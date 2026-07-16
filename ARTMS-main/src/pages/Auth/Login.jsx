@@ -61,7 +61,7 @@ export default function Login() {
       {/* Back to public site */}
       <Link
         to="/"
-        className="absolute left-6 top-6 z-10 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-[#060F5A]"
+        className="absolute left-6 top-6 z-15 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-[#060F5A]"
       >
         <ArrowLeft size={16} />
         Back to website

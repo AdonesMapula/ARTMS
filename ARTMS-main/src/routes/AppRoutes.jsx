@@ -5,6 +5,7 @@ import DepartmentHeadLayout from "../layouts/DepartmentHeadLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import SuperAdminLayout from "../layouts/SuperAdminLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
+import GuestRoute from "../components/GuestRoute";
 
 // Public
 import Home from "../pages/Public/Home";
@@ -54,6 +55,7 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+
         {/* ── Public site (no auth required) ───────────────────────────── */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
@@ -64,10 +66,12 @@ export default function AppRoutes() {
           <Route path="/contact" element={<Contact />} />
         </Route>
 
-        {/* ── Auth pages ────────────────────────────────────────────────── */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/otp" element={<OtpVerification />} />
+        {/* ── Auth pages (redirect to dashboard if already logged in) ───── */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/otp" element={<OtpVerification />} />
+        </Route>
 
         {/* ── Department Head (role-protected) ──────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={["department_head"]} />}>
@@ -116,6 +120,7 @@ export default function AppRoutes() {
 
         {/* ── Fallback ──────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </BrowserRouter>
   );
