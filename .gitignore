@@ -1,0 +1,37 @@
+# ── Frontend ──────────────────────────────────────────
+ARTMS-main/node_modules/
+ARTMS-main/dist/
+ARTMS-main/dist-ssr/
+ARTMS-main/.env
+ARTMS-main/.env.local
+ARTMS-main/*.local
+
+# ── Backend ───────────────────────────────────────────
+artms-backend/vendor/
+artms-backend/.env
+artms-backend/.env.backup
+artms-backend/.env.production
+artms-backend/storage/*.key
+artms-backend/storage/pail/
+artms-backend/storage/logs/
+artms-backend/storage/framework/cache/data/
+artms-backend/storage/framework/sessions/
+artms-backend/storage/framework/views/
+artms-backend/public/storage
+artms-backend/public/hot
+artms-backend/public/build
+artms-backend/.phpunit.cache
+artms-backend/.phpunit.result.cache
+artms-backend/auth.json
+
+# ── Database dumps — never commit these ───────────────
+*.sql
+*.sql.gz
+
+# ── OS / Editor ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.sw?

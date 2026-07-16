@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* ARTMS Design Tokens (Tailwind v4-friendly) */
+:root {
+  --artms-bg: #ffffff;
+  --artms-fg: #0f172a; /* slate-900 */
+  --artms-muted: #64748b; /* slate-500 */
+  --artms-border: rgba(15, 23, 42, 0.08);
+
+  --artms-primary: #1d4ed8; /* blue-700 */
+  --artms-primary-2: #0b2a6f; /* deep enterprise blue */
+  --artms-accent: #f5821f; /* orange */
+
+  --artms-card: #ffffff;
+  --artms-soft: #f8fafc; /* slate-50 */
+  --artms-ring: rgba(29, 78, 216, 0.35);
+
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--artms-bg);
+  color: var(--artms-fg);
+}
+
+/* Better default focus + smooth UI */
+:focus-visible {
+  outline: 3px solid var(--artms-ring);
+  outline-offset: 2px;
+}
+
+/* Subtle, consistent scrollbar (supported browsers only) */
+* {
+  scrollbar-color: rgba(15, 23, 42, 0.25) transparent;
+  scrollbar-width: thin;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
