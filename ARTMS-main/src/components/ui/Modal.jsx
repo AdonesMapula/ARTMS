@@ -34,7 +34,7 @@ export default function Modal({
     >
       <div
         className={cn(
-          "w-full max-w-lg rounded-2xl border border-[var(--artms-border)] bg-white shadow-xl",
+          "w-full max-w-lg rounded-2xl border border-[var(--artms-border)] bg-white shadow-xl flex flex-col max-h-[90vh]",
           "animate-[modalIn_160ms_ease-out]",
           className
         )}
@@ -54,7 +54,7 @@ export default function Modal({
             ✕
           </Button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="px-5 py-4 min-h-0">{children}</div>
         <div className="border-t border-[var(--artms-border)] px-5 py-4">
           {footer ?? (
             <div className="flex justify-end gap-2">

@@ -18,6 +18,7 @@ class JobPostingController extends Controller
                 )
             )
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->approval_status, fn ($q) => $q->where('approval_status', $request->approval_status))
             ->when($request->department_id, fn ($q) => $q->where('department_id', $request->department_id))
             ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);

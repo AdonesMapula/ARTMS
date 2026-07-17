@@ -27,12 +27,14 @@ class ManpowerRequestController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'job_library_id'  => ['nullable', 'exists:job_library,id'],
-            'position_needed' => ['required', 'string'],
-            'headcount'       => ['required', 'integer', 'min:1'],
-            'justification'   => ['required', 'string'],
-            'needed_by'       => ['nullable', 'date'],
-            'urgency'         => ['required', 'in:low,medium,high,critical'],
+            'job_library_id'     => ['nullable', 'exists:job_library,id'],
+            'position_needed'    => ['required', 'string'],
+            'headcount'          => ['required', 'integer', 'min:1'],
+            'justification'      => ['required', 'string'],
+            'needed_by'          => ['nullable', 'date'],
+            'urgency'            => ['required', 'in:low,medium,high,critical'],
+            'fit_threshold_high' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'fit_threshold_medium' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $data['department_id'] = $request->user()->department_id;

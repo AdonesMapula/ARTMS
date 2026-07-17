@@ -47,6 +47,8 @@ import Settings from "../pages/Admin/Settings";
 // COO
 import CooDashboard from "../pages/Coo/Dashboard";
 import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
+import JobLibraryApprovals from "../pages/Coo/JobLibraryApprovals";
+import JobPostingApprovals from "../pages/Coo/JobPostingApprovals";
 import CooNotifications from "../pages/Coo/Notifications";
 
 // Super Admin
@@ -115,9 +117,11 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute allowedRoles={["coo"]} />}>
           <Route path="/coo" element={<CooLayout />}>
             <Route index element={<Navigate to="/coo/dashboard" replace />} />
-            <Route path="dashboard" element={<CooDashboard />} />
-            <Route path="prf-approvals" element={<ManpowerApprovals />} />
-            <Route path="notifications" element={<CooNotifications />} />
+            <Route path="dashboard"               element={<CooDashboard />} />
+            <Route path="prf-approvals"           element={<ManpowerApprovals />} />
+            <Route path="job-library-approvals"   element={<JobLibraryApprovals />} />
+            <Route path="job-posting-approvals"   element={<JobPostingApprovals />} />
+            <Route path="notifications"           element={<CooNotifications />} />
           </Route>
         </Route>
 

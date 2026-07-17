@@ -23,6 +23,23 @@ class JobLibraryController extends Controller
         return response()->json($jobs);
     }
 
+    /**
+     * GET /api/job-library/approved — COO-approved, active jobs for PRF dropdowns
+     */
+    public function approved(): JsonResponse
+    {
+        $jobs = JobLibrary::where('approval_status', 'approved')
+            ->where('is_active', true)
+            ->orderBy('job_title')
+            ->get([
+                'id', 'job_title', 'job_category', 'employment_type',
+                'qualifications', 'responsibilities', 'job_description',
+                'salary_min', 'salary_max',
+            ]);
+
+        return response()->json(['data' => $jobs]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

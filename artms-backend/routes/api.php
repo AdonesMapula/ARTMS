@@ -88,6 +88,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Job Library  (HR Admin creates; COO approves) ───────────────────────
+    Route::middleware('role:hr_admin,super_admin,coo,department_head')->group(function () {
+        Route::get('job-library/approved', [JobLibraryController::class, 'approved']);
+    });
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('job-library', JobLibraryController::class);
     });

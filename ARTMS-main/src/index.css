@@ -7,13 +7,15 @@
   --artms-muted: #64748b; /* slate-500 */
   --artms-border: rgba(15, 23, 42, 0.08);
 
-  --artms-primary: #1d4ed8; /* blue-700 */
+  --artms-primary: #111A62; /* Dark Blue - Main Brand Color */
+  --artms-primary-hover: #0d1550; /* Darker Blue for hover states */
   --artms-primary-2: #0b2a6f; /* deep enterprise blue */
-  --artms-accent: #f5821f; /* orange */
+  --artms-accent: #F97316; /* Orange - Secondary Brand Color */
+  --artms-accent-hover: #ea6a0a; /* Darker Orange for hover states */
 
   --artms-card: #ffffff;
   --artms-soft: #f8fafc; /* slate-50 */
-  --artms-ring: rgba(29, 78, 216, 0.35);
+  --artms-ring: rgba(17, 26, 98, 0.35);
 
   color-scheme: light;
 }
@@ -45,6 +47,7 @@ body {
   }
 }
 
+/* Smooth animations */
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -53,6 +56,28 @@ body {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -67,4 +92,13 @@ body {
 
 .font-logo {
   font-family: "Montserrat", sans-serif;
+}
+
+/* Custom utility classes for enhanced UI */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
 }

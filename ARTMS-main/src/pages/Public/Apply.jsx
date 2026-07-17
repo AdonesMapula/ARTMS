@@ -111,10 +111,11 @@ export default function Apply() {
 
   if (loading) {
     return (
-      <div className="bg-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <section className="mx-auto max-w-4xl px-6 py-14 lg:px-10">
-          <div className="flex h-64 items-center justify-center">
-            <p className="text-slate-500">Loading application form...</p>
+          <div className="flex h-96 flex-col items-center justify-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-[#111A62]"></div>
+            <p className="text-sm font-medium text-slate-600">Loading application form...</p>
           </div>
         </section>
       </div>
@@ -123,7 +124,7 @@ export default function Apply() {
 
   if (!job) {
     return (
-      <div className="bg-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
         <section className="mx-auto max-w-4xl px-6 py-14 lg:px-10">
           <EmptyState
             title="Job not found"
@@ -140,35 +141,37 @@ export default function Apply() {
   const department = job.department?.name || "N/A";
 
   return (
-    <div className="bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       <section className="mx-auto max-w-4xl px-6 py-12 lg:px-10">
         <Link
           to={`/jobs/${job.id}`}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900"
+          className="group inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-[#111A62]"
         >
-          <FiArrowLeft aria-hidden="true" />
-          Back to job details
+          <FiArrowLeft className="transition-transform group-hover:-translate-x-1" aria-hidden="true" />
+          Back to Job Details
         </Link>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
-              Online Application
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#F97316]/10 px-4 py-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#F97316]">
+                Online Application
+              </span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#111A62] sm:text-4xl">
               Apply for {jobTitle}
             </h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge tone="info">{department}</Badge>
-            <Badge tone="accent">{job.vacancies_count} {job.vacancies_count > 1 ? "openings" : "opening"}</Badge>
+            <Badge tone="info" className="bg-[#111A62]/10 text-[#111A62]">{department}</Badge>
+            <Badge tone="accent" className="bg-[#F97316]/10 text-[#F97316]">{job.vacancies_count} {job.vacancies_count > 1 ? "openings" : "opening"}</Badge>
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Applicant Information</CardTitle>
+        <div className="mt-8 grid gap-6">
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-lg font-bold text-[#111A62]">Applicant Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -219,9 +222,9 @@ export default function Apply() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Resume & Documents</CardTitle>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-lg font-bold text-[#111A62]">Resume & Documents</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -240,7 +243,7 @@ export default function Apply() {
                 />
               </div>
               {parsing && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm text-blue-700">
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-[#111A62]/5 border border-[#111A62]/10 px-3 py-2 text-sm text-[#111A62]">
                   <FiLoader className="animate-spin" />
                   <span>Analyzing your resume with AI...</span>
                 </div>
@@ -251,9 +254,9 @@ export default function Apply() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Additional Details</CardTitle>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-lg font-bold text-[#111A62]">Additional Details</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -287,16 +290,20 @@ export default function Apply() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-500">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-600">
               By submitting, you confirm the information provided is accurate.
             </p>
             <div className="flex gap-2">
-              <Button as={Link} to="/jobs" variant="outline">
+              <Button as={Link} to="/jobs" variant="outline" className="border-slate-300">
                 Cancel
               </Button>
-              <Button variant="accent" onClick={() => setOpen(true)}>
-                Submit application
+              <Button 
+                variant="accent" 
+                onClick={() => setOpen(true)}
+                className="bg-[#F97316] hover:bg-[#ea6a0a]"
+              >
+                Submit Application
               </Button>
             </div>
           </div>

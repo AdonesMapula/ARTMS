@@ -23,6 +23,8 @@ class ManpowerRequest extends Model
         'approved_by',
         'approved_at',
         'approval_remarks',
+        'fit_threshold_high',
+        'fit_threshold_medium',
     ];
 
     protected $casts = [

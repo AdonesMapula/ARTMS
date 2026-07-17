@@ -76,7 +76,7 @@ export default function Login() {
         >
           <img src={artmsLogo} alt="ARTMS logo" className="h-20 w-auto sm:h-24" />
           <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Administrative Portal HR
+            Administrative Portal
           </p>
         </div>
 

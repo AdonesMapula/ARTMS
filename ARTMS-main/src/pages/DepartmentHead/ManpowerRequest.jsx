@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiInfo } from "react-icons/fi";
+import { FiInfo, FiBookOpen } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
 import AlertModal from "../../components/ui/AlertModal";
+import api from "../../services/api";
 
 const EMPLOYMENT_STATUS_OPTIONS = [
   { value: "probationary", label: "Probationary" },
@@ -49,16 +50,19 @@ function Pill({ active, onClick, children }) {
   );
 }
 
-function SectionCard({ eyebrow, title, description, children }) {
+function SectionCard({ eyebrow, title, description, children, badge }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
       {(eyebrow || title) && (
         <div className="mb-5">
-          {eyebrow && (
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F97316]">
-              {eyebrow}
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            {eyebrow && (
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F97316]">
+                {eyebrow}
+              </p>
+            )}
+            {badge}
+          </div>
           {title && (
             <h3 className="mt-1 text-base font-extrabold text-slate-900">{title}</h3>
           )}
@@ -72,6 +76,36 @@ function SectionCard({ eyebrow, title, description, children }) {
   );
 }
 
+/**
+ * Parse a flat qualifications string (from Job Library) into structured fields.
+ * The library stores qualifications as plain text; we do a best-effort extraction.
+ * If the text contains the pipe-delimited format (from a previous PRF submission),
+ * we parse that too.
+ */
+function parseQualifications(raw = "") {
+  if (!raw) return {};
+  const result = {};
+
+  // Try pipe-delimited key: value format first
+  if (raw.includes("|")) {
+    raw.split("|").forEach((part) => {
+      const idx = part.indexOf(":");
+      if (idx === -1) return;
+      const key = part.slice(0, idx).trim().toLowerCase().replace(/\s+/g, "_");
+      const val = part.slice(idx + 1).trim();
+      if (key.includes("educational") || key.includes("education")) result.educational_background = val;
+      else if (key.includes("experience")) result.work_experience = val;
+      else if (key.includes("skill")) result.skills = val;
+      else if (key.includes("other")) result.other_characteristics = val;
+    });
+    return result;
+  }
+
+  // Otherwise treat the whole qualifications block as a description to pre-fill
+  result.educational_background = raw;
+  return result;
+}
+
 export default function ManpowerRequest() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -79,11 +113,24 @@ export default function ManpowerRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
 
+  // Job Library approved entries for the position dropdown
+  const [jobLibrary, setJobLibrary] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .get("/job-library/approved")
+      .then((res) => setJobLibrary(res.data.data || []))
+      .catch(() => setJobLibrary([]))
+      .finally(() => setLibraryLoading(false));
+  }, []);
+
   const showAlert = (variant, title, message) =>
     setAlert({ open: true, variant, title, message });
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   const initialForm = {
+    job_library_id: "",
     position_needed: "",
     employment_status: "",
     needed_by: "",
@@ -95,20 +142,54 @@ export default function ManpowerRequest() {
     other_characteristics: "",
     headcount: 1,
     urgency: "medium",
-    // Fit Threshold Configuration
     high_fit_min: 75,
     medium_fit_min: 50,
   };
 
   const [form, setForm] = useState(initialForm);
+  // Track which Step 3 fields were auto-filled so we can show a badge
+  const [autoFilled, setAutoFilled] = useState(false);
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  // ── When a job library entry is chosen, auto-populate Step 3 & 4 ──────────
+  const handleJobLibrarySelect = (jobId) => {
+    const selected = jobLibrary.find((j) => String(j.id) === String(jobId));
+    if (!selected) {
+      // Cleared — reset
+      setForm((prev) => ({
+        ...prev,
+        job_library_id: "",
+        position_needed: "",
+        educational_background: "",
+        work_experience: "",
+        skills: "",
+        other_characteristics: "",
+      }));
+      setAutoFilled(false);
+      return;
+    }
+
+    const parsed = parseQualifications(selected.qualifications);
+
+    setForm((prev) => ({
+      ...prev,
+      job_library_id: selected.id,
+      position_needed: selected.job_title,
+      // Step 3 auto-populate from qualifications
+      educational_background: parsed.educational_background || prev.educational_background,
+      work_experience: parsed.work_experience || prev.work_experience,
+      skills: parsed.skills || prev.skills,
+      other_characteristics: parsed.other_characteristics || prev.other_characteristics,
+    }));
+    setAutoFilled(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.position_needed.trim()) {
-      showAlert("error", "Missing Field", "Position is required.");
+    if (!form.job_library_id) {
+      showAlert("error", "Missing Field", "Please select a position from the Job Library.");
       return;
     }
     if (!form.employment_status) {
@@ -133,6 +214,7 @@ export default function ManpowerRequest() {
       .join(" | ");
 
     const payload = {
+      job_library_id: form.job_library_id,
       position_needed: form.position_needed,
       headcount: Number(form.headcount) || 1,
       justification,
@@ -146,6 +228,7 @@ export default function ManpowerRequest() {
       setSubmitting(true);
       await manpowerService.create(payload);
       setForm(initialForm);
+      setAutoFilled(false);
       showAlert(
         "success",
         "Request Submitted",
@@ -169,7 +252,9 @@ export default function ManpowerRequest() {
   const midWidth = Math.max(high - lowWidth, 0);
   const highWidth = Math.max(100 - lowWidth - midWidth, 0);
 
-  // ── Form ─────────────────────────────────────────────────────────────
+  // ── Selected job library entry for the preview card ────────────────────
+  const selectedJob = jobLibrary.find((j) => String(j.id) === String(form.job_library_id));
+
   return (
     <div className="space-y-4">
       {/* Page heading */}
@@ -181,25 +266,72 @@ export default function ManpowerRequest() {
           Personnel Requisition Form
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Fill out the details below to request new or replacement manpower for
-          your department.
+          Select a position from the Job Library, then fill in the remaining details.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ── Position & Schedule ─────────────────────────────────────── */}
+
+        {/* ── Step 1: Position & Schedule ──────────────────────────────────── */}
         <SectionCard eyebrow="Step 1" title="Position &amp; Schedule">
           <div className="grid gap-5 sm:grid-cols-2">
+
+            {/* Position dropdown from Job Library */}
             <div className="sm:col-span-2">
-              <label className={labelClass}>Position Needed</label>
-              <input
-                type="text"
-                value={form.position_needed}
-                onChange={(e) => set("position_needed", e.target.value)}
-                className={inputClass}
-                placeholder="e.g. Customer Service Representative"
-              />
+              <label className={labelClass}>
+                Position Needed{" "}
+                <span className="text-red-500">*</span>
+                <span className={hintClass}> — from Job Library</span>
+              </label>
+              {libraryLoading ? (
+                <div className={`${inputClass} text-slate-400`}>Loading job positions…</div>
+              ) : jobLibrary.length === 0 ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  <FiBookOpen className="mt-0.5 shrink-0" />
+                  <span>
+                    No approved job entries yet. An HR Admin must first add entries to the{" "}
+                    <span className="font-semibold">Job Library</span> and get COO approval before
+                    they appear here.
+                  </span>
+                </div>
+              ) : (
+                <select
+                  className={inputClass}
+                  value={form.job_library_id}
+                  onChange={(e) => handleJobLibrarySelect(e.target.value)}
+                >
+                  <option value="">Select a position from the Job Library…</option>
+                  {jobLibrary.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.job_title}
+                      {j.job_category ? ` — ${j.job_category}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
+            {/* Job Library preview card */}
+            {selectedJob && (
+              <div className="sm:col-span-2 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#111A62] mb-1">
+                  Job Library Entry
+                </p>
+                <p className="font-semibold text-slate-900">{selectedJob.job_title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {selectedJob.job_category && <span>{selectedJob.job_category} · </span>}
+                  {selectedJob.employment_type?.replace(/_/g, " ")}
+                  {selectedJob.salary_min && selectedJob.salary_max && (
+                    <span>
+                      {" "}· ₱{Number(selectedJob.salary_min).toLocaleString()} – ₱{Number(selectedJob.salary_max).toLocaleString()}
+                    </span>
+                  )}
+                </p>
+                {selectedJob.job_description && (
+                  <p className="mt-2 text-xs text-slate-600 line-clamp-2">{selectedJob.job_description}</p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className={labelClass}>Date Needed</label>
@@ -212,9 +344,7 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>
-                Number of Headcount
-              </label>
+              <label className={labelClass}>Number of Headcount</label>
               <input
                 type="number"
                 min="1"
@@ -235,10 +365,7 @@ export default function ManpowerRequest() {
                   key={opt.value}
                   active={form.employment_status === opt.value}
                   onClick={() =>
-                    set(
-                      "employment_status",
-                      form.employment_status === opt.value ? "" : opt.value
-                    )
+                    set("employment_status", form.employment_status === opt.value ? "" : opt.value)
                   }
                 >
                   {opt.label}
@@ -248,7 +375,7 @@ export default function ManpowerRequest() {
           </div>
         </SectionCard>
 
-        {/* ── Plantilla Requirement ───────────────────────────────────── */}
+        {/* ── Step 2: Plantilla Requirement ───────────────────────────────── */}
         <SectionCard eyebrow="Step 2" title="Plantilla Requirement">
           <div className="flex flex-wrap gap-2">
             {PLANTILLA_OPTIONS.map((opt) => (
@@ -278,8 +405,23 @@ export default function ManpowerRequest() {
           )}
         </SectionCard>
 
-        {/* ── Personnel Requirement Details ───────────────────────────── */}
-        <SectionCard eyebrow="Step 3" title="Personnel Requirement Details">
+        {/* ── Step 3: Personnel Requirement Details ───────────────────────── */}
+        <SectionCard
+          eyebrow="Step 3"
+          title="Personnel Requirement Details"
+          badge={
+            autoFilled && (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                Auto-filled from Job Library
+              </span>
+            )
+          }
+          description={
+            autoFilled
+              ? "These fields were pre-filled from the selected Job Library entry. You can edit them as needed."
+              : "Fill in the specific requirements for this position."
+          }
+        >
           <div className="grid gap-5">
             <div>
               <label className={labelClass}>Educational Background</label>
@@ -315,9 +457,7 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>
-                Other Preferred Characteristics / Licenses
-              </label>
+              <label className={labelClass}>Other Preferred Characteristics / Licenses</label>
               <input
                 type="text"
                 value={form.other_characteristics}
@@ -329,7 +469,7 @@ export default function ManpowerRequest() {
           </div>
         </SectionCard>
 
-        {/* ── Priority ─────────────────────────────────────────────────── */}
+        {/* ── Step 4: Priority ─────────────────────────────────────────────── */}
         <SectionCard eyebrow="Step 4" title="Priority Level">
           <div className="flex flex-wrap gap-2">
             {PRIORITY_OPTIONS.map((opt) => (
@@ -344,7 +484,7 @@ export default function ManpowerRequest() {
           </div>
         </SectionCard>
 
-        {/* ── Fit Threshold Configuration ─────────────────────────────── */}
+        {/* ── Fit Threshold Configuration ─────────────────────────────────── */}
         <SectionCard
           eyebrow="Fit Threshold Configuration"
           title="Applicant Score Matching"
@@ -405,7 +545,7 @@ export default function ManpowerRequest() {
           </div>
         </SectionCard>
 
-        {/* ── For Human Resources Department ──────────────────────────── */}
+        {/* ── For Human Resources Department ──────────────────────────────── */}
         <SectionCard
           eyebrow="HR Use Only"
           title="For Human Resources Department"
@@ -442,22 +582,18 @@ export default function ManpowerRequest() {
           </div>
         </SectionCard>
 
-        {/* ── Requested by (read-only summary of the submitter) ───────── */}
+        {/* ── Requested by ─────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 text-sm">
           <div>
-            <p className="font-semibold text-slate-800">
-              Requested by {user?.name ?? "you"}
-            </p>
-            <p className="text-slate-500 capitalize">
-              {user?.role?.replace(/_/g, " ") ?? ""}
-            </p>
+            <p className="font-semibold text-slate-800">Requested by {user?.name ?? "you"}</p>
+            <p className="text-slate-500 capitalize">{user?.role?.replace(/_/g, " ") ?? ""}</p>
           </div>
           <p className="text-xs text-slate-400">
             Submitted requests are routed for approval automatically.
           </p>
         </div>
 
-        {/* ── Submit row ───────────────────────────────────────────────── */}
+        {/* ── Submit row ───────────────────────────────────────────────────── */}
         <div className="flex justify-end gap-3">
           <button
             type="button"
@@ -476,7 +612,7 @@ export default function ManpowerRequest() {
         </div>
       </form>
 
-      {/* ── Alert Modal ─────────────────────────────────────────────────── */}
+      {/* ── Alert Modal ─────────────────────────────────────────────────────── */}
       <AlertModal
         open={alert.open}
         variant={alert.variant}
@@ -484,7 +620,6 @@ export default function ManpowerRequest() {
         message={alert.message}
         onClose={() => {
           closeAlert();
-          // Navigate to history only after a successful submission
           if (alert.variant === "success") {
             navigate("/department-head/request-history");
           }

@@ -1,8 +1,120 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import { FiLogOut } from "react-icons/fi";
+import { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { FiLogOut, FiChevronDown, FiChevronRight } from "react-icons/fi";
 import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
+
+/**
+ * NavItem renders either:
+ *   - a plain NavLink  (no `children` array)
+ *   - a collapsible group with child NavLinks  (has `children` array)
+ *
+ * Item shape:
+ *   { label, to, icon?, end?, badge? }          — plain link
+ *   { label, icon?, badge?, children: [...] }   — group (no `to`)
+ */
+function NavItem({ it }) {
+  const location = useLocation();
+
+  // A group item has children but no `to`
+  if (it.children?.length) {
+    // Auto-expand when any child is active
+    const anyChildActive = it.children.some((c) =>
+      location.pathname.startsWith(c.to)
+    );
+    const [open, setOpen] = useState(anyChildActive);
+
+    return (
+      <li>
+        {/* Group header — not a link, just a toggle */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+            anyChildActive
+              ? "bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
+              : "text-slate-700 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E]"
+          )}
+        >
+          {it.icon && (
+            <span className="nav-icon text-base transition-colors">{it.icon}</span>
+          )}
+          <span className="min-w-0 flex-1 truncate text-left">{it.label}</span>
+          {it.badge && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+              {it.badge}
+            </span>
+          )}
+          <span className="text-slate-400">
+            {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
+          </span>
+        </button>
+
+        {/* Children — indented */}
+        {open && (
+          <ul className="mt-0.5 space-y-0.5 pl-4">
+            {it.children.map((child) => (
+              <li key={child.to}>
+                <NavLink
+                  to={child.to}
+                  end={child.end}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition group",
+                      isActive
+                        ? "bg-[#111A62] text-white [&_.nav-icon]:text-white"
+                        : "text-slate-600 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E]"
+                    )
+                  }
+                >
+                  {child.icon && (
+                    <span className="nav-icon text-sm transition-colors">{child.icon}</span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{child.label}</span>
+                  {child.badge && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                      {child.badge}
+                    </span>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  }
+
+  // Plain link item
+  return (
+    <li>
+      <NavLink
+        to={it.to}
+        end={it.end}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition group",
+            isActive
+              ? "bg-[#111A62] text-white [&_.nav-icon]:text-white"
+              : "text-slate-700 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#4D569E]"
+          )
+        }
+      >
+        {it.icon && (
+          <span className="nav-icon text-base transition-colors">{it.icon}</span>
+        )}
+        <span className="min-w-0 flex-1 truncate">{it.label}</span>
+        {it.badge && (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+            {it.badge}
+          </span>
+        )}
+      </NavLink>
+    </li>
+  );
+}
 
 export default function Sidebar({ brand = "ARTMS", items = [] }) {
   const { user, logout } = useAuth();
@@ -39,33 +151,8 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         {/* Nav items */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           <ul className="space-y-1">
-            {items.map((it) => (
-              <li key={it.to}>
-                <NavLink
-                  to={it.to}
-                  end={it.end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition group",
-                      isActive
-                        ? "bg-[#111A62] text-white [&_.nav-icon]:text-white"
-                        : "text-slate-700 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#4D569E]"
-                    )
-                  }
-                >
-                  {it.icon && (
-                    <span className="nav-icon text-base transition-colors">
-                      {it.icon}
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1 truncate">{it.label}</span>
-                  {it.badge && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
-                      {it.badge}
-                    </span>
-                  )}
-                </NavLink>
-              </li>
+            {items.map((it, idx) => (
+              <NavItem key={it.to ?? `group-${idx}`} it={it} />
             ))}
           </ul>
         </nav>
