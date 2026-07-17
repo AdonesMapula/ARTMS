@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { FiLogOut } from "react-icons/fi";
 import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
+import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 
 export default function Sidebar({ brand = "ARTMS", items = [] }) {
   const { user, logout } = useAuth();
@@ -23,12 +24,14 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         {/* Brand */}
         <div className="px-5 py-5">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--artms-primary-2)] text-sm font-black text-white">
-              A
-            </span>
+            <img
+              src={artmsLogo}
+              alt="ARTMS Logo"
+              className="h-9 w-9 rounded-lg object-contain"
+            />
             <div className="leading-tight">
               <p className="text-sm font-extrabold text-slate-900">{brand}</p>
-              <p className="text-xs text-slate-500">ARTMS Console</p>
+              <p className="text-xs text-slate-500">AI Recruitment Management System</p>
             </div>
           </div>
         </div>

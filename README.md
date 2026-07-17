@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+[README.md](https://github.com/user-attachments/files/30073394/README.md)
+>>>>>>> 971c2ae3212afc7e25872403cb75a8ce50340e3a
 # ARTMS — Automated Recruitment and Talent Management System
 
 A full-stack web application built with **React (Vite)** for the frontend and **Laravel 11** for the backend REST API, connected to a **MySQL** database.

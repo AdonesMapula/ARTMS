@@ -62,13 +62,28 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // ── Department Head ───────────────────────────────────────────────────
+        $itDept = Department::where('department_name', 'Information Technology')->first();
+
+        User::firstOrCreate(
+            ['email' => 'depthead@artms.com'],
+            [
+                'name'          => 'Department Head',
+                'password'      => Hash::make('DeptHead@2024'),
+                'role'          => 'department_head',
+                'department_id' => $itDept?->id,
+                'is_active'     => true,
+            ]
+        );
+
         $this->command->info('Default users seeded successfully.');
         $this->command->table(
             ['Role', 'Email', 'Password'],
             [
-                ['Super Admin', 'superadmin@artms.com', 'SuperAdmin@2024'],
-                ['HR Admin',    'hradmin@artms.com',    'HrAdmin@2024'],
-                ['COO',         'coo@artms.com',        'CooUser@2024'],
+                ['Super Admin',     'superadmin@artms.com', 'SuperAdmin@2024'],
+                ['HR Admin',        'hradmin@artms.com',    'HrAdmin@2024'],
+                ['COO',             'coo@artms.com',        'CooUser@2024'],
+                ['Department Head', 'depthead@artms.com',   'DeptHead@2024'],
             ]
         );
     }

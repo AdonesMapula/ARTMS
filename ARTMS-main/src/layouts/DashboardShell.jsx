@@ -9,7 +9,7 @@ export default function DashboardShell({
 }) {
   return (
     <div className={cn("min-h-screen bg-[var(--artms-soft)]", className)}>
-      <div className="mx-auto flex w-full max-w-[1400px]">
+      <div className="flex min-h-screen w-full">
         {sidebar}
         <div className="min-w-0 flex-1">
           {topbar}
