@@ -1,9 +1,17 @@
+import { useState } from "react";
 import { FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import AlertModal from "../../components/ui/AlertModal";
 
 export default function Contact() {
+  const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
+
+  const showAlert = (variant, title, message) =>
+    setAlert({ open: true, variant, title, message });
+  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
+
   return (
     <div className="bg-white">
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
@@ -11,7 +19,7 @@ export default function Contact() {
           Contact
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          Let’s talk about hiring
+          Let's talk about hiring
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
           This is a frontend-only contact interface. Messages are not sent yet—ready for API integration.
@@ -39,7 +47,16 @@ export default function Contact() {
                 </div>
               </div>
               <div className="mt-4 flex justify-end">
-                <Button variant="accent" onClick={() => alert("Placeholder: message not sent (UI only).")}>
+                <Button
+                  variant="accent"
+                  onClick={() =>
+                    showAlert(
+                      "info",
+                      "Not Connected Yet",
+                      "The contact form is not yet connected to a backend. Your message was not sent."
+                    )
+                  }
+                >
                   Submit
                 </Button>
               </div>
@@ -83,7 +100,14 @@ export default function Contact() {
           </Card>
         </div>
       </section>
+
+      <AlertModal
+        open={alert.open}
+        variant={alert.variant}
+        title={alert.title}
+        message={alert.message}
+        onClose={closeAlert}
+      />
     </div>
   );
 }
-

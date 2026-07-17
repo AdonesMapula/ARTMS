@@ -4,6 +4,7 @@ import PublicLayout from "../layouts/PublicLayout";
 import DepartmentHeadLayout from "../layouts/DepartmentHeadLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import SuperAdminLayout from "../layouts/SuperAdminLayout";
+import CooLayout from "../layouts/CooLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import GuestRoute from "../components/GuestRoute";
 
@@ -42,6 +43,11 @@ import Reports from "../pages/Admin/Reports";
 import AdminNotifications from "../pages/Admin/Notifications";
 import Profile from "../pages/Admin/Profile";
 import Settings from "../pages/Admin/Settings";
+
+// COO
+import CooDashboard from "../pages/Coo/Dashboard";
+import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
+import CooNotifications from "../pages/Coo/Notifications";
 
 // Super Admin
 import SuperAdminDashboard from "../pages/SuperAdmin/Dashboard";
@@ -84,8 +90,8 @@ export default function AppRoutes() {
           </Route>
         </Route>
 
-        {/* ── HR Admin + COO (role-protected) ───────────────────────────── */}
-        <Route element={<ProtectedRoute allowedRoles={["hr_admin", "coo", "employee"]} />}>
+        {/* ── HR Admin (role-protected) ─────────────────────────────────── */}
+        <Route element={<ProtectedRoute allowedRoles={["hr_admin", "employee"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
@@ -102,6 +108,16 @@ export default function AppRoutes() {
             <Route path="notifications" element={<AdminNotifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
+          </Route>
+        </Route>
+
+        {/* ── COO (role-protected, own portal) ──────────────────────────── */}
+        <Route element={<ProtectedRoute allowedRoles={["coo"]} />}>
+          <Route path="/coo" element={<CooLayout />}>
+            <Route index element={<Navigate to="/coo/dashboard" replace />} />
+            <Route path="dashboard" element={<CooDashboard />} />
+            <Route path="prf-approvals" element={<ManpowerApprovals />} />
+            <Route path="notifications" element={<CooNotifications />} />
           </Route>
         </Route>
 

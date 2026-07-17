@@ -100,4 +100,19 @@ class ManpowerRequestController extends Controller
 
         return response()->json(['message' => "Request {$data['status']}.", 'request' => $manpowerRequest->fresh()]);
     }
+
+    /**
+     * GET /api/manpower-requests/approved-for-posting
+     * Returns approved PRFs that haven't been converted to job postings yet
+     */
+    public function approvedForPosting(Request $request): JsonResponse
+    {
+        $requests = ManpowerRequest::with(['department', 'requester', 'jobLibrary', 'approver'])
+            ->where('status', 'approved')
+            ->whereDoesntHave('jobPostings')
+            ->orderBy('approved_at', 'desc')
+            ->paginate($request->per_page ?? 15);
+
+        return response()->json($requests);
+    }
 }

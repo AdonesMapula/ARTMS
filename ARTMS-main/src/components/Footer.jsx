@@ -18,9 +18,9 @@ export default function Footer() {
           <Link to="/" className="flex items-center gap-3">
             <img src={artmsLogoWhite} alt="Accel4U logo" className="h-10 w-auto" />
             <div className="leading-tight">
-              <p className="font-sans text-xl font-extrabold tracking-tight text-white">
-                Accel4U
-              </p>
+            <p className="font-logo text-[2rem] font-extrabold tracking-[-0.03em] leading-none text-white">
+              Accel4U
+            </p>
               <p className="font-sans text-[11px] font-normal tracking-wide text-white/70">
                 AI Recruitment and Talent Management System
               </p>

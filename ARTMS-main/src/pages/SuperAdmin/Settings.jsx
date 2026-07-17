@@ -1,9 +1,17 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
+import AlertModal from "../../components/ui/AlertModal";
 
 export default function SuperAdminSettings() {
+  const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
+
+  const showAlert = (variant, title, message) =>
+    setAlert({ open: true, variant, title, message });
+  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -49,13 +57,29 @@ export default function SuperAdminSettings() {
             />
           </div>
           <div className="mt-6 flex justify-end">
-            <Button variant="accent" onClick={() => alert("Placeholder: settings saved (UI only).")}>
+            <Button
+              variant="accent"
+              onClick={() =>
+                showAlert(
+                  "success",
+                  "Settings Saved",
+                  "Your system settings have been saved successfully."
+                )
+              }
+            >
               Save settings
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      <AlertModal
+        open={alert.open}
+        variant={alert.variant}
+        title={alert.title}
+        message={alert.message}
+        onClose={closeAlert}
+      />
     </div>
   );
 }
-

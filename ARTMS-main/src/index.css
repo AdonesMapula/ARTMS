@@ -64,3 +64,7 @@ body {
     background-position: -200% 0;
   }
 }
+
+.font-logo {
+  font-family: "Montserrat", sans-serif;
+}

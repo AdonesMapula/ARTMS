@@ -43,12 +43,32 @@ class JobPostingController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'job_library_id' => ['required', 'exists:job_library,id'],
-            'department_id'  => ['required', 'exists:departments,id'],
-            'vacancies_count' => ['required', 'integer', 'min:1'],
-            'posting_date'   => ['nullable', 'date'],
-            'closing_date'   => ['nullable', 'date', 'after:posting_date'],
+            'job_library_id'      => ['nullable', 'exists:job_library,id'],
+            'department_id'       => ['required', 'exists:departments,id'],
+            'manpower_request_id' => ['nullable', 'exists:manpower_requests,id'],
+            'vacancies_count'     => ['required', 'integer', 'min:1'],
+            'location'            => ['nullable', 'string'],
+            'description'         => ['nullable', 'string'],
+            'posting_date'        => ['nullable', 'date'],
+            'closing_date'        => ['nullable', 'date', 'after:posting_date'],
         ]);
+
+        // If job_library_id is null but manpower_request_id is provided, 
+        // try to use the job_library_id from the manpower request
+        if (!isset($data['job_library_id']) && isset($data['manpower_request_id'])) {
+            $manpowerRequest = \App\Models\ManpowerRequest::find($data['manpower_request_id']);
+            if ($manpowerRequest && $manpowerRequest->job_library_id) {
+                $data['job_library_id'] = $manpowerRequest->job_library_id;
+            }
+        }
+
+        // If still no job_library_id, return validation error
+        if (!isset($data['job_library_id']) || !$data['job_library_id']) {
+            return response()->json([
+                'message' => 'Job posting requires a job title from the Job Library. Please select a job title first.',
+                'errors' => ['job_library_id' => ['The job library id field is required.']]
+            ], 422);
+        }
 
         $data['requested_by']    = auth()->id();
         $data['approval_status'] = 'pending';

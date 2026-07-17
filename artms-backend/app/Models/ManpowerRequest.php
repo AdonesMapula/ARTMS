@@ -49,4 +49,9 @@ class ManpowerRequest extends Model
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
+
+    public function jobPostings()
+    {
+        return $this->hasMany(JobPosting::class, 'manpower_request_id');
+    }
 }

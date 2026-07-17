@@ -65,14 +65,14 @@ export default function Navbar() {
             className="h-10 w-auto transition-opacity duration-300"
           />
           <div className="flex flex-col leading-tight">
-            <span
-              className={[
-                "font-sans text-xl font-extrabold tracking-tight transition-colors duration-300",
-                scrolled ? "text-[#060F5A]" : "text-white",
-              ].join(" ")}
-            >
-              Accel4U
-            </span>
+          <span
+            className={[
+              "font-logo text-[2rem] font-extrabold tracking-[-0.03em] leading-none transition-colors duration-300",
+              scrolled ? "text-[#111A62]" : "text-white",
+            ].join(" ")}
+          >
+            Accel4U
+          </span> 
             <span
               className={[
                 "font-sans text-[11px] font-normal tracking-wide transition-colors duration-300",

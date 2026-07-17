@@ -14,6 +14,7 @@ use App\Http\Controllers\JobPostingController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManpowerRequestController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\ResumeParserController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,7 @@ Route::prefix('public')->group(function () {
     Route::get('job-postings/{jobPosting}', [JobPostingController::class, 'show']);
     Route::post('applicants', [ApplicantController::class, 'store']); // online application form
     Route::post('applicants/track', [ApplicantController::class, 'track']); // track by application_id
+    Route::post('parse-resume', [ResumeParserController::class, 'parse']); // AI resume parser
 });
 
 /*
@@ -153,7 +155,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Manpower Requests ────────────────────────────────────────────────────
     Route::apiResource('manpower-requests', ManpowerRequestController::class);
-    Route::middleware('role:hr_admin,super_admin')->group(function () {
+    Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::patch('manpower-requests/{manpowerRequest}/approve', [ManpowerRequestController::class, 'approve']);
+        Route::get('manpower-requests-approved-for-posting', [ManpowerRequestController::class, 'approvedForPosting']);
     });
 });

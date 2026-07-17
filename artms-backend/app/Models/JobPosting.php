@@ -14,6 +14,7 @@ class JobPosting extends Model
         'job_library_id',
         'department_id',
         'requested_by',
+        'manpower_request_id',
         'vacancies_count',
         'posting_date',
         'closing_date',
@@ -23,6 +24,8 @@ class JobPosting extends Model
         'approved_at',
         'approval_remarks',
         'is_published',
+        'location',
+        'description',
     ];
 
     protected $casts = [
@@ -50,6 +53,11 @@ class JobPosting extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function manpowerRequest()
+    {
+        return $this->belongsTo(ManpowerRequest::class);
     }
 
     public function applicants()

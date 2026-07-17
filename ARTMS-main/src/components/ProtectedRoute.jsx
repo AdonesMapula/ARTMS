@@ -31,7 +31,7 @@ export default function ProtectedRoute({ allowedRoles }) {
     const dashboards = {
       super_admin:     '/superadmin/dashboard',
       hr_admin:        '/admin/dashboard',
-      coo:             '/admin/dashboard',
+      coo:             '/coo/dashboard',
       department_head: '/department-head/dashboard',
       employee:        '/admin/dashboard',
     };

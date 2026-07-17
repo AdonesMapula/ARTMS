@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiMapPin, FiBriefcase, FiFilter } from "react-icons/fi";
+import { FiMapPin, FiBriefcase, FiFilter, FiCalendar } from "react-icons/fi";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
@@ -8,43 +8,68 @@ import Badge from "../../components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import Pagination from "../../components/ui/Pagination";
-import { mockJobs } from "../../utils/mockData";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export default function Jobs() {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState("all");
-  const [type, setType] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const departments = useMemo(() => {
-    const set = new Set(mockJobs.map((j) => j.department));
-    return ["all", ...Array.from(set)];
+  useEffect(() => {
+    fetchJobs();
   }, []);
 
-  const types = useMemo(() => {
-    const set = new Set(mockJobs.map((j) => j.employmentType));
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/public/job-postings`);
+      setJobs(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const departments = useMemo(() => {
+    const set = new Set(jobs.map((j) => j.department?.name).filter(Boolean));
     return ["all", ...Array.from(set)];
-  }, []);
+  }, [jobs]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return mockJobs.filter((j) => {
+    return jobs.filter((j) => {
       const matchesQuery =
         !q ||
-        j.title.toLowerCase().includes(q) ||
-        j.department.toLowerCase().includes(q) ||
-        j.location.toLowerCase().includes(q) ||
-        j.tags.some((t) => t.toLowerCase().includes(q));
-      const matchesDept = dept === "all" || j.department === dept;
-      const matchesType = type === "all" || j.employmentType === type;
-      return matchesQuery && matchesDept && matchesType;
+        j.job_library?.job_title?.toLowerCase().includes(q) ||
+        j.department?.name?.toLowerCase().includes(q) ||
+        j.location?.toLowerCase().includes(q);
+      const matchesDept = dept === "all" || j.department?.name === dept;
+      return matchesQuery && matchesDept;
     });
-  }, [query, dept, type]);
+  }, [query, dept, jobs]);
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const pageItems = filtered.slice(start, start + pageSize);
+
+  if (loading) {
+    return (
+      <div className="bg-white">
+        <section className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+          <div className="flex h-64 items-center justify-center">
+            <p className="text-slate-500">Loading job openings...</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white">
@@ -63,19 +88,13 @@ export default function Jobs() {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-3 rounded-2xl border border-[var(--artms-border)] bg-[var(--artms-soft)] p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SearchBar value={query} onChange={(v) => { setPage(1); setQuery(v); }} placeholder="Search title, dept, location, tags…" />
+        <div className="mt-8 grid gap-3 rounded-2xl border border-[var(--artms-border)] bg-[var(--artms-soft)] p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SearchBar value={query} onChange={(v) => { setPage(1); setQuery(v); }} placeholder="Search title, dept, location…" />
           <Select
             value={dept}
             onChange={(e) => { setPage(1); setDept(e.target.value); }}
             label="Department"
             options={departments.map((d) => ({ value: d, label: d === "all" ? "All departments" : d }))}
-          />
-          <Select
-            value={type}
-            onChange={(e) => { setPage(1); setType(e.target.value); }}
-            label="Employment Type"
-            options={types.map((t) => ({ value: t, label: t === "all" ? "All types" : t }))}
           />
           <div className="flex items-end">
             <Button
@@ -84,7 +103,6 @@ export default function Jobs() {
               onClick={() => {
                 setQuery("");
                 setDept("all");
-                setType("all");
                 setPage(1);
               }}
             >
@@ -99,7 +117,6 @@ export default function Jobs() {
             Showing <span className="font-semibold text-slate-900">{total}</span> opening
             {total === 1 ? "" : "s"}
           </p>
-          <Badge tone="info">UI-only placeholder data</Badge>
         </div>
 
         {pageItems.length === 0 ? (
@@ -116,30 +133,33 @@ export default function Jobs() {
                 <CardHeader>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="text-base">{job.title}</CardTitle>
+                      <CardTitle className="text-base">{job.job_library?.job_title || "Untitled Position"}</CardTitle>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                         <span className="inline-flex items-center gap-1">
                           <FiBriefcase aria-hidden="true" />
-                          {job.department}
+                          {job.department?.name || "N/A"}
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <FiMapPin aria-hidden="true" />
-                          {job.location}
-                        </span>
+                        {job.location && (
+                          <span className="inline-flex items-center gap-1">
+                            <FiMapPin aria-hidden="true" />
+                            {job.location}
+                          </span>
+                        )}
+                        {job.posting_date && (
+                          <span className="inline-flex items-center gap-1 text-xs">
+                            <FiCalendar aria-hidden="true" />
+                            Posted {new Date(job.posting_date).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <Badge tone="accent">{job.employmentType}</Badge>
+                    <Badge tone="accent">{job.vacancies_count} {job.vacancies_count > 1 ? "openings" : "opening"}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-slate-600">{job.summary}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {job.tags.map((t) => (
-                      <Badge key={t} tone="default" className="bg-slate-100">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
+                  <p className="text-sm text-slate-600 line-clamp-2">
+                    {job.description || job.job_library?.job_description || "No description available."}
+                  </p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <Button as={Link} to={`/jobs/${job.id}`} variant="primary">
                       View details
