@@ -39,4 +39,12 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    'google_ai' => [
+        'key' => env('GOOGLE_AI_API_KEY'),
+    ],
+
+    'groq' => [
+        'key' => env('GROQ_API_KEY'),
+    ],
+
 ];

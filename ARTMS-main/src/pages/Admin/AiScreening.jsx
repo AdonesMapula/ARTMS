@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  FiAlertCircle, FiCheckCircle, FiCpu, FiEye,
+  FiAlertCircle, FiCheckCircle, FiCpu, FiInbox,
   FiLoader, FiRefreshCw, FiSearch, FiXCircle,
 } from "react-icons/fi";
 import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import StatusChip from "../../components/ui/StatusChip";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 
 // ── constants ─────────────────────────────────────────────────────────────────
@@ -35,11 +34,14 @@ function fitRingColor(label) {
 
 // ── main component ────────────────────────────────────────────────────────────
 export default function AiScreening() {
-  const [rows,         setRows]         = useState([]);
-  const [loading,      setLoading]      = useState(true);
+  const [tab,          setTab]          = useState("pending");   // "pending" | "screened"
+  const [pending,      setPending]      = useState([]);
+  const [screened,     setScreened]     = useState([]);
+  const [loadingP,     setLoadingP]     = useState(true);
+  const [loadingS,     setLoadingS]     = useState(true);
   const [error,        setError]        = useState(null);
-  const [selected,     setSelected]     = useState(null);   // applicant id
-  const [screening,    setScreening]    = useState(null);   // applicant id being screened
+  const [selected,     setSelected]     = useState(null);
+  const [screening,    setScreening]    = useState(null);
   const [screenError,  setScreenError]  = useState(null);
   const [search,       setSearch]       = useState("");
   const [filterFit,    setFilterFit]    = useState("");
@@ -48,55 +50,72 @@ export default function AiScreening() {
   const [hrSaved,      setHrSaved]      = useState(false);
   const searchTimer                     = useRef(null);
 
-  // ── fetch evaluated applicants ──────────────────────────────────────────────
-  const load = useCallback(async (q = search, fit = filterFit) => {
-    setLoading(true);
-    setError(null);
+  // ── loaders ────────────────────────────────────────────────────────────────
+  const loadPending = useCallback(async (q = search) => {
+    setLoadingP(true);
+    try {
+      const params = { per_page: 50 };
+      if (q) params.search = q;
+      const res = await aiService.pendingQueue(params);
+      setPending(res.data?.data ?? []);
+    } catch {
+      setError("Failed to load applicant queue.");
+    } finally {
+      setLoadingP(false);
+    }
+  }, [search]);
+
+  const loadScreened = useCallback(async (q = search, fit = filterFit) => {
+    setLoadingS(true);
     try {
       const params = { per_page: 50 };
       if (q)   params.search    = q;
       if (fit) params.fit_label = fit;
       const res = await aiService.evaluations(params);
-      setRows(res.data?.data ?? []);
+      setScreened(res.data?.data ?? []);
     } catch {
-      setError("Failed to load screening data.");
+      setError("Failed to load screening results.");
     } finally {
-      setLoading(false);
+      setLoadingS(false);
     }
   }, [search, filterFit]);
 
-  useEffect(() => { load(); }, []);  // eslint-disable-line
+  // load both on mount
+  useEffect(() => { loadPending(); loadScreened(); }, []); // eslint-disable-line
 
-  // ── search debounce ─────────────────────────────────────────────────────────
+  // ── search debounce ────────────────────────────────────────────────────────
   const handleSearch = (val) => {
     setSearch(val);
     clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => load(val, filterFit), 400);
+    searchTimer.current = setTimeout(() => {
+      loadPending(val);
+      loadScreened(val, filterFit);
+    }, 400);
   };
 
   const handleFilter = (val) => {
     setFilterFit(val);
-    load(search, val);
+    loadScreened(search, val);
   };
 
-  // ── run AI screening for one applicant ──────────────────────────────────────
+  // ── run screening ──────────────────────────────────────────────────────────
   const runScreening = async (applicantId) => {
     setScreening(applicantId);
     setScreenError(null);
     try {
       await aiService.screen(applicantId);
-      await load();                      // refresh list
-      setSelected(applicantId);          // auto-open the result
+      // refresh both lists — applicant moves from pending → screened
+      await Promise.all([loadPending(), loadScreened()]);
+      setTab("screened");
+      setSelected(applicantId);
     } catch (err) {
-      setScreenError(
-        err.response?.data?.message ?? "Screening failed. Check OpenAI key."
-      );
+      setScreenError(err.response?.data?.message ?? "Screening failed. Check your OpenAI API key.");
     } finally {
       setScreening(null);
     }
   };
 
-  // ── HR review save ──────────────────────────────────────────────────────────
+  // ── HR review ──────────────────────────────────────────────────────────────
   const saveHrReview = async () => {
     if (!active || !hrForm.decision) return;
     setSavingHr(true);
@@ -107,33 +126,25 @@ export default function AiScreening() {
       });
       setHrSaved(true);
       setTimeout(() => setHrSaved(false), 2500);
-      await load();
-    } catch {
-      // silent — user can retry
-    } finally {
+      await loadScreened();
+    } catch { /* silent */ } finally {
       setSavingHr(false);
     }
   };
 
-  // ── derived state ───────────────────────────────────────────────────────────
-  const active = selected ? rows.find(r => r.id === selected) : null;
+  // ── derived ────────────────────────────────────────────────────────────────
+  const rows   = tab === "pending" ? pending : screened;
+  const active = selected ? screened.find(r => r.id === selected) ?? pending.find(r => r.id === selected) : null;
   const eval_  = active?.ai_evaluation ?? null;
 
-  // pre-fill HR form when selection changes
   useEffect(() => {
-    if (eval_) {
-      setHrForm({
-        interpretation: eval_.hr_interpretation ?? "",
-        decision:       eval_.hr_decision       ?? "",
-      });
-    }
+    if (eval_) setHrForm({ interpretation: eval_.hr_interpretation ?? "", decision: eval_.hr_decision ?? "" });
   }, [selected]); // eslint-disable-line
 
-  // ── summary counts ──────────────────────────────────────────────────────────
-  const total  = rows.length;
-  const high   = rows.filter(r => r.ai_evaluation?.fit_label === "high").length;
-  const medium = rows.filter(r => r.ai_evaluation?.fit_label === "medium").length;
-  const low    = rows.filter(r => r.ai_evaluation?.fit_label === "low").length;
+  const high   = screened.filter(r => r.ai_evaluation?.fit_label === "high").length;
+  const medium = screened.filter(r => r.ai_evaluation?.fit_label === "medium").length;
+  const low    = screened.filter(r => r.ai_evaluation?.fit_label === "low").length;
+  const loading = tab === "pending" ? loadingP : loadingS;
 
   // ── render ──────────────────────────────────────────────────────────────────
   return (
@@ -142,20 +153,16 @@ export default function AiScreening() {
       {/* Page heading */}
       <div>
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">AI Screening</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          AI Resume Screening
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Parse uploaded resumes and score them against job requirements automatically.
-        </p>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">AI Resume Screening</h1>
+        <p className="mt-1 text-sm text-slate-500">Parse uploaded resumes and score them against job requirements automatically.</p>
       </div>
 
-      {/* Error banner */}
-      {screenError && (
+      {/* Error / screen-error banners */}
+      {(error || screenError) && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
           <FiAlertCircle size={16} className="shrink-0" />
-          {screenError}
-          <button onClick={() => setScreenError(null)} className="ml-auto text-red-400 hover:text-red-600">
+          {screenError || error}
+          <button onClick={() => { setScreenError(null); setError(null); }} className="ml-auto text-red-400 hover:text-red-600">
             <FiXCircle size={15} />
           </button>
         </div>
@@ -163,48 +170,49 @@ export default function AiScreening() {
 
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-4">
-        <SummaryCard label="Total Screened" value={total}  bg="bg-blue-50"    text="text-blue-700"    />
-        <SummaryCard label="High Fit"        value={high}   bg="bg-emerald-50" text="text-emerald-700" />
-        <SummaryCard label="Medium Fit"      value={medium} bg="bg-amber-50"   text="text-amber-700"   />
-        <SummaryCard label="Low Fit"         value={low}    bg="bg-red-50"     text="text-red-700"     />
+        <SummaryCard label="Pending"     value={pending.length}  bg="bg-amber-50"   text="text-amber-700"   />
+        <SummaryCard label="High Fit"    value={high}            bg="bg-emerald-50" text="text-emerald-700" />
+        <SummaryCard label="Medium Fit"  value={medium}          bg="bg-blue-50"    text="text-blue-700"    />
+        <SummaryCard label="Low Fit"     value={low}             bg="bg-red-50"     text="text-red-700"     />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
 
-        {/* ── Left: screening queue table ─────────────────────────────────── */}
+        {/* ── Left: table with tabs ────────────────────────────────────────── */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Screening Queue</CardTitle>
+
+              {/* Tabs */}
+              <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <TabBtn active={tab === "pending"} onClick={() => { setTab("pending"); setSelected(null); }}>
+                  <FiInbox size={13} /> Pending <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{pending.length}</span>
+                </TabBtn>
+                <TabBtn active={tab === "screened"} onClick={() => { setTab("screened"); setSelected(null); }}>
+                  <FiCpu size={13} /> Screened <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{screened.length}</span>
+                </TabBtn>
+              </div>
+
+              {/* Controls */}
               <div className="flex gap-2">
-                {/* Search */}
                 <div className="relative">
                   <FiSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={e => handleSearch(e.target.value)}
+                  <input value={search} onChange={e => handleSearch(e.target.value)}
                     placeholder="Search applicant…"
-                    className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20"
-                  />
+                    className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20" />
                 </div>
-                {/* Fit filter */}
-                <select
-                  value={filterFit}
-                  onChange={e => handleFilter(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20"
-                >
-                  <option value="">All Fits</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-                {/* Refresh */}
-                <button
-                  onClick={() => load()}
-                  title="Refresh"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition"
-                >
-                  <FiRefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                {tab === "screened" && (
+                  <select value={filterFit} onChange={e => handleFilter(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20">
+                    <option value="">All Fits</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                )}
+                <button onClick={() => { loadPending(search); loadScreened(search, filterFit); }} title="Refresh"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">
+                  <FiRefreshCw size={13} className={(loadingP || loadingS) ? "animate-spin" : ""} />
                 </button>
               </div>
             </div>
@@ -213,86 +221,81 @@ export default function AiScreening() {
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
-                <FiLoader size={20} className="animate-spin" />
-                <span className="text-sm">Loading…</span>
+                <FiLoader size={20} className="animate-spin" /><span className="text-sm">Loading…</span>
               </div>
-            ) : error ? (
-              <div className="py-10 text-center text-sm text-red-500">{error}</div>
             ) : rows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-                <FiCpu size={32} />
-                <p className="text-sm">No screened applicants yet.</p>
-                <p className="text-xs text-slate-400">
-                  Go to the Applicants page, open an applicant with a resume, and click "Run AI Screening".
-                </p>
+              <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">
+                {tab === "pending" ? <FiInbox size={32} /> : <FiCpu size={32} />}
+                <p className="text-sm">{tab === "pending" ? "No applicants waiting to be screened." : "No screened applicants yet."}</p>
+                {tab === "pending" && <p className="text-xs">Applicants who submit a resume will appear here.</p>}
               </div>
-            ) : (
+            ) : tab === "pending" ? (
+              /* ── Pending table ── */
               <Table>
-                <THead>
-                  <tr>
-                    <TH>Applicant</TH>
-                    <TH>Position</TH>
-                    <TH>Score</TH>
-                    <TH>Fit</TH>
-                    <TH>HR Decision</TH>
-                    <TH className="text-right">Action</TH>
-                  </tr>
-                </THead>
+                <THead><tr>
+                  <TH>Applicant</TH><TH>Position</TH><TH>Applied</TH><TH className="text-right">Action</TH>
+                </tr></THead>
                 <tbody>
                   {rows.map(row => {
-                    const ev     = row.ai_evaluation;
-                    const score  = ev?.ai_score   ?? null;
-                    const fit    = ev?.fit_label   ?? null;
-                    const hrDec  = ev?.hr_decision ?? "pending";
                     const isRunning = screening === row.id;
-
                     return (
-                      <tr
-                        key={row.id}
-                        onClick={() => setSelected(row.id === selected ? null : row.id)}
-                        className={`cursor-pointer transition hover:bg-slate-50 ${selected === row.id ? "bg-[#111A62]/5" : ""}`}
-                      >
+                      <tr key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
+                        className={`cursor-pointer transition hover:bg-slate-50 ${selected === row.id ? "bg-[#111A62]/5" : ""}`}>
                         <TD>
-                          <p className="font-semibold text-slate-900">
-                            {row.first_name} {row.last_name}
-                          </p>
+                          <p className="font-semibold text-slate-900">{row.first_name} {row.last_name}</p>
+                          <p className="text-xs text-slate-400">{row.application_id}</p>
+                        </TD>
+                        <TD className="max-w-[140px] truncate text-xs text-slate-500">
+                          {row.job_posting?.job_library?.job_title ?? "—"}
+                        </TD>
+                        <TD className="text-xs text-slate-400">
+                          {row.created_at ? new Date(row.created_at).toLocaleDateString() : "—"}
+                        </TD>
+                        <TD className="text-right">
+                          <button onClick={e => { e.stopPropagation(); runScreening(row.id); }}
+                            disabled={isRunning || !!screening}
+                            className="inline-flex items-center gap-1 rounded-lg bg-[#111A62] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a277a] disabled:cursor-not-allowed disabled:opacity-50">
+                            {isRunning ? <><FiLoader size={12} className="animate-spin" /> Running…</> : <><FiCpu size={12} /> Screen Now</>}
+                          </button>
+                        </TD>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            ) : (
+              /* ── Screened table ── */
+              <Table>
+                <THead><tr>
+                  <TH>Applicant</TH><TH>Position</TH><TH>Score</TH><TH>Fit</TH><TH>HR Decision</TH><TH className="text-right">Action</TH>
+                </tr></THead>
+                <tbody>
+                  {rows.map(row => {
+                    const ev = row.ai_evaluation;
+                    const isRunning = screening === row.id;
+                    return (
+                      <tr key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
+                        className={`cursor-pointer transition hover:bg-slate-50 ${selected === row.id ? "bg-[#111A62]/5" : ""}`}>
+                        <TD>
+                          <p className="font-semibold text-slate-900">{row.first_name} {row.last_name}</p>
                           <p className="text-xs text-slate-400">{row.application_id}</p>
                         </TD>
                         <TD className="max-w-[140px] truncate text-xs text-slate-500">
                           {row.job_posting?.job_library?.job_title ?? "—"}
                         </TD>
                         <TD>
-                          {score !== null ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900">{Math.round(score)}</span>
-                              <span className="text-[11px] text-slate-400">/100</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
+                          {ev?.ai_score != null
+                            ? <><span className="font-bold text-slate-900">{Math.round(ev.ai_score)}</span><span className="text-[11px] text-slate-400">/100</span></>
+                            : <span className="text-xs text-slate-400">—</span>}
                         </TD>
-                        <TD>
-                          {fit ? (
-                            <Badge tone={FIT_TONE[fit]}>{FIT_LABEL[fit]} Fit</Badge>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </TD>
-                        <TD>
-                          <HrDecisionBadge decision={hrDec} />
-                        </TD>
+                        <TD>{ev?.fit_label ? <Badge tone={FIT_TONE[ev.fit_label]}>{FIT_LABEL[ev.fit_label]} Fit</Badge> : "—"}</TD>
+                        <TD><HrDecisionBadge decision={ev?.hr_decision ?? "pending"} /></TD>
                         <TD className="text-right">
-                          <button
-                            onClick={e => { e.stopPropagation(); runScreening(row.id); }}
+                          <button onClick={e => { e.stopPropagation(); runScreening(row.id); }}
                             disabled={isRunning || !!screening}
                             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Re-run AI Screening"
-                          >
-                            {isRunning
-                              ? <FiLoader size={12} className="animate-spin" />
-                              : <FiCpu size={12} />
-                            }
-                            {isRunning ? "Running…" : "Screen"}
+                            title="Re-run">
+                            {isRunning ? <><FiLoader size={12} className="animate-spin" /> Running…</> : <><FiRefreshCw size={12} /> Re-run</>}
                           </button>
                         </TD>
                       </tr>
@@ -355,6 +358,38 @@ export default function AiScreening() {
                     </p>
                   </div>
                 </div>
+
+                {/* Parsed CV data ── shown from score_breakdown.parsed_cv */}
+                {eval_.score_breakdown?.parsed_cv && (() => {
+                  const cv = eval_.score_breakdown.parsed_cv;
+                  return (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Parsed from CV</p>
+                      {cv.email && (
+                        <InfoRow label="Email" value={cv.email} />
+                      )}
+                      {cv.phone && (
+                        <InfoRow label="Phone" value={cv.phone} />
+                      )}
+                      {cv.education && (
+                        <InfoRow label="Education" value={cv.education} multiline />
+                      )}
+                      {cv.experience && (
+                        <InfoRow label="Experience" value={cv.experience} multiline />
+                      )}
+                      {cv.skills?.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-[10px] font-semibold uppercase text-slate-400">Detected Skills</p>
+                          <div className="flex flex-wrap gap-1">
+                            {cv.skills.map(s => (
+                              <span key={s} className="rounded-full bg-[#111A62]/10 px-2 py-0.5 text-[11px] font-semibold text-[#111A62]">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Score breakdown bars */}
                 <div className="space-y-3">
@@ -509,4 +544,32 @@ function HrDecisionBadge({ decision }) {
   if (decision === "not_qualified")
     return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600"><FiXCircle size={11} /> Not Qualified</span>;
   return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">Pending</span>;
+}
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "bg-white text-[#111A62] shadow-sm"
+          : "text-slate-500 hover:text-slate-700"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InfoRow({ label, value, multiline = false }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase text-slate-400">{label}</p>
+      {multiline
+        ? <p className="mt-0.5 whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600 line-clamp-4">{value}</p>
+        : <p className="mt-0.5 text-xs font-medium text-slate-700">{value}</p>
+      }
+    </div>
+  );
 }

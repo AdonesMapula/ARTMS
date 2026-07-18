@@ -52,7 +52,7 @@ export default function Navbar() {
       className={[
         "fixed inset-x-0 top-0 z-50 w-full transition-colors duration-300",
         scrolled
-          ? "border-b border-[var(--artms-border)] bg-white shadow-sm"
+          ? "border-b border-[var(--artms-border)] bg-[#FCF8F8] shadow-sm"
           : "border-b border-transparent bg-transparent",
       ].join(" ")}
     >
@@ -137,7 +137,7 @@ export default function Navbar() {
           className={[
             "px-6 pb-6 md:hidden",
             scrolled
-              ? "border-t border-[var(--artms-border)] bg-white"
+              ? "border-t border-[var(--artms-border)] bg-[#FCF8F8]"
               : "border-t border-white/15 bg-[#060F5A]/95 backdrop-blur",
           ].join(" ")}
         >

@@ -1,7 +1,10 @@
 import api from './api';
 
 const aiService = {
-  /** Get all screened applicants with evaluation data (paginated) */
+  /** Applicants with resumes not yet screened (pending queue) */
+  pendingQueue: (params = {}) => api.get('/ai/applicants', { params }),
+
+  /** All applicants that have been screened with evaluation data */
   evaluations: (params = {}) => api.get('/ai/evaluations', { params }),
 
   /** Run AI screening on an applicant's resume */

@@ -13,6 +13,35 @@ use Illuminate\Support\Facades\Storage;
 class AiScreeningController extends Controller
 {
     /**
+     * GET /api/ai/applicants
+     * Returns applicants who have a resume but NO evaluation yet (pending screening queue).
+     */
+    public function pendingQueue(Request $request): JsonResponse
+    {
+        $applicants = Applicant::with([
+                'jobPosting.jobLibrary',
+                'jobPosting.department',
+            ])
+            ->whereNotNull('resume_path')
+            ->doesntHave('aiEvaluation')
+            ->when($request->job_posting_id, fn ($q) =>
+                $q->where('job_posting_id', $request->job_posting_id)
+            )
+            ->when($request->search, fn ($q) =>
+                $q->where(fn ($q2) =>
+                    $q2->where('first_name', 'like', "%{$request->search}%")
+                       ->orWhere('last_name',  'like', "%{$request->search}%")
+                       ->orWhere('email',       'like', "%{$request->search}%")
+                       ->orWhere('application_id', 'like', "%{$request->search}%")
+                )
+            )
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->per_page ?? 20);
+
+        return response()->json($applicants);
+    }
+
+    /**
      * GET /api/ai/evaluations
      * Returns all applicants that have been screened, with evaluation data.
      */
@@ -64,6 +93,13 @@ class AiScreeningController extends Controller
         // ── 1. Parse resume text ─────────────────────────────────────────────
         $parser     = new ResumeParserService();
         $resumeText = $parser->extractText($applicant->resume_path);
+
+        // Also capture structured fields from the CV for display in the screening UI
+        $parsedFields = [];
+        if (! empty(trim($resumeText))) {
+            // Reuse the same extraction logic via a quick local parse
+            $parsedFields = $this->extractStructuredFields($resumeText);
+        }
 
         if (empty(trim($resumeText))) {
             $resumeText = "Applicant Name: {$applicant->first_name} {$applicant->last_name}\nEmail: {$applicant->email}";
@@ -137,40 +173,45 @@ Respond with ONLY valid JSON — no markdown, no extra text:
 }
 EOT;
 
-        // ── 4. Call OpenAI ───────────────────────────────────────────────────
-        $apiKey = config('services.openai.key');
+        // ── 4. Call Groq (OpenAI-compatible) ────────────────────────────────
+        $apiKey = config('services.groq.key');
 
         if (empty($apiKey)) {
-            return response()->json(['message' => 'OpenAI API key is not configured.'], 503);
+            return response()->json(['message' => 'Groq API key is not configured. Add GROQ_API_KEY to your .env file.'], 503);
         }
 
         try {
             $response = Http::withToken($apiKey)
+                ->withOptions(['verify' => false])
                 ->timeout(90)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model'           => 'gpt-4o-mini',
-                    'messages'        => [
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile',
+                    'messages'    => [
                         [
                             'role'    => 'system',
-                            'content' => 'You are a precise HR screening AI. Always respond with valid JSON only, no markdown.',
+                            'content' => 'You are a precise HR screening AI. Always respond with valid JSON only. No markdown, no code fences, no extra text — just the raw JSON object.',
                         ],
                         ['role' => 'user', 'content' => $prompt],
                     ],
-                    'temperature'     => 0.2,
-                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.2,
+                    'max_tokens'  => 1024,
                 ]);
 
             if (! $response->successful()) {
-                return response()->json([
-                    'message' => 'AI service error: ' . $response->json('error.message', 'Unknown error'),
-                ], 503);
+                $errMsg = $response->json('error.message', 'Unknown error');
+                return response()->json(['message' => 'Groq AI service error: ' . $errMsg], 503);
             }
 
-            $content = $response->json('choices.0.message.content');
-            $aiData  = json_decode($content, true);
+            $rawContent = $response->json('choices.0.message.content');
+
+            // Strip any accidental markdown fences
+            $rawContent = preg_replace('/^```json\s*/i', '', trim($rawContent ?? ''));
+            $rawContent = preg_replace('/```\s*$/', '', $rawContent);
+
+            $aiData = json_decode($rawContent, true);
 
             if (! $aiData || ! isset($aiData['ai_score'])) {
-                return response()->json(['message' => 'Failed to parse AI response.'], 500);
+                return response()->json(['message' => 'Failed to parse Groq AI response. Raw: ' . substr($rawContent, 0, 200)], 500);
             }
 
         } catch (\Exception $e) {
@@ -187,10 +228,12 @@ EOT;
 
         // ── 6. Persist evaluation ────────────────────────────────────────────
         $scoreBreakdown = $aiData['score_breakdown'] ?? [];
-        // Attach remarks into breakdown for frontend display
+        // Attach per-category remarks into breakdown for frontend display
         $scoreBreakdown['education_remarks']  = $aiData['education_remarks']  ?? null;
         $scoreBreakdown['experience_remarks'] = $aiData['experience_remarks'] ?? null;
         $scoreBreakdown['skills_remarks']     = $aiData['skills_remarks']     ?? null;
+        // Attach the raw parsed CV fields so the UI can show what was extracted
+        $scoreBreakdown['parsed_cv'] = $parsedFields;
 
         $evaluation = AiEvaluation::updateOrCreate(
             ['applicant_id' => $applicant->id],
@@ -226,7 +269,7 @@ EOT;
     public function hrReview(Request $request, Applicant $applicant): JsonResponse
     {
         $data = $request->validate([
-            'hr_interpretation' => ['required', 'string'],
+            'hr_interpretation' => ['nullable', 'string'],
             'hr_decision'       => ['required', 'in:qualified,not_qualified,pending'],
         ]);
 
@@ -269,5 +312,70 @@ EOT;
             });
 
         return response()->json(['rankings' => $applicants]);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Extract structured personal / professional fields from raw resume text.
+     * Mirrors the logic in ResumeParserController so the screening UI can
+     * display what was found in the CV even without a separate parse call.
+     */
+    private function extractStructuredFields(string $text): array
+    {
+        // Email
+        $email = '';
+        if (preg_match('/[\w.+\-]+@[\w\-]+\.[\w.\-]+/', $text, $m)) {
+            $email = strtolower(trim($m[0]));
+        }
+
+        // Phone
+        $phone = '';
+        if (preg_match('/(?:\+?63|0)[\s\-]?9\d{2}[\s\-]?\d{3}[\s\-]?\d{4}/', $text, $m)) {
+            $phone = preg_replace('/[\s\-]/', '', $m[0]);
+        } elseif (preg_match('/\+?\d[\d\s\-().]{8,}\d/', $text, $m)) {
+            $phone = preg_replace('/[\s\-().]+/', '', $m[0]);
+        }
+
+        // Education section
+        $education = '';
+        $eduHeaders = ['EDUCATION', 'EDUCATIONAL BACKGROUND', 'ACADEMIC BACKGROUND'];
+        $nextSections = 'EDUCATION|EXPERIENCE|WORK HISTORY|SKILLS|REFERENCES|CERTIFICATES|ACHIEVEMENTS|AWARDS|OBJECTIVE|SUMMARY|CONTACT|PERSONAL';
+        $eduPattern = implode('|', array_map('preg_quote', $eduHeaders));
+        if (preg_match('/(?:' . $eduPattern . ')[\s:]*\n(.*?)(?=(?:' . $nextSections . ')[\s:]|\Z)/is', $text, $m)) {
+            $education = trim($m[1]);
+        }
+
+        // Experience section
+        $experience = '';
+        $expHeaders = ['EXPERIENCE', 'WORK HISTORY', 'EMPLOYMENT HISTORY', 'WORK EXPERIENCE'];
+        $expPattern = implode('|', array_map('preg_quote', $expHeaders));
+        if (preg_match('/(?:' . $expPattern . ')[\s:]*\n(.*?)(?=(?:' . $nextSections . ')[\s:]|\Z)/is', $text, $m)) {
+            $experience = trim($m[1]);
+        }
+
+        // Skills keywords
+        $skillKeywords = [
+            'PHP', 'JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'C++',
+            'React', 'Vue', 'Angular', 'Node.js', 'Laravel', 'MySQL', 'PostgreSQL',
+            'MongoDB', 'SQL', 'Docker', 'AWS', 'Git', 'HTML', 'CSS',
+            'Microsoft Office', 'Excel', 'PowerPoint', 'Leadership', 'Communication',
+            'Teamwork', 'Data Analysis', 'Marketing', 'Sales', 'Customer Service', 'Accounting',
+        ];
+        $skills = [];
+        foreach ($skillKeywords as $skill) {
+            if (preg_match('/\b' . preg_quote($skill, '/') . '\b/i', $text)) {
+                $skills[] = $skill;
+            }
+        }
+
+        return [
+            'email'      => $email,
+            'phone'      => $phone,
+            'education'  => $education,
+            'experience' => $experience,
+            'skills'     => $skills,
+            'raw_length' => strlen($text),
+        ];
     }
 }
