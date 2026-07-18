@@ -86,5 +86,8 @@ class DatabaseSeeder extends Seeder
                 ['Department Head', 'depthead@artms.com',   'DeptHead@2024'],
             ]
         );
+
+        $this->call(ManpowerRequestSeeder::class);
+        $this->call(JobPostingSeeder::class);
     }
 }

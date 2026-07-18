@@ -125,6 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── AI Screening ─────────────────────────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin')->group(function () {
+        Route::get('ai/evaluations', [AiScreeningController::class, 'index']);
         Route::post('ai/screen/{applicant}', [AiScreeningController::class, 'screen']);
         Route::patch('ai/review/{applicant}', [AiScreeningController::class, 'hrReview']);
         Route::get('ai/rankings', [AiScreeningController::class, 'rankings']);

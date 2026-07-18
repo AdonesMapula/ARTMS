@@ -47,6 +47,14 @@ return [
             'report' => false,
         ],
 
+        // Resumes stored locally, served via signed URLs through the API
+        'resumes' => [
+            'driver'     => 'local',
+            'root'       => storage_path('app/resumes'),
+            'throw'      => false,
+            'report'     => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

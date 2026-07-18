@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ResumeParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,197 +12,274 @@ class ResumeParserController extends Controller
 {
     /**
      * POST /api/public/parse-resume
-     * Accepts image or PDF resume, extracts text using OCR, and returns structured data
+     * Accepts PDF, DOCX, DOC, or TXT resume, extracts text, returns structured data.
      */
     public function parse(Request $request): JsonResponse
     {
         $request->validate([
-            'resume' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'], // 10MB max
+            'resume' => ['required', 'file', 'mimes:pdf,doc,docx,txt', 'max:10240'],
         ]);
 
         try {
-            $file = $request->file('resume');
-            $extension = $file->getClientOriginalExtension();
-            
-            // Store temporarily
-            $path = $file->store('temp-resumes', 'local');
-            $fullPath = storage_path('app/' . $path);
+            $file      = $request->file('resume');
+            $appId     = 'parse-' . uniqid();
+            $storedPath = $file->store("temp-resumes/{$appId}", 'local');
 
-            // Extract text based on file type
-            $extractedText = '';
-            
-            if (in_array($extension, ['jpg', 'jpeg', 'png'])) {
-                // For images, we'll use a simple regex-based extraction
-                // In production, integrate with Tesseract OCR or cloud OCR service
-                $extractedText = $this->extractTextFromImage($fullPath);
-            } elseif ($extension === 'pdf') {
-                // For PDFs, we'll use a simple text extraction
-                // In production, use libraries like Smalot\PdfParser or pdftotext
-                $extractedText = $this->extractTextFromPdf($fullPath);
+            // Use the shared ResumeParserService (smalot/pdfparser + phpoffice/phpword)
+            $parser      = new ResumeParserService();
+            $rawText     = $parser->extractText($storedPath);
+
+            // Clean up temp file
+            Storage::disk('local')->delete($storedPath);
+
+            if (empty(trim($rawText))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not extract text from this file. Please fill in the form manually.',
+                ], 422);
             }
 
-            // Parse the extracted text into structured data
-            $parsedData = $this->parseResumeText($extractedText);
-
-            // Clean up temporary file
-            Storage::disk('local')->delete($path);
+            $parsed = $this->parseResumeText($rawText);
 
             return response()->json([
-                'success' => true,
-                'data' => $parsedData,
-                'raw_text' => $extractedText, // For debugging
+                'success'  => true,
+                'data'     => $parsed,
+                'raw_text' => $rawText,   // kept for debugging; remove in production
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Resume parsing error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to parse resume. Please try again or enter details manually.',
-                'error' => $e->getMessage(),
+                'message' => 'Failed to parse resume. Please fill in the form manually.',
             ], 500);
         }
     }
 
-    /**
-     * Extract text from image file
-     * This is a placeholder - in production, integrate with Tesseract or cloud OCR
-     */
-    private function extractTextFromImage(string $path): string
-    {
-        // Check if Tesseract is available
-        if ($this->isTesseractAvailable()) {
-            try {
-                // Using shell_exec to call tesseract directly
-                $output = shell_exec("tesseract \"$path\" stdout 2>&1");
-                if ($output) {
-                    return trim($output);
-                }
-            } catch (\Exception $e) {
-                Log::warning('Tesseract OCR failed: ' . $e->getMessage());
-            }
-        }
+    // ── Text → structured data ────────────────────────────────────────────────
 
-        // Fallback: Return empty string with note
-        // In production, use cloud OCR services like:
-        // - Google Cloud Vision API
-        // - AWS Textract
-        // - Azure Computer Vision
-        return "OCR_NOT_AVAILABLE: Please install Tesseract OCR or integrate a cloud OCR service.";
-    }
-
-    /**
-     * Extract text from PDF file
-     */
-    private function extractTextFromPdf(string $path): string
-    {
-        // Simple approach using pdftotext if available
-        if ($this->isPdfToTextAvailable()) {
-            try {
-                $output = shell_exec("pdftotext \"$path\" - 2>&1");
-                if ($output) {
-                    return trim($output);
-                }
-            } catch (\Exception $e) {
-                Log::warning('pdftotext failed: ' . $e->getMessage());
-            }
-        }
-
-        // Fallback
-        return "PDF_PARSING_NOT_AVAILABLE: Please install pdftotext or use a PHP PDF parser library.";
-    }
-
-    /**
-     * Parse resume text into structured data using regex patterns
-     */
     private function parseResumeText(string $text): array
     {
-        $data = [
-            'firstName' => '',
-            'lastName' => '',
-            'email' => '',
-            'phone' => '',
-            'location' => '',
-            'skills' => [],
-            'education' => '',
-            'experience' => '',
+        return [
+            'firstName'  => $this->extractFirstName($text),
+            'lastName'   => $this->extractLastName($text),
+            'middleName' => $this->extractMiddleName($text),
+            'email'      => $this->extractEmail($text),
+            'phone'      => $this->extractPhone($text),
+            'address'    => $this->extractAddress($text),
+            'gender'     => $this->extractGender($text),
+            'dateOfBirth'=> $this->extractDateOfBirth($text),
+            'nationality'=> $this->extractNationality($text),
+            'civilStatus'=> $this->extractCivilStatus($text),
+            'skills'     => $this->extractSkills($text),
+            'education'  => $this->extractSection($text, ['EDUCATION', 'EDUCATIONAL BACKGROUND', 'ACADEMIC BACKGROUND']),
+            'experience' => $this->extractSection($text, ['EXPERIENCE', 'WORK HISTORY', 'EMPLOYMENT HISTORY', 'WORK EXPERIENCE']),
         ];
+    }
 
-        // Extract email
-        if (preg_match('/([a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/', $text, $matches)) {
-            $data['email'] = $matches[1];
+    // ── Field extractors ──────────────────────────────────────────────────────
+
+    private function extractEmail(string $text): string
+    {
+        if (preg_match('/[\w.+\-]+@[\w\-]+\.[\w.\-]+/', $text, $m)) {
+            return strtolower(trim($m[0]));
         }
+        return '';
+    }
 
-        // Extract phone (Philippine format and international)
-        if (preg_match('/(\+?63|0)?[\s\-]?9\d{2}[\s\-]?\d{3}[\s\-]?\d{4}/', $text, $matches)) {
-            $data['phone'] = preg_replace('/[\s\-]/', '', $matches[0]);
-        } elseif (preg_match('/(\+?\d{1,3}[\s\-]?)?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}/', $text, $matches)) {
-            $data['phone'] = preg_replace('/[\s\-\(\)]/', '', $matches[0]);
+    private function extractPhone(string $text): string
+    {
+        // Philippine mobile: 09xxxxxxxxx or +639xxxxxxxxx
+        if (preg_match('/(?:\+?63|0)[\s\-]?9\d{2}[\s\-]?\d{3}[\s\-]?\d{4}/', $text, $m)) {
+            return preg_replace('/[\s\-]/', '', $m[0]);
         }
+        // Generic international
+        if (preg_match('/\+?\d[\d\s\-().]{8,}\d/', $text, $m)) {
+            return preg_replace('/[\s\-().]+/', '', $m[0]);
+        }
+        return '';
+    }
 
-        // Extract name (usually at the top, before email)
-        $lines = explode("\n", $text);
-        $topLines = array_slice($lines, 0, 5);
-        foreach ($topLines as $line) {
-            $line = trim($line);
-            // Look for a line with 2-4 words, likely a name
-            if (preg_match('/^([A-Z][a-z]+)\s+([A-Z][a-z]+)(\s+[A-Z][a-z]+)?$/i', $line, $matches)) {
-                $data['firstName'] = $matches[1] ?? '';
-                $data['lastName'] = $matches[2] ?? '';
-                if (isset($matches[3])) {
-                    $data['lastName'] .= ' ' . trim($matches[3]);
+    private function extractFirstName(string $text): string
+    {
+        return $this->extractNamePart($text, 'first');
+    }
+
+    private function extractLastName(string $text): string
+    {
+        return $this->extractNamePart($text, 'last');
+    }
+
+    private function extractMiddleName(string $text): string
+    {
+        return $this->extractNamePart($text, 'middle');
+    }
+
+    /**
+     * Tries to find the full name from the first non-empty lines of the resume.
+     * Handles:
+     *  - Title-case:  "Maria Cruz Santos"
+     *  - ALL-CAPS:    "MARIA CRUZ SANTOS"
+     *  - Particles:   "Juan dela Cruz", "Maria de los Santos"
+     * Returns a specific part: first | last | middle.
+     */
+    private function extractNamePart(string $text, string $part): string
+    {
+        $lines = array_filter(
+            array_map('trim', explode("\n", $text)),
+            fn($l) => strlen($l) > 1
+        );
+        $lines = array_values($lines);
+
+        // Skip lines that are clearly not names
+        $skip = ['resume', 'curriculum vitae', 'cv', 'objective', 'summary', 'profile',
+                  'contact', 'address', 'email', 'phone', 'mobile', 'http', '@', 'www',
+                  'date', 'birth', 'gender', 'civil', 'nationality', 'skills', 'education',
+                  'experience', 'references', 'page'];
+
+        foreach (array_slice($lines, 0, 10) as $line) {
+            $lower = strtolower($line);
+            $isSkip = false;
+            foreach ($skip as $s) {
+                if (str_contains($lower, $s)) { $isSkip = true; break; }
+            }
+            if ($isSkip) continue;
+
+            // Normalize ALL-CAPS line to Title Case for matching
+            $normalized = preg_match('/^[A-Z\s]+$/', $line)
+                ? mb_convert_case($line, MB_CASE_TITLE, 'UTF-8')
+                : $line;
+
+            // Allow particles: de, dela, del, van, von, los, las, ng, etc.
+            $word     = '[A-ZÑa-záéíóúàèìòùñüÑ][a-záéíóúàèìòùñüÑ\']+\.?';
+            $particle = '(?:de|dela|del|de los|de las|van|von|ng|ni|mga|jr\.?|sr\.?|ii|iii)';
+            $nameRx   = "/^((?:{$particle}\s+)?{$word})(?:\s+((?:{$particle}\s+)?{$word}))?(?:\s+((?:{$particle}\s+)?{$word}))?(?:\s+((?:{$particle}\s+)?{$word}))?$/ui";
+
+            if (preg_match($nameRx, $normalized, $m)) {
+                // Collect non-empty capture groups
+                $parts = array_values(array_filter(array_slice($m, 1), fn($p) => trim($p) !== ''));
+
+                if (count($parts) >= 2) {
+                    return match ($part) {
+                        'first'  => trim($parts[0]),
+                        'last'   => trim($parts[count($parts) - 1]),
+                        'middle' => count($parts) === 3 ? trim($parts[1]) : '',
+                        default  => '',
+                    };
                 }
-                break;
             }
         }
 
-        // Extract location (look for city/province patterns)
-        if (preg_match('/(Manila|Quezon City|Makati|Pasig|Cebu|Davao|Taguig|Parañaque|Caloocan|Las Piñas|Antipolo|Marikina|Muntinlupa|Pasay|Valenzuela|Malabon|Navotas|San Juan|Mandaluyong)[,\s]+(Philippines|Metro Manila|NCR)?/i', $text, $matches)) {
-            $data['location'] = trim($matches[0]);
+        return '';
+    }
+
+    private function extractAddress(string $text): string
+    {
+        // Look for explicit address label
+        if (preg_match('/(?:address|home address|location)[:\s]+([^\n]{5,80})/i', $text, $m)) {
+            return trim($m[1]);
         }
 
-        // Extract skills (common keywords)
-        $skillKeywords = [
-            'PHP', 'JavaScript', 'Python', 'Java', 'React', 'Vue', 'Angular', 'Node.js', 'Laravel',
-            'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Git', 'Docker', 'AWS', 'Azure',
-            'HTML', 'CSS', 'TypeScript', 'C++', 'C#', '.NET', 'Spring', 'Django',
-            'Project Management', 'Leadership', 'Communication', 'Teamwork', 'Problem Solving',
-            'Microsoft Office', 'Excel', 'PowerPoint', 'Data Analysis', 'Marketing', 'Sales'
+        // Philippine city names
+        $cities = ['Manila', 'Quezon City', 'Makati', 'Pasig', 'Cebu City', 'Davao', 'Taguig',
+                   'Parañaque', 'Caloocan', 'Las Piñas', 'Antipolo', 'Marikina', 'Muntinlupa',
+                   'Pasay', 'Valenzuela', 'Malabon', 'Navotas', 'San Juan', 'Mandaluyong',
+                   'Lapu-Lapu', 'Mandaue', 'Zamboanga', 'Cagayan de Oro', 'Iloilo', 'Bacolod'];
+
+        foreach ($cities as $city) {
+            if (stripos($text, $city) !== false) {
+                // Grab the line containing the city name
+                foreach (explode("\n", $text) as $line) {
+                    if (stripos($line, $city) !== false) {
+                        return trim($line);
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function extractGender(string $text): string
+    {
+        if (preg_match('/(?:gender|sex)[:\s]+(male|female|non.binary|prefer not to say)/i', $text, $m)) {
+            return ucfirst(strtolower($m[1]));
+        }
+        // Standalone word on its own line
+        if (preg_match('/^\s*(Male|Female)\s*$/im', $text, $m)) {
+            return ucfirst(strtolower(trim($m[1])));
+        }
+        return '';
+    }
+
+    private function extractDateOfBirth(string $text): string
+    {
+        // Label-based
+        if (preg_match('/(?:date of birth|birthday|dob)[:\s]+(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{4}|\w+ \d{1,2},?\s*\d{4}|\d{4}[\-\/]\d{2}[\-\/]\d{2})/i', $text, $m)) {
+            $date = trim($m[1]);
+            try {
+                return date('Y-m-d', strtotime($date)) ?: '';
+            } catch (\Throwable) {
+                return '';
+            }
+        }
+        return '';
+    }
+
+    private function extractNationality(string $text): string
+    {
+        if (preg_match('/(?:nationality|citizenship)[:\s]+([A-Za-z]+)/i', $text, $m)) {
+            return trim($m[1]);
+        }
+        if (stripos($text, 'Filipino') !== false) return 'Filipino';
+        return '';
+    }
+
+    private function extractCivilStatus(string $text): string
+    {
+        $statuses = ['single', 'married', 'divorced', 'widowed', 'separated', 'annulled'];
+        if (preg_match('/(?:civil status|marital status)[:\s]+(single|married|divorced|widowed|separated|annulled)/i', $text, $m)) {
+            return ucfirst(strtolower($m[1]));
+        }
+        // Standalone word on its own line
+        foreach ($statuses as $status) {
+            if (preg_match('/^\s*' . $status . '\s*$/im', $text)) {
+                return ucfirst($status);
+            }
+        }
+        return '';
+    }
+
+    private function extractSkills(string $text): array
+    {
+        $keywords = [
+            'PHP', 'JavaScript', 'TypeScript', 'Python', 'Java', 'C#', 'C++', 'Go', 'Ruby',
+            'React', 'Vue', 'Angular', 'Next.js', 'Node.js', 'Laravel', 'Django', 'Spring',
+            'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'SQL', 'Docker', 'Kubernetes',
+            'AWS', 'Azure', 'GCP', 'Git', 'Linux', 'HTML', 'CSS', 'REST', 'GraphQL',
+            'Microsoft Office', 'Excel', 'PowerPoint', 'Word', 'SAP', 'Salesforce',
+            'Project Management', 'Leadership', 'Communication', 'Teamwork',
+            'Data Analysis', 'Marketing', 'Sales', 'Customer Service', 'Accounting',
+            'AutoCAD', 'Photoshop', 'Illustrator', 'Figma', 'Canva',
         ];
 
-        foreach ($skillKeywords as $skill) {
-            if (stripos($text, $skill) !== false) {
-                $data['skills'][] = $skill;
+        $found = [];
+        foreach ($keywords as $skill) {
+            if (preg_match('/\b' . preg_quote($skill, '/') . '\b/i', $text)) {
+                $found[] = $skill;
             }
         }
-
-        // Extract education section
-        if (preg_match('/(?:EDUCATION|EDUCATIONAL BACKGROUND)(.*?)(?:EXPERIENCE|WORK HISTORY|SKILLS|$)/is', $text, $matches)) {
-            $data['education'] = trim($matches[1]);
-        }
-
-        // Extract experience section
-        if (preg_match('/(?:EXPERIENCE|WORK HISTORY|EMPLOYMENT)(.*?)(?:EDUCATION|SKILLS|REFERENCES|$)/is', $text, $matches)) {
-            $data['experience'] = trim($matches[1]);
-        }
-
-        return $data;
+        return $found;
     }
 
-    /**
-     * Check if Tesseract OCR is available
-     */
-    private function isTesseractAvailable(): bool
+    private function extractSection(string $text, array $headers): string
     {
-        $output = shell_exec('tesseract --version 2>&1');
-        return $output && stripos($output, 'tesseract') !== false;
-    }
+        $pattern = implode('|', array_map('preg_quote', $headers));
+        $nextHeaders = 'EDUCATION|EXPERIENCE|WORK HISTORY|SKILLS|REFERENCES|CERTIFICATES|ACHIEVEMENTS|AWARDS|OBJECTIVE|SUMMARY|CONTACT|PERSONAL';
 
-    /**
-     * Check if pdftotext is available
-     */
-    private function isPdfToTextAvailable(): bool
-    {
-        $output = shell_exec('pdftotext -v 2>&1');
-        return $output && (stripos($output, 'pdftotext') !== false || stripos($output, 'version') !== false);
+        if (preg_match('/(?:' . $pattern . ')[\s:]*\n(.*?)(?=(?:' . $nextHeaders . ')[\s:]|\Z)/is', $text, $m)) {
+            return trim($m[1]);
+        }
+        return '';
     }
 }
