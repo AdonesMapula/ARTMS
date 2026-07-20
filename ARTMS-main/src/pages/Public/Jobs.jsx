@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   MapPin, Briefcase, Filter, Calendar, Search, Clock, 
   GraduationCap, Building2, Award, FileText, Users, 
-  CheckCircle2, AlertCircle, Upload, Loader2, Mail, 
-  Phone, MapPinned, Globe, MessageSquare, X 
+  CheckCircle2, AlertCircle,
 } from "lucide-react";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
@@ -14,12 +14,12 @@ import EmptyState from "../../components/ui/EmptyState";
 import Pagination from "../../components/ui/Pagination";
 import AlertModal from "../../components/ui/AlertModal";
 import Modal from "../../components/ui/Modal";
-import Input from "../../components/ui/Input";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export default function Jobs() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -28,19 +28,6 @@ export default function Jobs() {
   const [alertModal, setAlertModal] = useState({ open: false, variant: "info", title: "", message: "" });
   const [selectedJob, setSelectedJob] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  const [files, setFiles] = useState({ resume: null, supporting: null });
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    location: "",
-    linkedin: "",
-    portfolio: "",
-    coverLetter: "",
-  });
   const pageSize = 6;
 
   useEffect(() => {
@@ -82,87 +69,8 @@ export default function Jobs() {
     }
   };
 
-  const handleApplyNow = async (jobId) => {
-    try {
-      const response = await axios.get(`${API_URL}/public/job-postings/${jobId}`);
-      setSelectedJob(response.data.posting || response.data);
-      setShowApplyModal(true);
-      setShowDetailsModal(false);
-    } catch (error) {
-      console.error("Error fetching job:", error);
-      setAlertModal({
-        open: true,
-        variant: "error",
-        title: "Failed to Load Application",
-        message: "Unable to load application form. Please try again.",
-      });
-    }
-  };
-
-  const handleResumeUpload = async (file) => {
-    if (!file) return;
-    setFiles((s) => ({ ...s, resume: file }));
-    setParsing(true);
-
-    try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("resume", file);
-
-      const response = await axios.post(`${API_URL}/public/parse-resume`, formDataUpload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (response.data.success && response.data.data) {
-        const parsed = response.data.data;
-        setFormData((prev) => ({
-          ...prev,
-          firstName: parsed.firstName || prev.firstName,
-          lastName: parsed.lastName || prev.lastName,
-          email: parsed.email || prev.email,
-          phone: parsed.phone || prev.phone,
-          location: parsed.location || prev.location,
-        }));
-
-        setAlertModal({
-          open: true,
-          variant: "success",
-          title: "Resume Parsed Successfully",
-          message: "Your resume has been analyzed and form fields have been auto-filled.",
-        });
-      }
-    } catch (error) {
-      console.error("Error parsing resume:", error);
-      setAlertModal({
-        open: true,
-        variant: "warning",
-        title: "Partial Parsing",
-        message: "We couldn't fully parse your resume. Please fill in the remaining fields manually.",
-      });
-    } finally {
-      setParsing(false);
-    }
-  };
-
-  const handleSubmitApplication = () => {
-    // Placeholder - add real submission logic here
-    setAlertModal({
-      open: true,
-      variant: "success",
-      title: "Application Submitted",
-      message: "Your application has been submitted successfully. We'll review it and get back to you soon!",
-    });
-    setShowApplyModal(false);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      location: "",
-      linkedin: "",
-      portfolio: "",
-      coverLetter: "",
-    });
-    setFiles({ resume: null, supporting: null });
+  const handleApplyNow = (jobId) => {
+    navigate(`/apply/${jobId}`);
   };
 
   // Parse additional description field
@@ -348,7 +256,7 @@ export default function Jobs() {
                   {/* Department Badge */}
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wide text-[#F97316]">
-                      {job.department?.name || "N/A"}
+                      {job.department?.department_name ?? job.department?.name ?? "N/A"}
                     </span>
                   </div>
                   
@@ -438,22 +346,6 @@ export default function Jobs() {
           parseAdditionalInfo={parseAdditionalInfo}
         />
       )}
-
-      {/* Apply Modal */}
-      {selectedJob && (
-        <ApplyModal
-          open={showApplyModal}
-          job={selectedJob}
-          formData={formData}
-          setFormData={setFormData}
-          files={files}
-          setFiles={setFiles}
-          parsing={parsing}
-          handleResumeUpload={handleResumeUpload}
-          onClose={() => setShowApplyModal(false)}
-          onSubmit={handleSubmitApplication}
-        />
-      )}
     </div>
   );
 }
@@ -479,7 +371,7 @@ function JobDetailsModal({ open, job, onClose, onApply, parseAdditionalInfo }) {
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
             <Briefcase className="h-3.5 w-3.5 text-[#F97316]" />
             <span className="text-xs font-bold uppercase tracking-wider">
-              {department.name || "N/A"}
+              {department.department_name ?? department.name ?? "N/A"}
             </span>
           </div>
           <h2 className="text-2xl font-extrabold">{jobLibrary.job_title || "Untitled Position"}</h2>
@@ -648,205 +540,4 @@ function JobDetailsModal({ open, job, onClose, onApply, parseAdditionalInfo }) {
     </Modal>
   );
 }
-
-// Apply Modal Component
-function ApplyModal({ open, job, formData, setFormData, files, setFiles, parsing, handleResumeUpload, onClose, onSubmit }) {
-  if (!job) return null;
-  
-  const jobTitle = job.job_library?.job_title || "this position";
-  const department = job.department?.name || "N/A";
-
-  return (
-    <Modal
-      open={open}
-      title=""
-      onClose={onClose}
-      className="max-w-3xl"
-    >
-      <div className="max-h-[calc(90vh-200px)] overflow-y-auto px-1">
-        {/* Header */}
-        <div className="mb-6 rounded-xl bg-gradient-to-br from-[#F97316] to-[#ea6a0a] p-6 text-white">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 backdrop-blur-sm">
-            <FileText className="h-3.5 w-3.5" />
-            <span className="text-xs font-bold uppercase tracking-wider">Application Form</span>
-          </div>
-          <h2 className="text-2xl font-extrabold">Apply for {jobTitle}</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Badge className="bg-white/20 text-white">
-              <Briefcase className="mr-1 h-3.5 w-3.5" />
-              {department}
-            </Badge>
-            <Badge className="bg-white/20 text-white">
-              <Users className="mr-1 h-3.5 w-3.5" />
-              {job.vacancies_count} {job.vacancies_count > 1 ? "openings" : "opening"}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {/* Personal Information */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <Users className="h-5 w-5 text-[#111A62]" />
-              <h3 className="font-bold text-[#111A62]">Personal Information</h3>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="First Name"
-                placeholder="e.g., Alex"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                icon={<Users className="h-4 w-4" />}
-              />
-              <Input
-                label="Last Name"
-                placeholder="e.g., Rivera"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                icon={<Users className="h-4 w-4" />}
-              />
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="you@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                icon={<Mail className="h-4 w-4" />}
-              />
-              <Input
-                label="Mobile Number"
-                placeholder="+63..."
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                icon={<Phone className="h-4 w-4" />}
-              />
-              <Input
-                label="Current Location"
-                placeholder="City, Province"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                icon={<MapPinned className="h-4 w-4" />}
-              />
-            </div>
-          </div>
-
-          {/* Resume Upload */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <Upload className="h-5 w-5 text-[#F97316]" />
-              <h3 className="font-bold text-[#111A62]">Resume & Documents</h3>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FileUploadField
-                label="Resume (PDF/Image)"
-                file={files.resume}
-                parsing={parsing}
-                onChange={handleResumeUpload}
-              />
-              <FileUploadField
-                label="Supporting Documents (optional)"
-                file={files.supporting}
-                onChange={(f) => setFiles((s) => ({ ...s, supporting: f }))}
-              />
-            </div>
-            {parsing && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-[#111A62]/5 border border-[#111A62]/10 px-3 py-2 text-sm text-[#111A62]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Analyzing your resume with AI...</span>
-              </div>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              Upload your resume and we'll automatically extract information to fill the form fields.
-            </p>
-          </div>
-
-          {/* Additional Details */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <Globe className="h-5 w-5 text-[#111A62]" />
-              <h3 className="font-bold text-[#111A62]">Additional Details (Optional)</h3>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="LinkedIn Profile"
-                placeholder="https://linkedin.com/in/..."
-                value={formData.linkedin}
-                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-                icon={<Globe className="h-4 w-4" />}
-              />
-              <Input
-                label="Portfolio / Website"
-                placeholder="https://..."
-                value={formData.portfolio}
-                onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
-                icon={<Globe className="h-4 w-4" />}
-              />
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  <MessageSquare className="h-4 w-4 text-[#F97316]" />
-                  Short Cover Note
-                </label>
-                <textarea
-                  className="min-h-28 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#111A62] focus:ring-2 focus:ring-[#111A62]/20"
-                  placeholder="Tell us briefly why you're a great fit..."
-                  value={formData.coverLetter}
-                  onChange={(e) => setFormData({ ...formData, coverLetter: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <p className="text-xs text-slate-500">
-              By submitting, you confirm the information provided is accurate.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} className="border-slate-300">
-                Cancel
-              </Button>
-              <Button
-                onClick={onSubmit}
-                className="bg-[#F97316] hover:bg-[#ea6a0a]"
-              >
-                Submit Application
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// File Upload Component
-function FileUploadField({ label, file, parsing, onChange }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-semibold text-slate-800">{label}</label>
-      <label
-        className={`flex h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed ${
-          parsing ? "border-[#111A62] bg-[#111A62]/5" : "border-slate-300 bg-white hover:bg-slate-50"
-        } text-sm text-slate-600 transition`}
-      >
-        {parsing ? (
-          <Loader2 className="h-6 w-6 animate-spin text-[#111A62]" />
-        ) : (
-          <Upload className="h-6 w-6 text-slate-500" />
-        )}
-        <span className="font-semibold text-slate-700">
-          {file?.name || "Click to choose a file"}
-        </span>
-        {parsing && <span className="text-xs text-[#111A62]">Parsing...</span>}
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          className="sr-only"
-          onChange={(e) => onChange?.(e.target.files?.[0] || null)}
-          disabled={parsing}
-        />
-      </label>
-    </div>
-  );
-}
-
+

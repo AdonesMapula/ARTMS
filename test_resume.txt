@@ -1,0 +1,18 @@
+Juan dela Cruz
+juan.delacruz@email.com
+09171234567
+Date of Birth: January 15, 1995
+Gender: Male
+Civil Status: Single
+Nationality: Filipino
+Address: Cebu City, Philippines
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of San Carlos, 2017
+
+EXPERIENCE
+Software Developer at ABC Company 2018 to Present
+
+SKILLS
+PHP JavaScript React MySQL Git
