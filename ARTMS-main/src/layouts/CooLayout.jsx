@@ -5,12 +5,17 @@ import { FiGrid, FiClipboard, FiBell, FiBookOpen, FiCheckSquare, FiBriefcase } f
 
 export default function CooLayout() {
   const items = [
+    // OVERVIEW Section
+    { label: "OVERVIEW", type: "label" },
     {
       label: "Dashboard",
       to: "/coo/dashboard",
       icon: <FiGrid />,
       end: true,
     },
+    
+    // APPROVALS Section
+    { label: "APPROVALS", type: "label" },
     {
       label: "Approvals",
       icon: <FiCheckSquare />,
@@ -32,6 +37,9 @@ export default function CooLayout() {
         },
       ],
     },
+    
+    // SYSTEM Section
+    { label: "SYSTEM", type: "label" },
     {
       label: "Notifications",
       to: "/coo/notifications",

@@ -10,7 +10,12 @@ import {
 
 export default function DepartmentHeadLayout() {
   const items = [
+    // OVERVIEW Section
+    { label: "OVERVIEW", type: "label" },
     { label: "Dashboard", to: "/department-head/dashboard", icon: <FiHome /> },
+    
+    // REQUESTS Section
+    { label: "REQUESTS", type: "label" },
     {
       label: "Manpower Request",
       to: "/department-head/manpower-request",
@@ -21,6 +26,9 @@ export default function DepartmentHeadLayout() {
       to: "/department-head/request-history",
       icon: <FiClock />,
     },
+    
+    // SYSTEM Section
+    { label: "SYSTEM", type: "label" },
     { label: "Notifications", to: "/department-head/notifications", icon: <FiBell />, badge: "3" },
   ];
 

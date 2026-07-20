@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, KeyRound, Eye, EyeOff, ArrowRight, ShieldCheck, ArrowLeft } from "lucide-react";
-import artmsLogo from "../../assets/Logo/ARTMS_LOGO.png";
+import artmsLogo from "../../assets/Logo/ARTMS_LOGO_white.png";
+import loginBg from "../../assets/Backgrounds/login-bg.jpg";
 import { useAuth } from "../../context/AuthContext";
 import authService from "../../services/authService";
-
-const BG_IMAGE_URL =
-  "https://images.unsplash.com/photo-1524230507669-5ff97982bb5e?q=80&w=2000&auto=format&fit=crop";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -45,23 +43,46 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-100">
-      {/* Background photo */}
+    <div className="relative min-h-screen overflow-hidden bg-slate-900">
+      {/* Background photo — fixed + z-0 so it reliably paints as the base
+          layer regardless of any stacking context created higher up the
+          component tree (negative z-index can get trapped behind an
+          ancestor's own background in that situation, which is what was
+          happening before). */}
       <div
-        className="absolute inset-0 -z-20 bg-cover bg-center grayscale"
-        style={{ backgroundImage: `url(${BG_IMAGE_URL})` }}
+        className="fixed inset-0 z-0 scale-105 bg-cover bg-center"
+        style={{ backgroundImage: `url(${loginBg})` }}
         aria-hidden="true"
       />
-      {/* Soft white wash so the card and copy stay legible */}
+      {/* Layered navy vignette — darker toward the edges (where text sits),
+          lighter through the middle (where the photo and card breathe).
+          This replaces a flat transparent tint with an actual designed
+          scrim instead of a plain wash. */}
       <div
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-white via-white/85 to-slate-100/60"
+        className="fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(120% 65% at 50% 38%, rgba(6,15,90,0.10) 0%, rgba(6,15,90,0.55) 100%)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="fixed inset-0 z-0 bg-gradient-to-b from-[#060F5A]/45 via-transparent to-[#060F5A]/55"
+        aria-hidden="true"
+      />
+      {/* Soft accent glow, bottom-right — a bit of brand warmth without a hard shape */}
+      <div
+        className="pointer-events-none fixed -bottom-32 -right-24 z-0 h-96 w-96 rounded-full bg-[#F97316]/20 blur-[100px]"
         aria-hidden="true"
       />
 
+      {/* Everything else sits above the fixed background layers */}
+      <div className="relative z-10">
       {/* Back to public site */}
       <Link
         to="/"
-        className="absolute left-6 top-6 z-15 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-[#060F5A]"
+        className="fixed left-6 top-6 z-20 inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 transition-colors hover:text-white"
+        style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
       >
         <ArrowLeft size={16} />
         Back to website
@@ -70,19 +91,31 @@ export default function Login() {
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-16">
         {/* Logo + heading */}
         <div
-          className={`flex flex-col items-center text-center transition-all duration-700 ${
+          className={`relative flex flex-col items-center text-center transition-all duration-700 ${
             loaded ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
           }`}
         >
-          <img src={artmsLogo} alt="ARTMS logo" className="h-20 w-auto sm:h-24" />
-          <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {/* Soft glow behind the logo instead of a hard-edged box */}
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-40 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40 blur-3xl"
+            aria-hidden="true"
+          />
+          <img
+            src={artmsLogo}
+            alt="ARTMS logo"
+            className="h-20 w-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.35)] sm:h-24"
+          />
+          <p
+            className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-white/90"
+            style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
+          >
             Administrative Portal
           </p>
         </div>
 
         {/* Login card */}
         <div
-          className={`mt-8 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-900/10 transition-all duration-700 ${
+          className={`mt-8 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl shadow-black/30 transition-all duration-700 ${
             loaded ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
           style={{ transitionDelay: "120ms" }}
@@ -195,27 +228,28 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Role note */}
-        <p
-          className={`mt-5 flex items-center gap-1.5 text-xs text-slate-500 transition-all duration-700 ${
+        <div
+          className={`mt-6 max-w-lg text-center transition-all duration-700 ${
             loaded ? "opacity-100" : "opacity-0"
           }`}
           style={{ transitionDelay: "200ms" }}
         >
-          <ShieldCheck size={14} className="text-[var(--artms-accent)]" />
-          One login for Department Heads, HR Admins, and Super Admins — access is routed by role.
-        </p>
-
-        {/* Disclaimer */}
-        <p
-          className={`mt-3 max-w-md text-center text-xs font-medium leading-relaxed text-[#060F5A]/70 transition-all duration-700 ${
-            loaded ? "opacity-100" : "opacity-0"
-          }`}
-          style={{ transitionDelay: "260ms" }}
-        >
-          Unauthorized access to this HR Information System is strictly prohibited and subject to
-          organizational policy and legal action.
-        </p>
+          <p
+            className="flex items-center justify-center gap-1.5 text-xs font-medium text-white/90"
+            style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+          >
+            <ShieldCheck size={14} className="text-[#F97316]" />
+            One login for Department Heads, HR Admins, and Super Admins — access is routed by role.
+          </p>
+          <p
+            className="mt-2 text-xs font-medium leading-relaxed text-white/70"
+            style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+          >
+            Unauthorized access to this HR Information System is strictly prohibited and subject to
+            organizational policy and legal action.
+          </p>
+        </div>
+      </div>
       </div>
     </div>
   );

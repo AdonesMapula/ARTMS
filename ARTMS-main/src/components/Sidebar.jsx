@@ -9,13 +9,26 @@ import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
  * NavItem renders either:
  *   - a plain NavLink  (no `children` array)
  *   - a collapsible group with child NavLinks  (has `children` array)
+ *   - a section label (type: "label")
  *
  * Item shape:
  *   { label, to, icon?, end?, badge? }          — plain link
  *   { label, icon?, badge?, children: [...] }   — group (no `to`)
+ *   { label, type: "label" }                    — section header
  */
 function NavItem({ it }) {
   const location = useLocation();
+
+  // Section label
+  if (it.type === "label") {
+    return (
+      <li className="pt-4 first:pt-0">
+        <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          {it.label}
+        </p>
+      </li>
+    );
+  }
 
   // A group item has children but no `to`
   if (it.children?.length) {
@@ -152,7 +165,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           <ul className="space-y-1">
             {items.map((it, idx) => (
-              <NavItem key={it.to ?? `group-${idx}`} it={it} />
+              <NavItem key={it.to ?? it.type === "label" ? `label-${idx}` : `group-${idx}`} it={it} />
             ))}
           </ul>
         </nav>
