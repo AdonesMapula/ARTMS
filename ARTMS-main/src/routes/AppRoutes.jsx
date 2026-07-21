@@ -34,7 +34,6 @@ import AdminManpowerRequests from "../pages/Admin/ManpowerRequests";
 import JobLibrary from "../pages/Admin/JobLibrary";
 import JobPosting from "../pages/Admin/JobPosting";
 import Applicants from "../pages/Admin/Applicants";
-import ApplicantDetails from "../pages/Admin/ApplicantDetails";
 import AiScreening from "../pages/Admin/AiScreening";
 import Interviews from "../pages/Admin/Interviews";
 import Pipeline from "../pages/Admin/Pipeline";
@@ -101,7 +100,6 @@ export default function AppRoutes() {
             <Route path="job-library" element={<JobLibrary />} />
             <Route path="job-posting" element={<JobPosting />} />
             <Route path="applicants" element={<Applicants />} />
-            <Route path="applicants/:id" element={<ApplicantDetails />} />
             <Route path="ai-screening" element={<AiScreening />} />
             <Route path="interviews" element={<Interviews />} />
             <Route path="pipeline" element={<Pipeline />} />

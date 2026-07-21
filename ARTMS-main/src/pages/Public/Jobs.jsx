@@ -1,25 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { 
-  MapPin, Briefcase, Filter, Calendar, Search, Clock, 
-  GraduationCap, Building2, Award, FileText, Users, 
-  CheckCircle2, AlertCircle,
+  MapPin, Briefcase, Filter, Calendar, Search, Clock
 } from "lucide-react";
-import SearchBar from "../../components/ui/SearchBar";
-import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import Pagination from "../../components/ui/Pagination";
 import AlertModal from "../../components/ui/AlertModal";
-import Modal from "../../components/ui/Modal";
+import { JobDetailsModal, ApplyModal } from "../../modals";
+import Reveal from "../../components/ui/Reavel";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export default function Jobs() {
-  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -28,6 +23,7 @@ export default function Jobs() {
   const [alertModal, setAlertModal] = useState({ open: false, variant: "info", title: "", message: "" });
   const [selectedJob, setSelectedJob] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const pageSize = 6;
 
   useEffect(() => {
@@ -69,8 +65,21 @@ export default function Jobs() {
     }
   };
 
-  const handleApplyNow = (jobId) => {
-    navigate(`/apply/${jobId}`);
+  const handleApplyNow = async (jobId) => {
+    try {
+      const response = await axios.get(`${API_URL}/public/job-postings/${jobId}`);
+      setSelectedJob(response.data.posting || response.data);
+      setShowApplyModal(true);
+      setShowDetailsModal(false); // Close details modal if open
+    } catch (error) {
+      console.error("Error fetching job:", error);
+      setAlertModal({
+        open: true,
+        variant: "error",
+        title: "Failed to Load Application",
+        message: "Unable to load application form. Please try again.",
+      });
+    }
   };
 
   // Parse additional description field
@@ -141,34 +150,50 @@ export default function Jobs() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIi8+PC9nPjwvc3ZnPg==')] opacity-30"></div>
         <div className="relative mx-auto max-w-7xl">
           <div className="flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm">
-              <Search className="h-4 w-4 text-[#F97316]" />
-              <p className="text-xs font-bold uppercase tracking-wider text-white">
-                Career Opportunities
+            <Reveal>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm">
+                <Search className="h-4 w-4 text-[#F97316]" />
+                <p className="text-xs font-bold uppercase tracking-wider text-white">
+                  Career Opportunities
+                </p>
+              </div>
+            </Reveal>
+            
+            <Reveal delay={100}>
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Discover Your Next
+                <span className="block text-[#F97316]">Career Move</span>
+              </h1>
+            </Reveal>
+            
+            <Reveal delay={200}>
+              <p className="mt-6 max-w-3xl text-base text-slate-200 sm:text-lg">
+                Explore exciting opportunities across departments. Search, filter, and apply online—no account required.
               </p>
-            </div>
-            <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Discover Your Next
-              <span className="block text-[#F97316]">Career Move</span>
-            </h1>
-            <p className="mt-6 max-w-3xl text-base text-slate-200 sm:text-lg">
-              Explore exciting opportunities across departments. Search, filter, and apply online—no account required.
-            </p>
+            </Reveal>
             
             {/* Stats Bar */}
             <div className="mt-10 grid w-full max-w-2xl grid-cols-2 gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
-                <p className="text-3xl font-extrabold text-white">{jobs.length}</p>
-                <p className="mt-1 text-sm text-slate-300">Open Positions</p>
-              </div>
-              <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
-                <p className="text-3xl font-extrabold text-white">{departments.length - 1}</p>
-                <p className="mt-1 text-sm text-slate-300">Departments</p>
-              </div>
-              <div className="col-span-2 rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm sm:col-span-1">
-                <p className="text-3xl font-extrabold text-white">100%</p>
-                <p className="mt-1 text-sm text-slate-300">Remote-Friendly</p>
-              </div>
+              <Reveal delay={300}>
+                <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
+                  <p className="text-3xl font-extrabold text-white">{jobs.length}</p>
+                  <p className="mt-1 text-sm text-slate-300">Open Positions</p>
+                </div>
+              </Reveal>
+              
+              <Reveal delay={350}>
+                <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
+                  <p className="text-3xl font-extrabold text-white">{departments.length - 1}</p>
+                  <p className="mt-1 text-sm text-slate-300">Departments</p>
+                </div>
+              </Reveal>
+              
+              <Reveal delay={400}>
+                <div className="col-span-2 rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm sm:col-span-1">
+                  <p className="text-3xl font-extrabold text-white">100%</p>
+                  <p className="mt-1 text-sm text-slate-300">Remote-Friendly</p>
+                </div>
+              </Reveal>
             </div>
           </div>
         </div>
@@ -177,58 +202,62 @@ export default function Jobs() {
       {/* Main Content */}
       <section className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
         {/* Search and Filters */}
-        <div className="relative -mt-16 rounded-2xl border border-slate-200/50 bg-white p-6 shadow-xl shadow-slate-900/5 backdrop-blur-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[#111A62]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#111A62]">
-              Filter & Search
-            </h2>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus-within:border-[#111A62] focus-within:ring-2 focus-within:ring-[#111A62]/20">
-            <Search className="h-5 w-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by job title, keyword, or skills..."
-              value={query}
-              onChange={(e) => { setPage(1); setQuery(e.target.value); }}
-              className="flex-1 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
-            />
-          </div>
+        <Reveal>
+          <div className="relative -mt-16 rounded-2xl border border-slate-200/50 bg-white p-6 shadow-xl shadow-slate-900/5 backdrop-blur-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Filter className="h-4 w-4 text-[#111A62]" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#111A62]">
+                Filter & Search
+              </h2>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus-within:border-[#111A62] focus-within:ring-2 focus-within:ring-[#111A62]/20">
+              <Search className="h-5 w-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by job title, keyword, or skills..."
+                value={query}
+                onChange={(e) => { setPage(1); setQuery(e.target.value); }}
+                className="flex-1 border-none bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+              />
+            </div>
 
-          {/* Filter Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={() => { setPage(1); setDept("all"); }}
-              variant={dept === "all" ? "primary" : "outline"}
-              className={dept === "all" ? "bg-[#F97316] hover:bg-[#ea6a0a]" : "border-slate-300 text-slate-700 hover:bg-slate-100"}
-            >
-              All Roles
-            </Button>
-            {departments.filter(d => d !== "all").map((d) => (
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                key={d}
-                onClick={() => { setPage(1); setDept(d); }}
-                variant={dept === d ? "primary" : "outline"}
-                className={dept === d ? "bg-[#F97316] hover:bg-[#ea6a0a]" : "border-slate-300 text-slate-700 hover:bg-slate-100"}
+                onClick={() => { setPage(1); setDept("all"); }}
+                variant={dept === "all" ? "primary" : "outline"}
+                className={dept === "all" ? "bg-[#F97316] hover:bg-[#ea6a0a]" : "border-slate-300 text-slate-700 hover:bg-slate-100"}
               >
-                {d}
+                All Roles
               </Button>
-            ))}
+              {departments.filter(d => d !== "all").map((d) => (
+                <Button
+                  key={d}
+                  onClick={() => { setPage(1); setDept(d); }}
+                  variant={dept === d ? "primary" : "outline"}
+                  className={dept === d ? "bg-[#F97316] hover:bg-[#ea6a0a]" : "border-slate-300 text-slate-700 hover:bg-slate-100"}
+                >
+                  {d}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
+        </Reveal>
 
         {/* Results Count */}
-        <div className="mt-8 flex items-center justify-between">
-          <p className="text-sm text-slate-600">
-            Showing <span className="font-bold text-[#111A62]">{total}</span> opening
-            {total === 1 ? "" : "s"}
-          </p>
-          {filtered.length !== jobs.length && (
-            <p className="text-xs text-slate-500">Filtered from {jobs.length} total</p>
-          )}
-        </div>
+        <Reveal delay={100}>
+          <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-slate-600">
+              Showing <span className="font-bold text-[#111A62]">{total}</span> opening
+              {total === 1 ? "" : "s"}
+            </p>
+            {filtered.length !== jobs.length && (
+              <p className="text-xs text-slate-500">Filtered from {jobs.length} total</p>
+            )}
+          </div>
+        </Reveal>
 
         {/* Job Cards - Reference Design */}
         {pageItems.length === 0 ? (
@@ -240,91 +269,94 @@ export default function Jobs() {
           </div>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {pageItems.map((job) => (
-              <Card 
-                key={job.id} 
-                className="group relative overflow-hidden border border-slate-200 bg-white transition-all duration-200 hover:border-slate-300 hover:shadow-lg"
-              >
-                {/* Vacancy Badge - Top Right */}
-                <div className="absolute right-4 top-4">
-                  <Badge className="bg-[#F97316]/10 text-[#F97316] text-xs font-semibold">
-                    {job.vacancies_count} {job.vacancies_count > 1 ? "Vacancies" : "Vacancy"}
-                  </Badge>
-                </div>
-
-                <CardHeader className="pb-3">
-                  {/* Department Badge */}
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wide text-[#F97316]">
-                      {job.department?.department_name ?? job.department?.name ?? "N/A"}
-                    </span>
-                  </div>
-                  
-                  {/* Job Title */}
-                  <CardTitle className="pr-16 text-lg font-bold text-[#111A62] leading-snug">
-                    {job.job_library?.job_title || "Untitled Position"}
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Meta Info */}
-                  <div className="space-y-2 text-sm text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-slate-400" />
-                      <span>{job.location || "Remote"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-slate-400" />
-                      <span>Full-time</span>
-                    </div>
+            {pageItems.map((job, index) => (
+              <Reveal key={job.id} delay={index * 80}>
+                <Card 
+                  className="group relative overflow-hidden border border-slate-200 bg-white transition-all duration-200 hover:border-slate-300 hover:shadow-lg"
+                >
+                  {/* Vacancy Badge - Top Right */}
+                  <div className="absolute right-4 top-4">
+                    <Badge className="bg-[#F97316]/10 text-[#F97316] text-xs font-semibold">
+                      {job.vacancies_count} {job.vacancies_count > 1 ? "Vacancies" : "Vacancy"}
+                    </Badge>
                   </div>
 
-                  {/* Description Preview */}
-                  <p className="text-sm leading-relaxed text-slate-600 line-clamp-3">
-                    {job.description || job.job_library?.job_description || "No description available."}
-                  </p>
-
-                  {/* Deadline */}
-                  {job.closing_date && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>Apply by {new Date(job.closing_date).toLocaleDateString()}</span>
+                  <CardHeader className="pb-3">
+                    {/* Department Badge */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-[#F97316]">
+                        {job.department?.department_name ?? job.department?.name ?? "N/A"}
+                      </span>
                     </div>
-                  )}
+                    
+                    {/* Job Title */}
+                    <CardTitle className="pr-16 text-lg font-bold text-[#111A62] leading-snug">
+                      {job.job_library?.job_title || "Untitled Position"}
+                    </CardTitle>
+                  </CardHeader>
 
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <Button 
-                      onClick={() => handleViewDetails(job.id)}
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-[#111A62] text-[#111A62] hover:bg-[#111A62] hover:text-white"
-                    >
-                      View Details
-                    </Button>
-                    <Button 
-                      onClick={() => handleApplyNow(job.id)}
-                      size="sm"
-                      className="w-full bg-[#111A62] text-white hover:bg-[#0d1550]"
-                    >
-                      Apply Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  <CardContent className="space-y-4">
+                    {/* Meta Info */}
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-400" />
+                        <span>{job.location || "Remote"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-slate-400" />
+                        <span>Full-time</span>
+                      </div>
+                    </div>
+
+                    {/* Description Preview */}
+                    <p className="text-sm leading-relaxed text-slate-600 line-clamp-3">
+                      {job.description || job.job_library?.job_description || "No description available."}
+                    </p>
+
+                    {/* Deadline */}
+                    {job.closing_date && (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Apply by {new Date(job.closing_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <Button 
+                        onClick={() => handleViewDetails(job.id)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-[#111A62] text-[#111A62] hover:bg-[#111A62] hover:text-white"
+                      >
+                        View Details
+                      </Button>
+                      <Button 
+                        onClick={() => handleApplyNow(job.id)}
+                        size="sm"
+                        className="w-full bg-[#111A62] text-white hover:bg-[#0d1550]"
+                      >
+                        Apply Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Reveal>
             ))}
           </div>
         )}
 
         {/* Pagination */}
-        <div className="mt-12">
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={(p) => setPage(p)}
-          />
-        </div>
+        <Reveal delay={100}>
+          <div className="mt-12">
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={(p) => setPage(p)}
+            />
+          </div>
+        </Reveal>
       </section>
 
       {/* Alert Modal */}
@@ -346,198 +378,16 @@ export default function Jobs() {
           parseAdditionalInfo={parseAdditionalInfo}
         />
       )}
+
+      {/* Apply Modal - Slide-in Panel */}
+      {selectedJob && (
+        <ApplyModal
+          open={showApplyModal}
+          job={selectedJob}
+          onClose={() => setShowApplyModal(false)}
+        />
+      )}
     </div>
   );
 }
 
-// Job Details Modal Component
-function JobDetailsModal({ open, job, onClose, onApply, parseAdditionalInfo }) {
-  if (!job) return null;
-  
-  const jobLibrary = job.job_library || {};
-  const department = job.department || {};
-  const additionalInfo = parseAdditionalInfo(job);
-
-  return (
-    <Modal
-      open={open}
-      title=""
-      onClose={onClose}
-      className="max-w-4xl"
-    >
-      <div className="max-h-[calc(90vh-200px)] overflow-y-auto px-1">
-        {/* Header */}
-        <div className="mb-6 rounded-xl bg-gradient-to-br from-[#111A62] to-[#1a2575] p-6 text-white">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-            <Briefcase className="h-3.5 w-3.5 text-[#F97316]" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              {department.department_name ?? department.name ?? "N/A"}
-            </span>
-          </div>
-          <h2 className="text-2xl font-extrabold">{jobLibrary.job_title || "Untitled Position"}</h2>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-200">
-            {job.location && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-[#F97316]" />
-                {job.location}
-              </span>
-            )}
-            {job.posting_date && (
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                Posted {new Date(job.posting_date).toLocaleDateString()}
-              </span>
-            )}
-            {job.closing_date && (
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                Closes {new Date(job.closing_date).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-          <div className="mt-4">
-            <Badge className="bg-[#F97316] text-white">
-              <Users className="mr-1 h-3.5 w-3.5" />
-              {job.vacancies_count} {job.vacancies_count > 1 ? "Openings" : "Opening"}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Content Grid */}
-        <div className="space-y-4">
-          {/* Job Description */}
-          {(job.description || jobLibrary.job_description) && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-[#111A62]" />
-                <h3 className="font-bold text-[#111A62]">Job Description</h3>
-              </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                {job.description || jobLibrary.job_description}
-              </p>
-            </div>
-          )}
-
-          {/* Responsibilities & Qualifications */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {jobLibrary.responsibilities && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-[#F97316]" />
-                  <h3 className="font-bold text-[#111A62]">Responsibilities</h3>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {jobLibrary.responsibilities}
-                </p>
-              </div>
-            )}
-            {jobLibrary.qualifications && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-[#F97316]" />
-                  <h3 className="font-bold text-[#111A62]">Qualifications</h3>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {jobLibrary.qualifications}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Additional Requirements */}
-          {(additionalInfo.education || additionalInfo.workExp || additionalInfo.skills || additionalInfo.other) && (
-            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Award className="h-5 w-5 text-[#111A62]" />
-                <h3 className="font-bold text-[#111A62]">Additional Requirements</h3>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {additionalInfo.education && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <GraduationCap className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Educational Background</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.education}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.workExp && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10">
-                      <Briefcase className="h-5 w-5 text-[#F97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Work Experience</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.workExp}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.skills && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <Award className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Skills Required</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.skills}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.employmentStatus && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10">
-                      <Building2 className="h-5 w-5 text-[#F97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Employment Status</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.employmentStatus}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.plantillaType && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <FileText className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Plantilla Type</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.plantillaType}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.other && (
-                  <div className="flex gap-3 sm:col-span-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                      <AlertCircle className="h-5 w-5 text-slate-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Other Requirements</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.other}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* CTA */}
-          <div className="rounded-xl border-2 border-[#F97316]/20 bg-gradient-to-br from-orange-50 to-white p-6 text-center">
-            <h3 className="text-lg font-extrabold text-[#111A62]">Ready to Join Us?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Take the next step in your career. Apply now and our team will review your application.
-            </p>
-            <Button
-              onClick={onApply}
-              className="mt-4 bg-[#F97316] px-8 py-3 font-bold hover:bg-[#ea6a0a]"
-            >
-              Start Application
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-

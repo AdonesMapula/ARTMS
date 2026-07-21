@@ -118,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('applicants/{applicant}', [ApplicantController::class, 'show']);
         Route::put('applicants/{applicant}', [ApplicantController::class, 'update']);
         Route::patch('applicants/{applicant}', [ApplicantController::class, 'update']);
+        Route::patch('applicants/{applicant}/ready-for-interview', [ApplicantController::class, 'readyForInterview']);
         Route::patch('applicants/{applicant}/hire', [ApplicantController::class, 'hire']);
         Route::patch('applicants/{applicant}/reject', [ApplicantController::class, 'reject']);
         Route::post('applicants/{applicant}/notes', [ApplicantController::class, 'addNote']);

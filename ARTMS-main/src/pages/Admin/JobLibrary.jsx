@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   FiBookOpen, FiCheckCircle, FiClock, FiPlus, FiEdit2, FiTrash2,
-  FiX, FiAlertCircle, FiCheck, FiSearch,
+  FiCheck, FiSearch, FiAlertCircle,
 } from "react-icons/fi";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Button from "../../components/ui/Button";
-import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
+import { JobLibraryFormModal, JobLibraryApproveModal, JobLibraryDeleteModal } from "../../modals";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 
@@ -24,11 +24,6 @@ const EMPTY_FORM = {
   salary_min: "",
   salary_max: "",
 };
-
-const inputClass =
-  "w-full rounded-lg border border-[var(--artms-border)] bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]";
-const textareaClass = `${inputClass} resize-none`;
-const labelClass = "mb-1.5 block text-sm font-semibold text-slate-800";
 
 export default function JobLibrary() {
   const { user } = useAuth();
@@ -281,8 +276,8 @@ export default function JobLibrary() {
                       </Badge>
                     </TD>
                     <TD className="text-sm text-slate-600">{j.creator?.name || "—"}</TD>
-                    <TD>
-                      <div className="flex items-center gap-1.5">
+                    <TD className="w-40">
+                      <div className="flex items-center gap-2">
                         {/* COO approve/reject button */}
                         {isCOO && j.approval_status === "pending" && (
                           <Button
@@ -292,13 +287,13 @@ export default function JobLibrary() {
                               setApproveModal({ open: true, job: j, status: "approved", remarks: "" })
                             }
                           >
-                            <FiCheck size={13} /> Review
+                            <FiCheck size={14} /> Review
                           </Button>
                         )}
                         {canEdit && (
                           <>
                             <Button variant="ghost" size="sm" onClick={() => openEdit(j)}>
-                              <FiEdit2 size={13} />
+                              <FiEdit2 size={14} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -306,7 +301,7 @@ export default function JobLibrary() {
                               className="text-red-500 hover:bg-red-50 hover:text-red-600"
                               onClick={() => setDeleteModal({ open: true, job: j })}
                             >
-                              <FiTrash2 size={13} />
+                              <FiTrash2 size={14} />
                             </Button>
                           </>
                         )}
@@ -321,232 +316,37 @@ export default function JobLibrary() {
       </Card>
 
       {/* ── Create / Edit Modal ── */}
-      <Modal
+      <JobLibraryFormModal
         open={formModal.open}
-        title={formModal.mode === "create" ? "Add Job Entry" : "Edit Job Entry"}
-        description={
-          formModal.mode === "create"
-            ? "New entries require COO approval before they appear in PRF dropdowns."
-            : `Editing JL-${String(formModal.data?.id ?? 0).padStart(3, "0")}`
-        }
+        mode={formModal.mode}
+        data={formModal.data}
+        form={form}
+        setForm={setForm}
         onClose={() => setFormModal({ open: false, mode: "create", data: null })}
-        className="max-w-2xl"
-        footer={
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setFormModal({ open: false, mode: "create", data: null })}>
-              <FiX /> Cancel
-            </Button>
-            <Button variant="primary" className="flex-1" onClick={handleSave} disabled={saving}>
-              <FiCheckCircle /> {saving ? "Saving…" : formModal.mode === "create" ? "Submit for Approval" : "Save Changes"}
-            </Button>
-          </div>
-        }
-      >
-        <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-5">
-          {/* Basic Info */}
-          <div className="space-y-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Basic Info</p>
-            <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className={labelClass}>Job Title <span className="text-red-500">*</span></label>
-                  <input
-                    className={inputClass}
-                    placeholder="e.g., Customer Service Representative"
-                    value={form.job_title}
-                    onChange={(e) => setForm({ ...form, job_title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Job Category</label>
-                  <input
-                    className={inputClass}
-                    placeholder="e.g., Operations, IT, Finance"
-                    value={form.job_category}
-                    onChange={(e) => setForm({ ...form, job_category: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Employment Type</label>
-                  <select
-                    className={inputClass}
-                    value={form.employment_type}
-                    onChange={(e) => setForm({ ...form, employment_type: e.target.value })}
-                  >
-                    <option value="full_time">Full-time</option>
-                    <option value="part_time">Part-time</option>
-                    <option value="contractual">Contractual</option>
-                    <option value="project_based">Project-based</option>
-                    <option value="probationary">Probationary</option>
-                    <option value="ojt">OJT / Internship</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Salary Min (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className={inputClass}
-                    placeholder="e.g., 20000"
-                    value={form.salary_min}
-                    onChange={(e) => setForm({ ...form, salary_min: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Salary Max (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className={inputClass}
-                    placeholder="e.g., 35000"
-                    value={form.salary_max}
-                    onChange={(e) => setForm({ ...form, salary_max: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Details */}
-          <div className="space-y-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Job Details</p>
-            <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4 space-y-4">
-              <div>
-                <label className={labelClass}>Job Description <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={3}
-                  className={textareaClass}
-                  placeholder="Brief overview of the role and its purpose…"
-                  value={form.job_description}
-                  onChange={(e) => setForm({ ...form, job_description: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Qualifications <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={3}
-                  className={textareaClass}
-                  placeholder="Educational background, experience, skills required…"
-                  value={form.qualifications}
-                  onChange={(e) => setForm({ ...form, qualifications: e.target.value })}
-                />
-                <p className="mt-1 text-xs text-slate-400">
-                  This will auto-populate Steps 3 &amp; 4 in the PRF when this job is selected.
-                </p>
-              </div>
-              <div>
-                <label className={labelClass}>Responsibilities <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={3}
-                  className={textareaClass}
-                  placeholder="Key duties and tasks for this role…"
-                  value={form.responsibilities}
-                  onChange={(e) => setForm({ ...form, responsibilities: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
+        onSave={handleSave}
+        saving={saving}
+      />
 
       {/* ── COO Approve/Reject Modal ── */}
-      <Modal
+      <JobLibraryApproveModal
         open={approveModal.open}
-        title="Review Job Entry"
-        description={approveModal.job ? `Reviewing "${approveModal.job.job_title}"` : ""}
+        job={approveModal.job}
+        status={approveModal.status}
+        remarks={approveModal.remarks}
+        onStatusChange={(status) => setApproveModal({ ...approveModal, status })}
+        onRemarksChange={(remarks) => setApproveModal({ ...approveModal, remarks })}
         onClose={() => setApproveModal({ open: false, job: null, status: "approved", remarks: "" })}
-        className="max-w-lg"
-        footer={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setApproveModal({ open: false, job: null, status: "approved", remarks: "" })}
-            >
-              <FiX /> Cancel
-            </Button>
-            <Button
-              variant={approveModal.status === "approved" ? "primary" : "danger"}
-              className="flex-1"
-              onClick={handleApprove}
-              disabled={saving}
-            >
-              <FiCheckCircle /> {saving ? "Saving…" : approveModal.status === "approved" ? "Approve" : "Reject"}
-            </Button>
-          </div>
-        }
-      >
-        {approveModal.job && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
-              <p><span className="font-semibold">Category:</span> {approveModal.job.job_category || "—"}</p>
-              <p><span className="font-semibold">Type:</span> {approveModal.job.employment_type?.replace(/_/g, " ")}</p>
-              <p className="mt-2 text-xs text-slate-500">{approveModal.job.job_description}</p>
-            </div>
-            <div>
-              <label className={labelClass}>Decision</label>
-              <div className="flex gap-2">
-                {["approved", "rejected"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setApproveModal({ ...approveModal, status: s })}
-                    className={`flex-1 rounded-lg border px-4 py-2 text-sm font-semibold capitalize transition ${
-                      approveModal.status === s
-                        ? s === "approved"
-                          ? "border-emerald-600 bg-emerald-600 text-white"
-                          : "border-red-500 bg-red-500 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>Remarks (optional)</label>
-              <textarea
-                rows={2}
-                className={textareaClass}
-                placeholder="Leave a note for the HR team…"
-                value={approveModal.remarks}
-                onChange={(e) => setApproveModal({ ...approveModal, remarks: e.target.value })}
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
+        onConfirm={handleApprove}
+        saving={saving}
+      />
 
       {/* ── Delete Confirm Modal ── */}
-      <Modal
+      <JobLibraryDeleteModal
         open={deleteModal.open}
-        title="Delete Job Entry"
-        description="This action cannot be undone."
+        job={deleteModal.job}
         onClose={() => setDeleteModal({ open: false, job: null })}
-        className="max-w-sm"
-        footer={
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setDeleteModal({ open: false, job: null })}>
-              Cancel
-            </Button>
-            <Button variant="danger" className="flex-1" onClick={handleDelete}>
-              <FiTrash2 /> Delete
-            </Button>
-          </div>
-        }
-      >
-        {deleteModal.job && (
-          <p className="text-sm text-slate-600">
-            Are you sure you want to delete{" "}
-            <span className="font-semibold text-slate-900">"{deleteModal.job.job_title}"</span>?
-            {deleteModal.job.approval_status === "approved" && (
-              <span className="mt-2 block text-xs text-amber-600">
-                Warning: this is an approved entry used in PRF position dropdowns.
-              </span>
-            )}
-          </p>
-        )}
-      </Modal>
+        onConfirm={handleDelete}
+      />
 
       {/* Alert */}
       <AlertModal

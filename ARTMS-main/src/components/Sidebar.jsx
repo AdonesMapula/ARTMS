@@ -22,7 +22,7 @@ function NavItem({ it }) {
   // Section label
   if (it.type === "label") {
     return (
-      <li className="pt-4 first:pt-0">
+      <li className="pt-6 first:pt-2">
         <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
           {it.label}
         </p>
@@ -147,16 +147,20 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
       <div className="flex h-full flex-col">
 
         {/* Brand */}
-        <div className="px-5 py-5">
-          <div className="flex items-center gap-2">
+        <div className="border-b border-[var(--artms-border)] px-5 py-5">
+          <div className="flex items-center gap-3">
             <img
               src={artmsLogo}
               alt="ARTMS Logo"
-              className="h-9 w-9 rounded-lg object-contain"
+              className="h-10 w-10 rounded-lg object-contain"
             />
-            <div className="leading-tight">
-              <p className="text-sm font-extrabold text-[#111A62]">{brand}</p>
-              <p className="text-xs text-slate-500">AI Recruitment Management System</p>
+            <div className="flex flex-col leading-tight">
+              <span className="font-logo text-[1.35rem] font-extrabold tracking-[-0.03em] leading-none text-[#111A62]">
+                {brand}
+              </span>
+              <span className="font-sans text-[10px] font-normal tracking-wide text-slate-500">
+                AI Recruitment Management System
+              </span>
             </div>
           </div>
         </div>

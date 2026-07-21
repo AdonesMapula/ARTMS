@@ -16,27 +16,73 @@ class ResumeParserController extends Controller
      */
     public function parse(Request $request): JsonResponse
     {
-        $request->validate([
-            'resume' => ['required', 'file', 'mimes:pdf,doc,docx,txt', 'max:10240'],
+        // Log the incoming request for debugging
+        Log::info('Resume parse request received', [
+            'has_file' => $request->hasFile('resume'),
+            'file_info' => $request->hasFile('resume') ? [
+                'name' => $request->file('resume')->getClientOriginalName(),
+                'size' => $request->file('resume')->getSize(),
+                'mime' => $request->file('resume')->getMimeType(),
+                'ext' => $request->file('resume')->getClientOriginalExtension(),
+            ] : null
         ]);
 
+        $request->validate([
+            'resume' => ['required', 'file', 'max:10240'], // 10MB max
+        ]);
+
+        $file = $request->file('resume');
+        
+        // Validate file extension manually (more reliable than MIME types)
+        $allowedExt = ['pdf', 'doc', 'docx', 'txt'];
+        $ext = strtolower($file->getClientOriginalExtension());
+        
+        if (!in_array($ext, $allowedExt)) {
+            Log::warning('Invalid file extension', ['ext' => $ext, 'allowed' => $allowedExt]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid file type. Please upload a PDF, DOCX, DOC, or TXT file.',
+                'errors' => ['resume' => ['The resume must be a file of type: pdf, doc, docx, txt.']]
+            ], 422);
+        }
+
         try {
-            $file      = $request->file('resume');
             $appId     = 'parse-' . uniqid();
             $storedPath = $file->store("temp-resumes/{$appId}", 'local');
+            
+            Log::info('File stored', ['path' => $storedPath]);
+
+            // Check if parsing libraries are available
+            if (!class_exists(\Smalot\PdfParser\Parser::class) && !class_exists(\PhpOffice\PhpWord\IOFactory::class)) {
+                Log::warning('PDF/DOCX parsing libraries not installed');
+                // Clean up temp file
+                Storage::disk('local')->delete($storedPath);
+                
+                // Return success but with empty data - file is uploaded, parsing not available
+                return response()->json([
+                    'success' => true,
+                    'data' => $this->emptyParsedData(),
+                    'message' => 'Resume uploaded successfully. Auto-parsing not available - please fill in the form manually.',
+                ]);
+            }
 
             // Use the shared ResumeParserService (smalot/pdfparser + phpoffice/phpword)
             $parser      = new ResumeParserService();
             $rawText     = $parser->extractText($storedPath);
 
+            Log::info('Text extracted', ['length' => strlen($rawText)]);
+
             // Clean up temp file
             Storage::disk('local')->delete($storedPath);
 
             if (empty(trim($rawText))) {
+                Log::warning('Empty text extracted from resume');
+                // Return success but indicate parsing didn't work
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Could not extract text from this file. Please fill in the form manually.',
-                ], 422);
+                    'success' => true,
+                    'data' => $this->emptyParsedData(),
+                    'message' => 'Resume uploaded. Could not extract text from this file - please fill in the form manually.',
+                ]);
             }
 
             $parsed = $this->parseResumeText($rawText);
@@ -44,16 +90,44 @@ class ResumeParserController extends Controller
             return response()->json([
                 'success'  => true,
                 'data'     => $parsed,
-                'raw_text' => $rawText,   // kept for debugging; remove in production
+                'message'  => 'Resume parsed successfully',
             ]);
 
         } catch (\Throwable $e) {
-            Log::error('Resume parsing error: ' . $e->getMessage());
+            Log::error('Resume parsing error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            
+            // Return success even on error - file is uploaded, just parsing failed
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to parse resume. Please fill in the form manually.',
-            ], 500);
+                'success' => true,
+                'data' => $this->emptyParsedData(),
+                'message' => 'Resume uploaded. Auto-parsing not available - please fill in the form manually.',
+            ]);
         }
+    }
+
+    // ── Empty parsed data ──────────────────────────────────────────────────────
+
+    private function emptyParsedData(): array
+    {
+        return [
+            'firstName'  => '',
+            'lastName'   => '',
+            'middleName' => '',
+            'email'      => '',
+            'phone'      => '',
+            'address'    => '',
+            'gender'     => '',
+            'dateOfBirth'=> '',
+            'nationality'=> '',
+            'civilStatus'=> '',
+            'skills'     => [],
+            'education'  => '',
+            'experience' => '',
+        ];
     }
 
     // ── Text → structured data ────────────────────────────────────────────────

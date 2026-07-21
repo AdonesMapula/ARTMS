@@ -49,10 +49,10 @@ export default function CooLayout() {
 
   return (
     <DashboardShell
-      sidebar={<Sidebar brand="COO Portal" items={items} />}
+      sidebar={<Sidebar brand="Accel4U" items={items} />}
       topbar={
         <Topbar
-          title="Chief Operating Officer"
+          title="CHIEF OPERATING OFFICER"
           subtitle="Approvals — PRF, Job Library &amp; Job Postings"
         />
       }

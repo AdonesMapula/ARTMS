@@ -308,14 +308,16 @@ export default function AiScreening() {
         </Card>
 
         {/* ── Right: detail panel ─────────────────────────────────────────── */}
-        <Card className="flex flex-col">
-          <CardHeader>
+        <Card className="flex h-fit max-h-[800px] flex-col lg:sticky lg:top-4">
+          <CardHeader className="shrink-0">
             <CardTitle>
               {active ? `${active.first_name} ${active.last_name}` : "Select an applicant"}
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="flex-1 overflow-y-auto">
+          <CardContent className="scrollable-content flex-1 overflow-y-auto min-h-0"
+            style={{ maxHeight: "calc(800px - 80px)" }}
+          >
             {!active ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400">
                 <FiCpu size={32} />

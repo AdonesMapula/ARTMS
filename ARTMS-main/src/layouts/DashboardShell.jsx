@@ -13,7 +13,7 @@ export default function DashboardShell({
         {sidebar}
         <div className="min-w-0 flex-1">
           {topbar}
-          <main className={cn("p-4 sm:p-6 lg:p-8", contentClassName)}>
+          <main className={cn("p-4 pt-6 sm:p-6 sm:pt-8 lg:p-8 lg:pt-10", contentClassName)}>
             <Outlet />
           </main>
         </div>

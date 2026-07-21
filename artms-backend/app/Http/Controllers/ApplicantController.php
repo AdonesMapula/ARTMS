@@ -117,6 +117,42 @@ class ApplicantController extends Controller
     }
 
     /**
+     * PATCH /api/applicants/{id}/ready-for-interview
+     */
+    public function readyForInterview(Request $request, Applicant $applicant): JsonResponse
+    {
+        $request->validate([
+            'message' => ['nullable', 'string'],
+        ]);
+
+        $applicant->update(['status' => 'ready_for_interview']);
+
+        // Send email notification to applicant
+        try {
+            $message = $request->message ?? "Congratulations! You have been selected for an interview for the {$applicant->jobPosting->jobLibrary->job_title} position.";
+            
+            Mail::send('emails.ready_for_interview', [
+                'applicant' => $applicant,
+                'message' => $message,
+                'job_title' => $applicant->jobPosting->jobLibrary->job_title ?? 'the position',
+            ], function ($mail) use ($applicant) {
+                $mail->to($applicant->email)
+                     ->subject('Interview Invitation — ARTMS Recruitment');
+            });
+        } catch (\Exception $e) {
+            // Non-fatal: log but don't fail the status update
+            \Log::error('Failed to send ready-for-interview email: ' . $e->getMessage());
+        }
+
+        AuditLog::record('ready_for_interview', 'applicant', "Applicant marked ready for interview: {$applicant->application_id}");
+
+        return response()->json([
+            'message' => 'Applicant marked as ready for interview. Email notification sent.',
+            'applicant' => $applicant->fresh(),
+        ]);
+    }
+
+    /**
      * PATCH /api/applicants/{id}/hire
      */
     public function hire(Applicant $applicant): JsonResponse

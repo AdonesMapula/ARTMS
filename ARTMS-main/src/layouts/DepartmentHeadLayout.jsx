@@ -34,10 +34,10 @@ export default function DepartmentHeadLayout() {
 
   return (
     <DashboardShell
-      sidebar={<Sidebar brand="Department Head" items={items} />}
+      sidebar={<Sidebar brand="Accel4U" items={items} />}
       topbar={
         <Topbar
-          title="Department Head"
+          title="DEPARTMENT HEAD"
           subtitle="Manpower requests • approvals • notifications"
         />
       }

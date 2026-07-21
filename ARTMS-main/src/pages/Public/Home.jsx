@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -16,6 +17,9 @@ import {
   Users,
   ShieldCheck,
   BarChart3,
+  TrendingUp,
+  Award,
+  Target,
 } from "lucide-react";
 
 /* Swap for your own photo — a wide, high-res office / team shot works best
@@ -183,6 +187,36 @@ function Reveal({ children, delay = 0, className = "" }) {
   );
 }
 
+/** Custom hook for counting animation */
+function useCountAnimation(end, duration = 2000, start = 0) {
+  const [count, setCount] = useState(start);
+  const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    let startTime = null;
+    const step = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const currentCount = Math.floor(easeOutQuart * (end - start) + start);
+      
+      setCount(currentCount);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+
+    requestAnimationFrame(step);
+  }, [isActive, end, start, duration]);
+
+  return [count, setIsActive];
+}
+
 function PrimaryButton({ children, className = "", ...props }) {
   return (
     <button
@@ -210,6 +244,43 @@ function SecondaryButton({ children, className = "", ...props }) {
     >
       {children}
     </button>
+  );
+}
+
+/** Animated badge with counting number */
+function CountingBadge() {
+  const [count, setIsActive] = useCountAnimation(1240, 2500, 0);
+  const badgeRef = useRef(null);
+
+  useEffect(() => {
+    const node = badgeRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsActive(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [setIsActive]);
+
+  return (
+    <div
+      ref={badgeRef}
+      className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em]"
+      style={{
+        borderColor: "rgba(249,115,22,0.4)",
+        color: TOKENS.accent,
+        backgroundColor: "rgba(249,115,22,0.08)",
+      }}
+    >
+      <Sparkles size={13} /> 
+      <span className="tabular-nums">{count.toLocaleString()}</span> roles hiring right now
+    </div>
   );
 }
 
@@ -250,16 +321,13 @@ export default function JobBoardLanding() {
 
         <div className="mx-auto flex min-h-[620px] max-w-7xl flex-col items-center justify-center px-6 py-24 text-center lg:px-10">
           <div
-            className="mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-700"
+            className="mb-6 transition-all duration-700"
             style={{
-              borderColor: "rgba(249,115,22,0.4)",
-              color: TOKENS.accent,
-              backgroundColor: "rgba(249,115,22,0.08)",
               opacity: heroLoaded ? 1 : 0,
               transform: heroLoaded ? "translateY(0)" : "translateY(10px)",
             }}
           >
-            <Sparkles size={13} /> 1,240 roles hiring right now
+            <CountingBadge />
           </div>
 
           <h1
@@ -295,36 +363,24 @@ export default function JobBoardLanding() {
               transitionDelay: "340ms",
             }}
           >
-            <PrimaryButton>
-              Explore Job Openings <ArrowRight size={16} />
-            </PrimaryButton>
-            <SecondaryButton>Learn More About Us</SecondaryButton>
+            <Link to="/jobs">
+              <PrimaryButton>
+                Explore Job Openings <ArrowRight size={16} />
+              </PrimaryButton>
+            </Link>
+            <Link to="/about">
+              <SecondaryButton>Learn More About Us</SecondaryButton>
+            </Link>
           </div>
 
-          {/* quick search affordance — reinforces "find a job fast" */}
-          <div
-            className="mt-12 flex w-full max-w-xl items-center gap-2 rounded-2xl border p-2 transition-all duration-700"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.06)",
-              borderColor: "rgba(255,255,255,0.14)",
-              opacity: heroLoaded ? 1 : 0,
-              transform: heroLoaded ? "translateY(0)" : "translateY(24px)",
-              transitionDelay: "440ms",
-            }}
-          >
-            <Search size={18} className="ml-3 shrink-0 text-white/50" />
-            <input
-              type="text"
-              placeholder="Job title, keyword, or company"
-              className="w-full bg-transparent py-2 text-sm text-white placeholder-white/40 outline-none"
-            />
-            <PrimaryButton className="!px-5 !py-2.5 !text-xs shrink-0">Search</PrimaryButton>
-          </div>
         </div>
       </section>
 
+      {/* ---------------- Infinite Stats Marquee ---------------- */}
+      <InfiniteStatsMarquee />
+
       {/* ---------------- What is ARTMS ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
+      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10 bg-[#FCF8F8]">
         <Reveal>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_1fr] lg:items-end">
             <div>
@@ -474,6 +530,77 @@ export default function JobBoardLanding() {
         </Reveal>
       </section>
     </div>
+  );
+}
+
+/** Infinite scrolling stats marquee */
+function InfiniteStatsMarquee() {
+  const stats = [
+    { icon: TrendingUp, label: "95% Match Accuracy", color: TOKENS.accent },
+    { icon: Users, label: "10,000+ Candidates", color: TOKENS.navy },
+    { icon: Award, label: "500+ Companies", color: TOKENS.accent },
+    { icon: Target, label: "AI-Powered Screening", color: TOKENS.navy },
+    { icon: BadgeCheck, label: "Verified Employers", color: TOKENS.accent },
+    { icon: Briefcase, label: "1,240+ Active Jobs", color: TOKENS.navy },
+  ];
+
+  // Duplicate the stats array for seamless loop
+  const duplicatedStats = [...stats, ...stats];
+
+  return (
+    <section 
+      className="relative overflow-hidden py-8"
+      style={{ 
+        backgroundColor: TOKENS.navy,
+        borderTop: `1px solid rgba(255,255,255,0.1)`,
+        borderBottom: `1px solid rgba(255,255,255,0.1)`
+      }}
+    >
+      <div className="flex animate-marquee whitespace-nowrap">
+        {duplicatedStats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={index}
+              className="mx-8 inline-flex items-center gap-3"
+            >
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                style={{ 
+                  backgroundColor: "rgba(249,115,22,0.15)",
+                  color: TOKENS.accent 
+                }}
+              >
+                <Icon size={20} />
+              </div>
+              <span 
+                className="text-sm font-bold"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                {stat.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <style>{`
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+    </section>
   );
 }
 

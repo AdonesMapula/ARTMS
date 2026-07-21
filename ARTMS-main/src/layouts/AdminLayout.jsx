@@ -54,10 +54,10 @@ export default function AdminLayout() {
 
   return (
     <DashboardShell
-      sidebar={<Sidebar brand="HR Admin" items={items} />}
+      sidebar={<Sidebar brand="Accel4U" items={items} />}
       topbar={
         <Topbar
-          title="HR Admin"
+          title="HR ADMIN"
           subtitle="Recruitment operations • pipeline • analytics"
         />
       }

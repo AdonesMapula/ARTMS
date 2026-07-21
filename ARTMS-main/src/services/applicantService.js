@@ -1,21 +1,29 @@
 import api from './api';
 
 const applicantService = {
+  /** Get all applicants with filters */
   getAll: (params = {}) => api.get('/applicants', { params }),
-  getById: (id) => api.get(`/applicants/${id}`),
-  update: (id, data) => api.patch(`/applicants/${id}`, data),
-  hire: (id) => api.patch(`/applicants/${id}/hire`),
-  reject: (id, data) => api.patch(`/applicants/${id}/reject`, data),
-  addNote: (id, note) => api.post(`/applicants/${id}/notes`, { note }),
-  track: (applicationId) => api.post('/public/applicants/track', { application_id: applicationId }),
 
-  /**
-   * Public application submission (multipart/form-data for file upload)
-   */
-  submit: (formData) =>
-    api.post('/public/applicants', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  /** Get single applicant details */
+  getById: (id) => api.get(`/applicants/${id}`),
+
+  /** Update applicant status/details */
+  update: (id, data) => api.patch(`/applicants/${id}`, data),
+
+  /** Mark applicant as ready for interview and send email */
+  readyForInterview: (id, data) => api.patch(`/applicants/${id}/ready-for-interview`, data),
+
+  /** Hire applicant */
+  hire: (id) => api.patch(`/applicants/${id}/hire`),
+
+  /** Reject applicant */
+  reject: (id, data) => api.patch(`/applicants/${id}/reject`, data),
+
+  /** Add note to applicant */
+  addNote: (id, data) => api.post(`/applicants/${id}/notes`, data),
+
+  /** Track application by application_id (public) */
+  track: (applicationId) => api.get('/applicants/track', { params: { application_id: applicationId } }),
 };
 
 export default applicantService;

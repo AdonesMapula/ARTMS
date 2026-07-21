@@ -2,16 +2,16 @@ import { cn } from "../../utils/cn";
 
 const VARIANTS = {
   primary:
-    "bg-[var(--artms-primary)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary),#000_10%)]",
+    "bg-[var(--artms-primary)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary),#000_10%)] cursor-pointer active:scale-[0.98]",
   secondary:
-    "bg-[var(--artms-primary-2)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary-2),#000_10%)]",
+    "bg-[var(--artms-primary-2)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary-2),#000_10%)] cursor-pointer active:scale-[0.98]",
   outline:
-    "border border-[var(--artms-border)] bg-white text-slate-800 hover:bg-slate-50",
-  ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
+    "border border-[var(--artms-border)] bg-white text-slate-800 hover:bg-slate-50 cursor-pointer active:scale-[0.98]",
+  ghost: "bg-transparent text-slate-700 hover:bg-slate-100 cursor-pointer active:scale-95",
   danger:
-    "bg-red-600 text-white hover:bg-[color-mix(in_oklab,#dc2626,#000_12%)]",
+    "bg-red-600 text-white hover:bg-[color-mix(in_oklab,#dc2626,#000_12%)] cursor-pointer active:scale-[0.98]",
   accent:
-    "bg-[var(--artms-accent)] text-white hover:bg-[color-mix(in_oklab,var(--artms-accent),#000_10%)]",
+    "bg-[var(--artms-accent)] text-white hover:bg-[color-mix(in_oklab,var(--artms-accent),#000_10%)] cursor-pointer active:scale-[0.98]",
 };
 
 const SIZES = {
@@ -30,9 +30,9 @@ export default function Button({
   return (
     <Comp
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all",
         "focus-visible:ring-2 focus-visible:ring-[var(--artms-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
-        "disabled:pointer-events-none disabled:opacity-60",
+        "disabled:pointer-events-none disabled:opacity-60 disabled:cursor-not-allowed",
         VARIANTS[variant],
         SIZES[size],
         className

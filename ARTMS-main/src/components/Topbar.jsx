@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FiBell, FiSearch, FiLogOut, FiUser, FiChevronDown } from "react-icons/fi";
+import { FiBell, FiLogOut, FiUser, FiChevronDown } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import Button from "./ui/Button";
 import { useAuth } from "../context/AuthContext";
@@ -28,17 +28,16 @@ export default function Topbar({ title, subtitle, right }) {
           {subtitle && <p className="truncate text-xs text-slate-500">{subtitle}</p>}
         </div>
 
-        {/* Right — search, bell, user menu */}
+        {/* Right — bell, user menu */}
         <div className="flex items-center gap-2">
           {right}
 
-          <div className="hidden h-10 items-center gap-2 rounded-lg border border-[var(--artms-border)] bg-white px-3 text-sm text-slate-600 md:flex">
-            <FiSearch className="text-slate-400" aria-hidden="true" />
-            <span className="text-slate-400">Search…</span>
-          </div>
-
-          <Button variant="outline" className="h-10 w-10 p-0" aria-label="Notifications">
-            <FiBell aria-hidden="true" />
+          <Button
+            variant="outline"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center p-0"
+            aria-label="Notifications"
+          >
+            <FiBell size={20} className="shrink-0" aria-hidden="true" />
           </Button>
 
           {/* User dropdown */}

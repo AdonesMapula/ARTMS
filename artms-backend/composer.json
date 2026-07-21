@@ -10,7 +10,7 @@
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
-        "phpoffice/phpword": "^1.4",
+        "phpoffice/phpword": "^1.1",
         "smalot/pdfparser": "^2.12",
         "thiagoalessio/tesseract_ocr": "^2.13"
     },
