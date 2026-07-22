@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateAIInterviewReportJob;
 use App\Models\AuditLog;
 use App\Models\Interview;
+use App\Services\LiveKitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class InterviewController extends Controller
 {
@@ -132,5 +135,115 @@ class InterviewController extends Controller
         $interview->update(['reminder_sent' => true]);
 
         return response()->json(['message' => 'Reminder sent.']);
+    }
+
+    // ── Video Session Endpoints ───────────────────────────────────────────
+
+    /**
+     * POST /api/interviews/{id}/livekit-token
+     *
+     * Validates that the authenticated user belongs to this interview
+     * (either as the assigned interviewer/HR or as the applicant via email),
+     * then returns a signed LiveKit JWT so the client can join the room.
+     */
+    public function generateToken(Request $request, Interview $interview): JsonResponse
+    {
+        $user = $request->user();
+
+        // ── Authorisation: must be the interviewer or a super_admin/hr_admin ──
+        $isHr = in_array($user->role, ['hr_admin', 'super_admin', 'coo']);
+        $isAssignedInterviewer = $interview->interviewer_id === $user->id;
+
+        if (! $isHr && ! $isAssignedInterviewer) {
+            return response()->json(['message' => 'Forbidden. You are not part of this interview.'], 403);
+        }
+
+        // ── Lazily create / reuse a room name ─────────────────────────────
+        if (! $interview->livekit_room_name) {
+            $roomName = 'artms-interview-' . $interview->id . '-' . Str::random(8);
+            $interview->update(['livekit_room_name' => $roomName]);
+        } else {
+            $roomName = $interview->livekit_room_name;
+        }
+
+        // ── Build participant identity and display name ───────────────────
+        $identity    = 'hr_' . $user->id;
+        $displayName = $user->name . ' (HR)';
+
+        try {
+            $liveKit = new LiveKitService();
+
+            // Ensure the room exists in LiveKit Cloud
+            $liveKit->ensureRoom($roomName);
+
+            $token = $liveKit->generateToken(
+                roomName:              $roomName,
+                participantIdentity:   $identity,
+                participantName:       $displayName,
+                canPublish:            true,
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to generate LiveKit token: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        // Mark session as active
+        if ($interview->status === 'confirmed' || $interview->status === 'scheduled') {
+            $interview->update(['status' => 'active']);
+        }
+
+        AuditLog::record('livekit_join', 'interview', "User {$user->id} joined interview room {$interview->id}");
+
+        return response()->json([
+            'token'     => $token,
+            'room_name' => $roomName,
+            'livekit_host' => config('services.livekit.host'),
+            'identity'  => $identity,
+        ]);
+    }
+
+    /**
+     * POST /api/interviews/{id}/end-session
+     *
+     * Marks the interview as done and dispatches the Grok AI report job.
+     */
+    public function endSession(Interview $interview): JsonResponse
+    {
+        $interview->update(['status' => 'done']);
+
+        // Dispatch AI analysis — runs async via the queue
+        GenerateAIInterviewReportJob::dispatch($interview->id);
+
+        // Update applicant status
+        $stageStatus = [
+            'interview_1' => 'interview_1_done',
+            'interview_2' => 'interview_2_done',
+            'final'       => 'interview_2_done',
+        ];
+        $interview->applicant->update([
+            'status' => $stageStatus[$interview->interview_stage] ?? $interview->applicant->status,
+        ]);
+
+        AuditLog::record('end_session', 'interview', "Interview session ended: {$interview->id}");
+
+        return response()->json(['message' => 'Session ended. AI analysis has been queued.']);
+    }
+
+    /**
+     * GET /api/interviews/{id}/report
+     *
+     * Returns the AI report + full transcript for an interview.
+     */
+    public function report(Interview $interview): JsonResponse
+    {
+        $interview->load([
+            'applicant',
+            'jobPosting.jobLibrary',
+            'aiReport',
+            'transcripts',
+        ]);
+
+        return response()->json(['interview' => $interview]);
     }
 }

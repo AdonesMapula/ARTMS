@@ -45,6 +45,10 @@ import AdminNotifications from "../pages/Admin/Notifications";
 import Profile from "../pages/Admin/Profile";
 import Settings from "../pages/Admin/Settings";
 
+// Video Interview
+import ActiveInterviewRoom from "../pages/Interview/ActiveInterviewRoom";
+import InterviewReport from "../pages/Interview/InterviewReport";
+
 // COO
 import CooDashboard from "../pages/Coo/Dashboard";
 import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
@@ -127,6 +131,21 @@ export default function AppRoutes() {
 
         {/* ── HR Admin (role-protected) ─────────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={["hr_admin", "employee"]} />}>
+
+          {/* ── Video Interview Room — full-screen, no sidebar ───────────── */}
+          <Route
+            path="/admin/interviews/:id/room"
+            element={<ActiveInterviewRoom />}
+          />
+          <Route
+            path="/admin/interviews/:id/report"
+            element={
+              <PermissionProtectedRoute permission="view_interviews">
+                <InterviewReport />
+              </PermissionProtectedRoute>
+            }
+          />
+
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
@@ -249,6 +268,11 @@ export default function AppRoutes() {
 
         {/* ── Super Admin (role-protected) ──────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={["super_admin"]} />}>
+
+          {/* ── Video Interview Room — full-screen, no sidebar ───────────── */}
+          <Route path="/superadmin/interviews/:id/room" element={<ActiveInterviewRoom />} />
+          <Route path="/superadmin/interviews/:id/report" element={<InterviewReport />} />
+
           <Route path="/superadmin" element={<SuperAdminLayout />}>
             <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
             <Route path="dashboard" element={<SuperAdminDashboard />} />

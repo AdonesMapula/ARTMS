@@ -13,9 +13,10 @@
  *  ✅ Calendar view (highlights days with interviews)
  */
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FiCalendar, FiClock, FiMapPin, FiLink,
-  FiPlus, FiBell, FiClipboard, FiRefreshCw,
+  FiPlus, FiBell, FiClipboard, FiRefreshCw, FiVideo, FiFileText,
 } from "react-icons/fi";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -85,6 +86,8 @@ function fmtYear(dt) {
 
 // ── component ──────────────────────────────────────────────────────────────
 export default function Interviews() {
+  const navigate = useNavigate();
+
   // ── view state ────────────────────────────────────────────────────────
   const [view,        setView]       = useState("list");    // "list" | "calendar"
   const [stageTab,    setStageTab]   = useState("");
@@ -304,6 +307,7 @@ export default function Interviews() {
                   <option value="">All Statuses</option>
                   <option value="scheduled">Scheduled</option>
                   <option value="confirmed">Confirmed</option>
+                  <option value="active">Active (Live)</option>
                   <option value="done">Done</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="no_show">No Show</option>
@@ -459,6 +463,28 @@ export default function Interviews() {
                         {/* Actions */}
                         <TD>
                           <div className="flex items-center gap-1">
+                            {/* Join Video — shown when scheduled/confirmed/active */}
+                            {(i.status === "scheduled" || i.status === "confirmed" || i.status === "active") && (
+                              <button
+                                title="Join Video Interview"
+                                onClick={() => navigate(`/admin/interviews/${i.id}/room`)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
+                              >
+                                <FiVideo size={13} />
+                              </button>
+                            )}
+
+                            {/* View Report — shown when done and has AI summary */}
+                            {i.status === "done" && (
+                              <button
+                                title="View AI Report"
+                                onClick={() => navigate(`/admin/interviews/${i.id}/report`)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition"
+                              >
+                                <FiFileText size={13} />
+                              </button>
+                            )}
+
                             {/* Evaluate button */}
                             <button
                               title="Evaluate"

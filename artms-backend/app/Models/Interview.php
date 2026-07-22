@@ -16,6 +16,7 @@ class Interview extends Model
         'scheduled_at',
         'location',
         'meeting_link',
+        'livekit_room_name',   // LiveKit room identifier
         'interview_type',
         'status',
         'applicant_confirmed',
@@ -41,6 +42,8 @@ class Interview extends Model
         'rating_score'          => 'decimal:2',
     ];
 
+    // ── Relationships ─────────────────────────────────────────────────────
+
     public function applicant()
     {
         return $this->belongsTo(Applicant::class);
@@ -54,5 +57,15 @@ class Interview extends Model
     public function interviewer()
     {
         return $this->belongsTo(User::class, 'interviewer_id');
+    }
+
+    public function transcripts()
+    {
+        return $this->hasMany(InterviewTranscript::class)->orderBy('spoken_at');
+    }
+
+    public function aiReport()
+    {
+        return $this->hasOne(AiInterviewReport::class);
     }
 }

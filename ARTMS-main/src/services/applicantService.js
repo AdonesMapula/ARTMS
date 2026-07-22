@@ -1,6 +1,13 @@
 import api from './api';
 
 const applicantService = {
+  /** Submit a new job application */
+  submit: (data) => api.post('/public/applicants', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+
   /** Get all applicants with filters */
   getAll: (params = {}) => api.get('/applicants', { params }),
 
@@ -23,7 +30,7 @@ const applicantService = {
   addNote: (id, data) => api.post(`/applicants/${id}/notes`, data),
 
   /** Track application by application_id (public) */
-  track: (applicationId) => api.get('/applicants/track', { params: { application_id: applicationId } }),
+  track: (applicationId) => api.post('/public/applicants/track', { application_id: applicationId }),
 };
 
 export default applicantService;

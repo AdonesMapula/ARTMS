@@ -12,6 +12,7 @@ use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\JobLibraryController;
 use App\Http\Controllers\JobPostingController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\LiveKitWebhookController;
 use App\Http\Controllers\ManpowerRequestController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PermissionController;
@@ -31,6 +32,9 @@ Route::prefix('public')->group(function () {
     Route::post('applicants/track', [ApplicantController::class, 'track']); // track by application_id
     Route::post('parse-resume', [ResumeParserController::class, 'parse']); // AI resume parser
 });
+
+// ── LiveKit Webhook (no Sanctum auth — signature validated inside controller) ──
+Route::post('livekit/webhook', [LiveKitWebhookController::class, 'handle']);
 
 /*
 |--------------------------------------------------------------------------
@@ -154,7 +158,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Interviews ───────────────────────────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('interviews', InterviewController::class);
-        Route::post('interviews/{interview}/send-reminder', [InterviewController::class, 'sendReminder']);
+        Route::post('interviews/{interview}/send-reminder',  [InterviewController::class, 'sendReminder']);
+        Route::post('interviews/{interview}/livekit-token',  [InterviewController::class, 'generateToken']);
+        Route::post('interviews/{interview}/end-session',    [InterviewController::class, 'endSession']);
+        Route::get('interviews/{interview}/report',          [InterviewController::class, 'report']);
     });
     // Public-facing confirm (applicant uses a secure token link in email)
     Route::patch('interviews/{interview}/confirm', [InterviewController::class, 'confirm']);

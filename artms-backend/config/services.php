@@ -47,4 +47,14 @@ return [
         'key' => env('GROQ_API_KEY'),
     ],
 
+    'livekit' => [
+        'key'    => env('LIVEKIT_API_KEY'),
+        'secret' => env('LIVEKIT_API_SECRET'),
+        'host'   => env('LIVEKIT_HOST', 'https://cloud.livekit.io'),
+    ],
+
+    'xai' => [
+        'key' => env('XAI_API_KEY'),
+    ],
+
 ];

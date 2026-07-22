@@ -160,6 +160,8 @@ export default function ApplyModal({ open, job, onClose }) {
       const res = await applicantService.submit(fd);
       setSubmitted({ application_id: res.data.application_id });
     } catch (err) {
+      console.error("Form submission error:", err); // ADD THIS LINE
+      console.log("Response data:", err.response?.data); // ADD THIS LINE
       const errors = err.response?.data?.errors;
       if (errors) {
         const mapped = {};
