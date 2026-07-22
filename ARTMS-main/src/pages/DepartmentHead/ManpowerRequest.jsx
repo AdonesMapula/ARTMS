@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiInfo, FiBookOpen } from "react-icons/fi";
+import { 
+  FiInfo, 
+  FiBookOpen, 
+  FiCalendar, 
+  FiUsers, 
+  FiBriefcase, 
+  FiCheckCircle,
+  FiFileText,
+  FiAlertCircle,
+  FiArrowRight,
+  FiAward,
+  FiTarget,
+  FiClock,
+  FiStar
+} from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
 import AlertModal from "../../components/ui/AlertModal";
@@ -39,39 +53,56 @@ function Pill({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       className={[
-        "rounded-lg border px-4 py-2 text-sm font-medium transition",
+        "group relative overflow-hidden rounded-xl border px-5 py-3 text-sm font-semibold transition-all duration-200",
         active
-          ? "border-[#111A62] bg-[#111A62] text-white shadow-sm"
-          : "border-slate-300 bg-white text-slate-600 hover:border-[#111A62]/40 hover:bg-slate-50",
+          ? "border-[#111A62] bg-gradient-to-br from-[#111A62] to-[#0d1449] text-white shadow-lg shadow-[#111A62]/20 scale-105"
+          : "border-slate-200 bg-white text-slate-700 hover:border-[#111A62]/40 hover:bg-gradient-to-br hover:from-slate-50 hover:to-white hover:shadow-md",
       ].join(" ")}
     >
+      {active && (
+        <div className="absolute right-2 top-2">
+          <FiCheckCircle size={14} className="text-white" />
+        </div>
+      )}
       {children}
     </button>
   );
 }
 
-function SectionCard({ eyebrow, title, description, children, badge }) {
+function SectionCard({ eyebrow, title, description, children, badge, icon }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-[#111A62]/20 sm:p-8">
+      {/* Decorative gradient corner */}
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-[#111A62]/5 to-[#F97316]/5 blur-2xl transition-all duration-300 group-hover:scale-150" />
+      
       {(eyebrow || title) && (
-        <div className="mb-5">
-          <div className="flex items-center gap-2">
-            {eyebrow && (
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#F97316]">
-                {eyebrow}
-              </p>
+        <div className="relative mb-6">
+          <div className="flex items-center gap-3">
+            {icon && (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#111A62] to-[#0d1449] text-white shadow-lg">
+                {icon}
+              </div>
             )}
-            {badge}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                {eyebrow && (
+                  <p className="text-xs font-black uppercase tracking-[0.20em] text-[#F97316]">
+                    {eyebrow}
+                  </p>
+                )}
+                {badge}
+              </div>
+              {title && (
+                <h3 className="mt-1 text-lg font-extrabold text-slate-900">{title}</h3>
+              )}
+            </div>
           </div>
-          {title && (
-            <h3 className="mt-1 text-base font-extrabold text-slate-900">{title}</h3>
-          )}
           {description && (
-            <p className="mt-1 text-sm text-slate-500">{description}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{description}</p>
           )}
         </div>
       )}
-      {children}
+      <div className="relative">{children}</div>
     </div>
   );
 }
@@ -256,43 +287,64 @@ export default function ManpowerRequest() {
   const selectedJob = jobLibrary.find((j) => String(j.id) === String(form.job_library_id));
 
   return (
-    <div className="space-y-4">
-      {/* Page heading */}
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#F97316]">
-          Manpower Request
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          Personnel Requisition Form
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Select a position from the Job Library, then fill in the remaining details.
-        </p>
+    <div className="space-y-6">
+      {/* Modern Page Header with gradient background */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#111A62] via-[#0d1449] to-[#111A62] p-8 shadow-xl">
+        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-[#F97316]/20 blur-3xl" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-2">
+            <FiFileText className="text-[#F97316]" size={16} />
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#F97316]">
+              Manpower Request
+            </p>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            Personnel Requisition Form
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-slate-300">
+            Select a position from the Job Library, then fill in the remaining details to submit your manpower request.
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* ── Step 1: Position & Schedule ──────────────────────────────────── */}
-        <SectionCard eyebrow="Step 1" title="Position &amp; Schedule">
-          <div className="grid gap-5 sm:grid-cols-2">
+        <SectionCard 
+          eyebrow="Step 1" 
+          title="Position &amp; Schedule"
+          icon={<FiBriefcase size={18} />}
+        >
+          <div className="grid gap-6 sm:grid-cols-2">
 
             {/* Position dropdown from Job Library */}
             <div className="sm:col-span-2">
               <label className={labelClass}>
-                Position Needed{" "}
-                <span className="text-red-500">*</span>
-                <span className={hintClass}> — from Job Library</span>
+                <div className="flex items-center gap-2">
+                  <FiBookOpen size={14} className="text-[#F97316]" />
+                  <span>Position Needed</span>
+                  <span className="text-red-500">*</span>
+                  <span className={hintClass}> — from Job Library</span>
+                </div>
               </label>
               {libraryLoading ? (
-                <div className={`${inputClass} text-slate-400`}>Loading job positions…</div>
+                <div className={`${inputClass} flex items-center gap-2 text-slate-400`}>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#111A62]" />
+                  Loading job positions…
+                </div>
               ) : jobLibrary.length === 0 ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  <FiBookOpen className="mt-0.5 shrink-0" />
-                  <span>
-                    No approved job entries yet. An HR Admin must first add entries to the{" "}
-                    <span className="font-semibold">Job Library</span> and get COO approval before
-                    they appear here.
-                  </span>
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-sm text-amber-800 shadow-sm">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                    <FiBookOpen className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">No approved job positions available</p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      An HR Admin must first add entries to the Job Library and get COO approval before they appear here.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <select
@@ -311,30 +363,60 @@ export default function ManpowerRequest() {
               )}
             </div>
 
-            {/* Job Library preview card */}
+            {/* Job Library preview card - Modernized */}
             {selectedJob && (
-              <div className="sm:col-span-2 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#111A62] mb-1">
-                  Job Library Entry
-                </p>
-                <p className="font-semibold text-slate-900">{selectedJob.job_title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {selectedJob.job_category && <span>{selectedJob.job_category} · </span>}
-                  {selectedJob.employment_type?.replace(/_/g, " ")}
-                  {selectedJob.salary_min && selectedJob.salary_max && (
-                    <span>
-                      {" "}· ₱{Number(selectedJob.salary_min).toLocaleString()} – ₱{Number(selectedJob.salary_max).toLocaleString()}
-                    </span>
+              <div className="sm:col-span-2 group relative overflow-hidden rounded-xl border border-[#111A62]/30 bg-gradient-to-br from-[#111A62]/10 via-[#111A62]/5 to-transparent p-5 shadow-md transition-all duration-300 hover:shadow-xl">
+                <div className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full bg-[#111A62]/10 blur-2xl" />
+                
+                <div className="relative">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111A62] text-white shadow-lg">
+                      <FiCheckCircle size={14} />
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-wider text-[#111A62]">
+                      Selected Position
+                    </p>
+                  </div>
+                  
+                  <h4 className="text-lg font-bold text-slate-900">{selectedJob.job_title}</h4>
+                  
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                    {selectedJob.job_category && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
+                        <FiTarget size={12} />
+                        {selectedJob.job_category}
+                      </span>
+                    )}
+                    {selectedJob.employment_type && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
+                        <FiBriefcase size={12} />
+                        {selectedJob.employment_type?.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {selectedJob.salary_min && selectedJob.salary_max && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 shadow-sm">
+                        <FiAward size={12} />
+                        ₱{Number(selectedJob.salary_min).toLocaleString()} – ₱{Number(selectedJob.salary_max).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {selectedJob.job_description && (
+                    <p className="mt-3 text-sm leading-relaxed text-slate-700 line-clamp-2">
+                      {selectedJob.job_description}
+                    </p>
                   )}
-                </p>
-                {selectedJob.job_description && (
-                  <p className="mt-2 text-xs text-slate-600 line-clamp-2">{selectedJob.job_description}</p>
-                )}
+                </div>
               </div>
             )}
 
             <div>
-              <label className={labelClass}>Date Needed</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiCalendar size={14} className="text-[#F97316]" />
+                  <span>Date Needed</span>
+                </div>
+              </label>
               <input
                 type="date"
                 value={form.needed_by}
@@ -344,7 +426,12 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>Number of Headcount</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiUsers size={14} className="text-[#F97316]" />
+                  <span>Number of Headcount</span>
+                </div>
+              </label>
               <input
                 type="number"
                 min="1"
@@ -355,11 +442,15 @@ export default function ManpowerRequest() {
             </div>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6">
             <label className={labelClass}>
-              Employment Status <span className={hintClass}>(select one)</span>
+              <div className="flex items-center gap-2 mb-3">
+                <FiBriefcase size={14} className="text-[#F97316]" />
+                <span>Employment Status</span>
+                <span className={hintClass}>(select one)</span>
+              </div>
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {EMPLOYMENT_STATUS_OPTIONS.map((opt) => (
                 <Pill
                   key={opt.value}
@@ -376,8 +467,12 @@ export default function ManpowerRequest() {
         </SectionCard>
 
         {/* ── Step 2: Plantilla Requirement ───────────────────────────────── */}
-        <SectionCard eyebrow="Step 2" title="Plantilla Requirement">
-          <div className="flex flex-wrap gap-2">
+        <SectionCard 
+          eyebrow="Step 2" 
+          title="Plantilla Requirement"
+          icon={<FiFileText size={18} />}
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
             {PLANTILLA_OPTIONS.map((opt) => (
               <Pill
                 key={opt.value}
@@ -392,8 +487,13 @@ export default function ManpowerRequest() {
           </div>
 
           {form.plantilla_type === "replacement" && (
-            <div className="mt-4">
-              <label className={labelClass}>Replacement For</label>
+            <div className="mt-5 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-5">
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiUsers size={14} className="text-blue-600" />
+                  <span>Replacement For</span>
+                </div>
+              </label>
               <input
                 type="text"
                 value={form.replacement_for}
@@ -409,9 +509,11 @@ export default function ManpowerRequest() {
         <SectionCard
           eyebrow="Step 3"
           title="Personnel Requirement Details"
+          icon={<FiAward size={18} />}
           badge={
             autoFilled && (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                <FiCheckCircle size={12} />
                 Auto-filled from Job Library
               </span>
             )
@@ -422,9 +524,14 @@ export default function ManpowerRequest() {
               : "Fill in the specific requirements for this position."
           }
         >
-          <div className="grid gap-5">
+          <div className="grid gap-6">
             <div>
-              <label className={labelClass}>Educational Background</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiAward size={14} className="text-[#F97316]" />
+                  <span>Educational Background</span>
+                </div>
+              </label>
               <input
                 type="text"
                 value={form.educational_background}
@@ -435,7 +542,12 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>Work Experience</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiBriefcase size={14} className="text-[#F97316]" />
+                  <span>Work Experience</span>
+                </div>
+              </label>
               <textarea
                 rows={3}
                 value={form.work_experience}
@@ -446,7 +558,12 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>Skills</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiStar size={14} className="text-[#F97316]" />
+                  <span>Skills</span>
+                </div>
+              </label>
               <textarea
                 rows={2}
                 value={form.skills}
@@ -457,7 +574,12 @@ export default function ManpowerRequest() {
             </div>
 
             <div>
-              <label className={labelClass}>Other Preferred Characteristics / Licenses</label>
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiCheckCircle size={14} className="text-[#F97316]" />
+                  <span>Other Preferred Characteristics / Licenses</span>
+                </div>
+              </label>
               <input
                 type="text"
                 value={form.other_characteristics}
@@ -470,8 +592,13 @@ export default function ManpowerRequest() {
         </SectionCard>
 
         {/* ── Step 4: Priority ─────────────────────────────────────────────── */}
-        <SectionCard eyebrow="Step 4" title="Priority Level">
-          <div className="flex flex-wrap gap-2">
+        <SectionCard 
+          eyebrow="Step 4" 
+          title="Priority Level"
+          icon={<FiClock size={18} />}
+          description="Set the urgency level for this manpower request"
+        >
+          <div className="grid gap-3 sm:grid-cols-4">
             {PRIORITY_OPTIONS.map((opt) => (
               <Pill
                 key={opt.value}
@@ -486,62 +613,104 @@ export default function ManpowerRequest() {
 
         {/* ── Fit Threshold Configuration ─────────────────────────────────── */}
         <SectionCard
-          eyebrow="Fit Threshold Configuration"
+          eyebrow="AI Configuration"
           title="Applicant Score Matching"
+          icon={<FiTarget size={18} />}
           description="Set the score ranges used to classify how well an applicant fits this position."
         >
-          {/* Gradient bar */}
-          <div className="flex h-3 w-full overflow-hidden rounded-full">
-            <div className="bg-red-500 transition-all" style={{ width: `${lowWidth}%` }} />
-            <div className="bg-orange-500 transition-all" style={{ width: `${midWidth}%` }} />
-            <div className="bg-green-500 transition-all" style={{ width: `${highWidth}%` }} />
-          </div>
-          <div className="mt-2 flex justify-between text-xs text-slate-500">
-            <span>LOW (0&ndash;{Math.max(medium - 1, 0)}%)</span>
-            <span>MEDIUM ({medium}&ndash;{Math.max(high - 1, medium)}%)</span>
-            <span>HIGH ({high}&ndash;100%)</span>
+          {/* Modern Gradient bar with labels */}
+          <div className="relative">
+            <div className="flex h-4 w-full overflow-hidden rounded-full shadow-inner">
+              <div 
+                className="bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300" 
+                style={{ width: `${lowWidth}%` }} 
+              />
+              <div 
+                className="bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-300" 
+                style={{ width: `${midWidth}%` }} 
+              />
+              <div 
+                className="bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-300" 
+                style={{ width: `${highWidth}%` }} 
+              />
+            </div>
+            <div className="mt-3 flex justify-between text-xs font-semibold">
+              <span className="flex items-center gap-1 text-red-600">
+                <div className="h-2 w-2 rounded-full bg-red-500" />
+                LOW (0&ndash;{Math.max(medium - 1, 0)}%)
+              </span>
+              <span className="flex items-center gap-1 text-orange-600">
+                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                MEDIUM ({medium}&ndash;{Math.max(high - 1, medium)}%)
+              </span>
+              <span className="flex items-center gap-1 text-green-600">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                HIGH ({high}&ndash;100%)
+              </span>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-slate-200 p-4">
-              <label className={labelClass}>High Fit Min Score</label>
-              <div className="flex items-center gap-2">
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <div className="group relative overflow-hidden rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-5 transition-all duration-300 hover:shadow-xl hover:border-green-300">
+              <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-green-200/30 blur-2xl" />
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500 text-white text-xs font-bold">
+                    H
+                  </div>
+                  <span>High Fit Min Score</span>
+                </div>
+              </label>
+              <div className="relative mt-2 flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   max="100"
                   value={form.high_fit_min}
                   onChange={(e) => set("high_fit_min", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm font-bold text-green-600 outline-none transition focus:border-[#111A62] focus:ring-4 focus:ring-[#111A62]/10"
+                  className="relative z-10 w-full rounded-xl border-2 border-green-200 bg-white px-4 py-3 text-lg font-extrabold text-green-600 outline-none transition focus:border-green-400 focus:ring-4 focus:ring-green-100"
                 />
-                <span className="text-sm text-slate-400">%</span>
+                <span className="text-xl font-bold text-green-600">%</span>
               </div>
-              <p className="mt-1.5 text-xs text-slate-400">Above this = High Fit</p>
+              <p className="mt-2 text-xs font-medium text-green-700">Above this score = High Fit candidate</p>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-4">
-              <label className={labelClass}>Medium Fit Min Score</label>
-              <div className="flex items-center gap-2">
+            <div className="group relative overflow-hidden rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5 transition-all duration-300 hover:shadow-xl hover:border-orange-300">
+              <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-orange-200/30 blur-2xl" />
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#F97316] text-white text-xs font-bold">
+                    M
+                  </div>
+                  <span>Medium Fit Min Score</span>
+                </div>
+              </label>
+              <div className="relative mt-2 flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   max="100"
                   value={form.medium_fit_min}
                   onChange={(e) => set("medium_fit_min", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm font-bold text-[#F97316] outline-none transition focus:border-[#111A62] focus:ring-4 focus:ring-[#111A62]/10"
+                  className="relative z-10 w-full rounded-xl border-2 border-orange-200 bg-white px-4 py-3 text-lg font-extrabold text-[#F97316] outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
                 />
-                <span className="text-sm text-slate-400">%</span>
+                <span className="text-xl font-bold text-[#F97316]">%</span>
               </div>
-              <p className="mt-1.5 text-xs text-slate-400">Above this = Medium Fit</p>
+              <p className="mt-2 text-xs font-medium text-orange-700">Above this score = Medium Fit candidate</p>
             </div>
           </div>
 
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            <FiInfo className="mt-0.5 shrink-0" aria-hidden="true" />
-            <span>
-              Scores below the Medium threshold will be classified as{" "}
-              <span className="font-semibold text-red-600">Low Fit</span>.
-            </span>
+          <div className="mt-5 flex items-start gap-3 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-4 shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white">
+              <FiInfo size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">AI Scoring Information</p>
+              <p className="mt-1 text-xs leading-relaxed text-blue-700">
+                Scores below the Medium threshold will be classified as{" "}
+                <span className="font-bold text-red-600">Low Fit</span>. The AI will automatically evaluate applicants based on these thresholds.
+              </p>
+            </div>
           </div>
         </SectionCard>
 
@@ -549,65 +718,122 @@ export default function ManpowerRequest() {
         <SectionCard
           eyebrow="HR Use Only"
           title="For Human Resources Department"
+          icon={<FiAlertCircle size={18} />}
           description="These fields will be completed by HR once your request is received and processed."
         >
           <div className="grid gap-5 sm:grid-cols-3">
             <div>
-              <label className={labelClass}>Date of Receipt</label>
-              <input
-                type="text"
-                disabled
-                placeholder="Pending HR review"
-                className={`${inputClass} cursor-not-allowed bg-slate-50 text-slate-400`}
-              />
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiClock size={14} className="text-slate-400" />
+                  <span>Date of Receipt</span>
+                </div>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled
+                  placeholder="Pending HR review"
+                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                </div>
+              </div>
             </div>
             <div>
-              <label className={labelClass}>Position Filled Up By</label>
-              <input
-                type="text"
-                disabled
-                placeholder="Pending HR review"
-                className={`${inputClass} cursor-not-allowed bg-slate-50 text-slate-400`}
-              />
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiUsers size={14} className="text-slate-400" />
+                  <span>Position Filled Up By</span>
+                </div>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled
+                  placeholder="Pending HR review"
+                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                </div>
+              </div>
             </div>
             <div>
-              <label className={labelClass}>Date Start</label>
-              <input
-                type="text"
-                disabled
-                placeholder="Pending HR review"
-                className={`${inputClass} cursor-not-allowed bg-slate-50 text-slate-400`}
-              />
+              <label className={labelClass}>
+                <div className="flex items-center gap-2">
+                  <FiCalendar size={14} className="text-slate-400" />
+                  <span>Date Start</span>
+                </div>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  disabled
+                  placeholder="Pending HR review"
+                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                </div>
+              </div>
             </div>
           </div>
         </SectionCard>
 
         {/* ── Requested by ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 text-sm">
-          <div>
-            <p className="font-semibold text-slate-800">Requested by {user?.name ?? "you"}</p>
-            <p className="text-slate-500 capitalize">{user?.role?.replace(/_/g, " ") ?? ""}</p>
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 shadow-lg">
+          <div className="absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-[#111A62]/5 blur-3xl" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#111A62] to-[#0d1449] text-white shadow-lg">
+                <FiUsers size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-600">Requested by</p>
+                <p className="text-lg font-extrabold text-slate-900">{user?.name ?? "you"}</p>
+                <p className="text-xs text-slate-500 capitalize">{user?.role?.replace(/_/g, " ") ?? ""}</p>
+              </div>
+            </div>
+            <div className="hidden sm:block rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-blue-700">
+                <FiCheckCircle size={14} />
+                Auto-routed for approval
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-400">
-            Submitted requests are routed for approval automatically.
-          </p>
         </div>
 
         {/* ── Submit row ───────────────────────────────────────────────────── */}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => navigate("/department-head/request-history")}
-            className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="group flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md"
           >
-            Cancel
+            <span>Cancel</span>
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg bg-[#111A62] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d1550] disabled:opacity-60"
+            className="group relative overflow-hidden rounded-xl border-2 border-[#111A62] bg-gradient-to-br from-[#111A62] to-[#0d1449] px-8 py-3.5 text-sm font-bold text-white shadow-xl transition-all duration-200 hover:shadow-2xl hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            {submitting ? "Submitting…" : "Submit Request"}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="relative flex items-center justify-center gap-2">
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Submitting Request…
+                </>
+              ) : (
+                <>
+                  <FiCheckCircle size={16} />
+                  Submit Request
+                  <FiArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </span>
           </button>
         </div>
       </form>
