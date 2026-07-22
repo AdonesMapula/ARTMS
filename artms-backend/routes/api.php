@@ -14,6 +14,7 @@ use App\Http\Controllers\JobPostingController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\ManpowerRequestController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ResumeParserController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +74,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
         Route::get('audit-logs', [AuditLogController::class, 'index']);
         Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+        
+        // Permissions Management
+        Route::get('permissions', [PermissionController::class, 'index']);
+        Route::get('permissions/role/{role}', [PermissionController::class, 'getByRole']);
+        Route::post('permissions/role/{role}', [PermissionController::class, 'updateRolePermissions']);
+        Route::get('permissions/all-roles', [PermissionController::class, 'getAllRoles']);
+        Route::post('permissions/sync-defaults', [PermissionController::class, 'syncDefaultPermissions']);
+        
+        // Custom Roles Management
+        Route::get('roles', [\App\Http\Controllers\RoleController::class, 'index']);
+        Route::post('roles', [\App\Http\Controllers\RoleController::class, 'store']);
+        Route::put('roles/{id}', [\App\Http\Controllers\RoleController::class, 'update']);
+        Route::delete('roles/{id}', [\App\Http\Controllers\RoleController::class, 'destroy']);
     });
 
     // ── Departments  (Super Admin + HR Admin) ────────────────────────────────

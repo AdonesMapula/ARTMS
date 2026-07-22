@@ -1,23 +1,10 @@
-import { FiCheckCircle, FiX } from "react-icons/fi";
+import { CheckCircle, XCircle, FileText } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
-
-const labelClass = "mb-1.5 block text-sm font-semibold text-slate-800";
-const textareaClass =
-  "w-full resize-none rounded-lg border border-[var(--artms-border)] bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]";
+import Badge from "../components/ui/Badge";
 
 /**
  * JobLibraryApproveModal - COO Review (Approve/Reject) Modal
- * 
- * @param {boolean} open - Modal visibility
- * @param {object} job - Job data to review
- * @param {string} status - "approved" or "rejected"
- * @param {string} remarks - Remarks text
- * @param {function} onStatusChange - Status change callback
- * @param {function} onRemarksChange - Remarks change callback
- * @param {function} onClose - Close callback
- * @param {function} onConfirm - Confirm callback
- * @param {boolean} saving - Loading state
  */
 export default function JobLibraryApproveModal({
   open,
@@ -30,81 +17,104 @@ export default function JobLibraryApproveModal({
   onConfirm,
   saving = false,
 }) {
+  if (!open || !job) return null;
+
   return (
-    <Modal
-      open={open}
-      title="Review Job Entry"
-      description={job ? `Reviewing "${job.job_title}"` : ""}
-      onClose={onClose}
-      className="max-w-2xl" // Larger modal
-      footer={
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            <FiX /> Cancel
-          </Button>
-          <Button
-            variant={status === "approved" ? "primary" : "danger"}
-            className="flex-1"
-            onClick={onConfirm}
-            disabled={saving}
-          >
-            <FiCheckCircle />{" "}
-            {saving ? "Saving…" : status === "approved" ? "Approve" : "Reject"}
-          </Button>
+    <Modal open={open} onClose={onClose} className="max-w-3xl">
+      {/* Header */}
+      <div className="border-b border-slate-200 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+            <FileText size={20} className="text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900">Review Job Entry</h2>
+            <p className="text-xs text-slate-500">
+              Reviewing "{job.job_title}"
+            </p>
+          </div>
         </div>
-      }
-    >
-      {job && (
+      </div>
+
+      {/* Content */}
+      <div
+        className="px-6 py-5"
+        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
+      >
         <div className="space-y-5">
           {/* Job Details Card */}
-          <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50 p-5 space-y-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Job Details</p>
-              <h3 className="mt-1 text-lg font-bold text-slate-900">{job.job_title}</h3>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-extrabold text-slate-900">
+                  {job.job_title}
+                </h3>
+                <span className="text-xs text-slate-400">
+                  JL-{String(job.id).padStart(3, "0")}
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            {/* Basic Info Grid */}
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <span className="font-semibold text-slate-700">Category:</span>
-                <p className="text-slate-600">{job.job_category || "—"}</p>
-              </div>
-              <div>
-                <span className="font-semibold text-slate-700">Type:</span>
-                <p className="text-slate-600 capitalize">
-                  {job.employment_type?.replace(/_/g, " ") || "—"}
+                <p className="text-xs font-semibold text-slate-500">Category</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {job.job_category || "—"}
                 </p>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500">
+                  Employment Type
+                </p>
+                <Badge tone="accent" className="mt-1">
+                  {job.employment_type?.replace(/_/g, " ") || "—"}
+                </Badge>
+              </div>
               {(job.salary_min || job.salary_max) && (
-                <div className="col-span-2">
-                  <span className="font-semibold text-slate-700">Salary Range:</span>
-                  <p className="text-slate-600">
-                    ₱{job.salary_min ? Number(job.salary_min).toLocaleString() : "—"} - ₱
-                    {job.salary_max ? Number(job.salary_max).toLocaleString() : "—"}
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold text-slate-500">
+                    Salary Range
+                  </p>
+                  <p className="text-sm font-medium text-slate-900">
+                    ₱{job.salary_min ? Number(job.salary_min).toLocaleString() : "—"}{" "}
+                    - ₱{job.salary_max ? Number(job.salary_max).toLocaleString() : "—"}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="pt-2 border-t border-slate-200">
-              <p className="text-xs font-semibold text-slate-700 mb-1">Description:</p>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                {job.job_description || "No description provided."}
-              </p>
-            </div>
+            {/* Description */}
+            {job.job_description && (
+              <div className="mb-4 border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold text-slate-700">
+                  Description
+                </p>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  {job.job_description}
+                </p>
+              </div>
+            )}
 
+            {/* Qualifications */}
             {job.qualifications && (
-              <div className="pt-2 border-t border-slate-200">
-                <p className="text-xs font-semibold text-slate-700 mb-1">Qualifications:</p>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+              <div className="mb-4 border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold text-slate-700">
+                  Qualifications
+                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
                   {job.qualifications}
                 </p>
               </div>
             )}
 
+            {/* Responsibilities */}
             {job.responsibilities && (
-              <div className="pt-2 border-t border-slate-200">
-                <p className="text-xs font-semibold text-slate-700 mb-1">Responsibilities:</p>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+              <div className="border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold text-slate-700">
+                  Responsibilities
+                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
                   {job.responsibilities}
                 </p>
               </div>
@@ -113,42 +123,86 @@ export default function JobLibraryApproveModal({
 
           {/* Decision Selection */}
           <div>
-            <label className={labelClass}>Decision</label>
-            <div className="grid grid-cols-2 gap-3">
-              {["approved", "rejected"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onStatusChange(s)}
-                  className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold capitalize transition ${
-                    status === s
-                      ? s === "approved"
-                        ? "border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-200"
-                        : "border-red-500 bg-red-500 text-white shadow-lg shadow-red-200"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
-                  }`}
-                >
-                  {s === "approved" ? "✓" : "✕"} {s}
-                </button>
-              ))}
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Your Decision
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => onStatusChange("approved")}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-4 text-sm font-bold capitalize transition ${
+                  status === "approved"
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-200"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
+                }`}
+              >
+                <CheckCircle size={18} />
+                Approve
+              </button>
+
+              <button
+                onClick={() => onStatusChange("rejected")}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-5 py-4 text-sm font-bold capitalize transition ${
+                  status === "rejected"
+                    ? "border-red-500 bg-red-500 text-white shadow-lg shadow-red-200"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                }`}
+              >
+                <XCircle size={18} />
+                Reject
+              </button>
             </div>
           </div>
 
           {/* Remarks */}
           <div>
-            <label className={labelClass}>Remarks (optional)</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Remarks (Optional)
+            </label>
             <textarea
               rows={3}
-              className={textareaClass}
-              placeholder="Leave a note for the HR team…"
+              className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Leave a note for the HR team..."
               value={remarks}
               onChange={(e) => onRemarksChange(e.target.value)}
             />
-            <p className="mt-1.5 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-slate-500">
               This will be visible to the HR team who created this entry.
             </p>
           </div>
+
+          {/* Info Box */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-xs font-semibold text-blue-900">
+              💡 Review Guidelines
+            </p>
+            <ul className="mt-2 space-y-1 text-xs text-blue-700">
+              <li>• Approved entries will appear in PRF position dropdowns</li>
+              <li>• Rejected entries can be revised and resubmitted</li>
+              <li>• Your remarks will help the HR team improve the entry</li>
+            </ul>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-slate-200 px-6 py-4">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            variant={status === "approved" ? "primary" : "danger"}
+            onClick={onConfirm}
+            disabled={saving}
+          >
+            {saving
+              ? "Saving..."
+              : status === "approved"
+              ? "Approve Entry"
+              : "Reject Entry"}
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEye, FiMail, FiCheckCircle, FiRefreshCw, FiLoader, FiTrash2 } from "react-icons/fi";
+import { Users, UserCheck, Clock, XCircle, Mail, Eye, CheckCircle, Trash2, Filter, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import StatusChip from "../../components/ui/StatusChip";
@@ -7,11 +7,13 @@ import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
+import Skeleton from "../../components/ui/Skeleton";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { ApplicantDetailModal } from "../../modals";
 import applicantService from "../../services/applicantService";
 
 const STATUSES = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All Status" },
   { value: "applied", label: "Applied" },
   { value: "ai_screening", label: "AI Screening" },
   { value: "screening_passed", label: "Screening Passed" },
@@ -23,7 +25,7 @@ const STATUSES = [
 ];
 
 const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
-const FIT_LABEL = { high: "High", medium: "Medium", low: "Low" };
+const FIT_LABEL = { high: "High Fit", medium: "Medium Fit", low: "Low Fit" };
 
 export default function Applicants() {
   const [applicants, setApplicants] = useState([]);
@@ -36,6 +38,8 @@ export default function Applicants() {
   const [selectedId, setSelectedId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [interviewConfirm, setInterviewConfirm] = useState(null);
   const pageSize = 10;
 
   const loadApplicants = useCallback(async () => {
@@ -83,15 +87,15 @@ export default function Applicants() {
     setSelectedId(null);
   };
 
-  const handleReadyForInterview = async (applicant, e) => {
-    e.stopPropagation();
-    if (!confirm(`Mark ${applicant.first_name} ${applicant.last_name} as ready for interview?`)) return;
+  const handleReadyForInterview = async () => {
+    if (!interviewConfirm) return;
     
-    setActionLoading(applicant.id);
+    setActionLoading(interviewConfirm.id);
     try {
-      await applicantService.readyForInterview(applicant.id, {
-        message: `Congratulations! You have been selected for an interview for the ${applicant.job_posting?.job_library?.job_title || "position"}.`,
+      await applicantService.readyForInterview(interviewConfirm.id, {
+        message: `Congratulations! You have been selected for an interview for the ${interviewConfirm.job_posting?.job_library?.job_title || "position"}.`,
       });
+      setInterviewConfirm(null);
       loadApplicants();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to update status.");
@@ -127,13 +131,13 @@ export default function Applicants() {
     }
   };
 
-  const handleDelete = async (applicant) => {
-    if (!confirm(`Are you sure you want to delete ${applicant.first_name} ${applicant.last_name}'s application?\n\nThis action cannot be undone.`)) return;
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
     
-    setActionLoading(applicant.id);
+    setActionLoading(deleteConfirm.id);
     try {
-      await applicantService.reject(applicant.id, { remarks: "Application deleted" });
-      alert("Applicant deleted successfully.");
+      await applicantService.reject(deleteConfirm.id, { remarks: "Application deleted" });
+      setDeleteConfirm(null);
       loadApplicants();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to delete applicant.");
@@ -142,58 +146,92 @@ export default function Applicants() {
     }
   };
 
-  // Count by status
-  const statusCounts = useMemo(() => {
-    const counts = { all: total };
-    STATUSES.forEach(s => {
-      if (s.value !== "all") counts[s.value] = 0;
-    });
-    return counts;
-  }, [total]);
+  // Statistics
+  const stats = useMemo(() => {
+    // For now, use the total count. You can enhance this by fetching separate counts from backend
+    return {
+      total: total,
+      screening: applicants.filter(a => ["applied", "ai_screening", "screening_passed"].includes(a.status)).length,
+      interview: applicants.filter(a => ["ready_for_interview", "interview_1", "interview_2"].includes(a.status)).length,
+      hired: applicants.filter(a => a.status === "hired").length,
+    };
+  }, [total, applicants]);
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">Applicants</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
+            Recruitment
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
             Applicant Management
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {total} applicant{total !== 1 ? "s" : ""} found • Ranked by AI score
+            View and manage all job applications • AI-powered screening
           </p>
         </div>
-
-        {/* Refresh button */}
         <Button
           variant="outline"
           onClick={loadApplicants}
           disabled={loading}
-          className="h-9 w-9 p-0 sm:h-auto sm:w-auto sm:px-4"
+          className="gap-2"
         >
-          <FiRefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          <span className="ml-2 hidden sm:inline">Refresh</span>
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 
-      {/* Status filter chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {STATUSES.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => handleStatusChange(s.value)}
-            className={`rounded-full border px-3 py-1 text-xs font-bold transition ${
-              status === s.value
-                ? "border-[var(--artms-primary)] bg-[var(--artms-primary)] text-white"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {s.label}
-            {statusCounts[s.value] !== undefined && (
-              <span className="ml-1.5 opacity-75">({statusCounts[s.value]})</span>
-            )}
-          </button>
-        ))}
+      {/* Statistics Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+              <Users size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Total Applicants</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+              <Clock size={24} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">In Screening</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.screening}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
+              <UserCheck size={24} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">In Interview</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.interview}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <CheckCircle size={24} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Hired</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.hired}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Error banner */}
@@ -203,30 +241,65 @@ export default function Applicants() {
         </div>
       )}
 
+      {/* Filters & Search */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Applicants</CardTitle>
-            <div className="w-full sm:max-w-sm">
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Filter size={16} />
+              Filters:
+            </div>
+            <div className="flex flex-1 flex-wrap gap-2">
+              {STATUSES.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => handleStatusChange(s.value)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                    status === s.value
+                      ? "border-[#111A62] bg-[#111A62] text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <div className="w-full lg:w-64">
               <SearchBar
                 value={q}
                 onChange={handleSearch}
-                placeholder="Search by name, email, application ID…"
+                placeholder="Search applicants..."
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Applicants Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Applicants ({total} {total === 1 ? "applicant" : "applicants"})
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-slate-400">
-              <FiLoader size={20} className="animate-spin" />
-              <span className="text-sm">Loading applicants...</span>
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-14 rounded-xl" />
+              ))}
             </div>
           ) : applicants.length === 0 ? (
-            <div className="py-10 text-center text-slate-400">
-              {q || status !== "all"
-                ? "No applicants match your search."
-                : "No applicants yet. Applications will appear here."}
+            <div className="py-12 text-center">
+              <Users size={48} className="mx-auto mb-3 text-slate-300" />
+              <p className="text-sm font-semibold text-slate-600">No applicants found</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {q || status !== "all"
+                  ? "Try adjusting your search or filters"
+                  : "Applications will appear here when candidates apply"}
+              </p>
             </div>
           ) : (
             <>
@@ -237,7 +310,7 @@ export default function Applicants() {
                     <TH>Position Applied</TH>
                     <TH>Status</TH>
                     <TH>AI Score</TH>
-                    <TH>Fit</TH>
+                    <TH>Fit Level</TH>
                     <TH className="text-right">Actions</TH>
                   </tr>
                 </THead>
@@ -253,19 +326,24 @@ export default function Applicants() {
                       >
                         <TD>
                           <div className="flex items-center gap-2.5">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
                               {a.first_name?.charAt(0)}{a.last_name?.charAt(0)}
                             </span>
                             <div>
                               <p className="font-semibold text-slate-900">
                                 {a.first_name} {a.last_name}
                               </p>
-                              <p className="text-xs text-slate-400">{a.application_id}</p>
+                              <p className="text-xs text-slate-400">{a.email}</p>
                             </div>
                           </div>
                         </TD>
-                        <TD className="max-w-[180px] truncate text-slate-600">
-                          {job?.job_title || "—"}
+                        <TD className="max-w-[180px]">
+                          <div className="truncate font-medium text-slate-900">
+                            {job?.job_title || "—"}
+                          </div>
+                          {a.application_id && (
+                            <div className="text-xs text-slate-400">{a.application_id}</div>
+                          )}
                         </TD>
                         <TD>
                           <StatusChip status={a.status || "applied"} />
@@ -292,8 +370,8 @@ export default function Applicants() {
                           )}
                         </TD>
                         <TD className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* Ready for Interview button - only show if qualified and not already in interview/hired/rejected */}
+                          <div className="inline-flex gap-1.5">
+                            {/* Ready for Interview button - only show if qualified */}
                             {eval_?.hr_decision === "qualified" &&
                               a.status !== "ready_for_interview" &&
                               a.status !== "interview_1" &&
@@ -301,16 +379,15 @@ export default function Applicants() {
                               a.status !== "hired" &&
                               a.status !== "rejected" && (
                                 <button
-                                  onClick={(e) => handleReadyForInterview(a, e)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setInterviewConfirm(a);
+                                  }}
                                   disabled={actionLoading === a.id}
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white transition hover:bg-emerald-600 disabled:opacity-50"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-green-500 hover:bg-green-50 hover:text-green-600 cursor-pointer disabled:opacity-50"
                                   title="Mark as Ready for Interview"
                                 >
-                                  {actionLoading === a.id ? (
-                                    <FiLoader size={14} className="animate-spin" />
-                                  ) : (
-                                    <FiCheckCircle size={14} />
-                                  )}
+                                  <CheckCircle size={16} />
                                 </button>
                               )}
 
@@ -321,10 +398,10 @@ export default function Applicants() {
                                 handleSendEmail(a);
                               }}
                               disabled={actionLoading === a.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 transition hover:bg-blue-100 disabled:opacity-50"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer disabled:opacity-50"
                               title="Send Status Email"
                             >
-                              <FiMail size={14} />
+                              <Mail size={16} />
                             </button>
 
                             {/* View Details button */}
@@ -333,23 +410,23 @@ export default function Applicants() {
                                 e.stopPropagation();
                                 handleViewDetails(a.id);
                               }}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-purple-500 hover:bg-purple-50 hover:text-purple-600 cursor-pointer"
                               title="View Details"
                             >
-                              <FiEye size={14} />
+                              <Eye size={16} />
                             </button>
 
                             {/* Delete button */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDelete(a);
+                                setDeleteConfirm(a);
                               }}
                               disabled={actionLoading === a.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer disabled:opacity-50"
                               title="Delete Applicant"
                             >
-                              <FiTrash2 size={14} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </TD>
@@ -379,6 +456,30 @@ export default function Applicants() {
         applicantId={selectedId}
         onClose={handleModalClose}
         onStatusChange={loadApplicants}
+      />
+
+      {/* Ready for Interview Confirm Dialog */}
+      <ConfirmDialog
+        open={!!interviewConfirm}
+        title="Mark as Ready for Interview?"
+        description={`Are you sure you want to mark ${interviewConfirm?.first_name} ${interviewConfirm?.last_name} as ready for interview? An email notification will be sent to the candidate.`}
+        confirmLabel="Yes, Mark Ready"
+        cancelLabel="Cancel"
+        tone="primary"
+        onConfirm={handleReadyForInterview}
+        onClose={() => setInterviewConfirm(null)}
+      />
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title="Delete Application?"
+        description={`Are you sure you want to delete ${deleteConfirm?.first_name} ${deleteConfirm?.last_name}'s application? This action cannot be undone and all applicant data will be removed from the system.`}
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleDelete}
+        onClose={() => setDeleteConfirm(null)}
       />
     </div>
   );

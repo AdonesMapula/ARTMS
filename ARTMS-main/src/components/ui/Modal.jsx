@@ -73,15 +73,11 @@ export default function Modal({
         <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">{children}</div>
 
         {/* Footer */}
-        <div className="border-t border-[var(--artms-border)] bg-slate-50/50 px-6 py-4 rounded-b-2xl">
-          {footer ?? (
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={onClose} className="cursor-pointer">
-                Close
-              </Button>
-            </div>
-          )}
-        </div>
+        {footer && (
+          <div className="border-t border-[var(--artms-border)] bg-slate-50/50 px-6 py-4 rounded-b-2xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

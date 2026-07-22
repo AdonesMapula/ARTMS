@@ -6,6 +6,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import SuperAdminLayout from "../layouts/SuperAdminLayout";
 import CooLayout from "../layouts/CooLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
+import PermissionProtectedRoute from "../components/PermissionProtectedRoute";
 import GuestRoute from "../components/GuestRoute";
 
 // Public
@@ -16,6 +17,7 @@ import JobDetails from "../pages/Public/JobDetails";
 import Apply from "../pages/Public/Apply";
 import Contact from "../pages/Public/Contact";
 import NotFound from "../pages/Public/NotFound";
+import AccessDenied from "../pages/Public/AccessDenied";
 
 // Auth
 import Login from "../pages/Auth/Login";
@@ -57,6 +59,18 @@ import Departments from "../pages/SuperAdmin/Departments";
 import Roles from "../pages/SuperAdmin/Roles";
 import SuperAdminSettings from "../pages/SuperAdmin/Settings";
 import AuditLogs from "../pages/SuperAdmin/AuditLogs";
+import HrManpowerRequests from "../pages/SuperAdmin/HrManpowerRequests";
+import HrJobLibrary from "../pages/SuperAdmin/HrJobLibrary";
+import HrJobPosting from "../pages/SuperAdmin/HrJobPosting";
+import HrApplicants from "../pages/SuperAdmin/HrApplicants";
+import HrAiScreening from "../pages/SuperAdmin/HrAiScreening";
+import HrInterviews from "../pages/SuperAdmin/HrInterviews";
+import HrPipeline from "../pages/SuperAdmin/HrPipeline";
+import HrEmployees from "../pages/SuperAdmin/HrEmployees";
+import HrReports from "../pages/SuperAdmin/HrReports";
+
+// Debug (temporary)
+import DebugPermissions from "../pages/DebugPermissions";
 
 export default function AppRoutes() {
   return (
@@ -80,13 +94,33 @@ export default function AppRoutes() {
           <Route path="/otp" element={<OtpVerification />} />
         </Route>
 
+        {/* ── Access Denied ─────────────────────────────────────────────── */}
+        <Route path="/access-denied" element={<AccessDenied />} />
+
         {/* ── Department Head (role-protected) ──────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={["department_head"]} />}>
           <Route path="/department-head" element={<DepartmentHeadLayout />}>
             <Route index element={<Navigate to="/department-head/dashboard" replace />} />
             <Route path="dashboard" element={<DepartmentHeadDashboard />} />
-            <Route path="manpower-request" element={<ManpowerRequest />} />
-            <Route path="request-history" element={<RequestHistory />} />
+            
+            {/* Protected by permissions */}
+            <Route
+              path="manpower-request"
+              element={
+                <PermissionProtectedRoute permission="view_manpower_request">
+                  <ManpowerRequest />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="request-history"
+              element={
+                <PermissionProtectedRoute permission="view_request_history">
+                  <RequestHistory />
+                </PermissionProtectedRoute>
+              }
+            />
+            
             <Route path="notifications" element={<DepartmentHeadNotifications />} />
           </Route>
         </Route>
@@ -96,15 +130,81 @@ export default function AppRoutes() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="manpower-requests" element={<AdminManpowerRequests />} />
-            <Route path="job-library" element={<JobLibrary />} />
-            <Route path="job-posting" element={<JobPosting />} />
-            <Route path="applicants" element={<Applicants />} />
-            <Route path="ai-screening" element={<AiScreening />} />
-            <Route path="interviews" element={<Interviews />} />
-            <Route path="pipeline" element={<Pipeline />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="reports" element={<Reports />} />
+            
+            {/* Protected by permissions */}
+            <Route
+              path="manpower-requests"
+              element={
+                <PermissionProtectedRoute permission="view_manpower_requests">
+                  <AdminManpowerRequests />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="job-library"
+              element={
+                <PermissionProtectedRoute permission="view_job_library">
+                  <JobLibrary />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="job-posting"
+              element={
+                <PermissionProtectedRoute permission="view_job_postings">
+                  <JobPosting />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="applicants"
+              element={
+                <PermissionProtectedRoute permission="view_applicants">
+                  <Applicants />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="ai-screening"
+              element={
+                <PermissionProtectedRoute permission="view_ai_screening">
+                  <AiScreening />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="interviews"
+              element={
+                <PermissionProtectedRoute permission="view_interviews">
+                  <Interviews />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="pipeline"
+              element={
+                <PermissionProtectedRoute permission="view_pipeline">
+                  <Pipeline />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="employees"
+              element={
+                <PermissionProtectedRoute permission="view_employees">
+                  <Employees />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <PermissionProtectedRoute permission="view_reports">
+                  <Reports />
+                </PermissionProtectedRoute>
+              }
+            />
+            
             <Route path="notifications" element={<AdminNotifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
@@ -115,11 +215,35 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute allowedRoles={["coo"]} />}>
           <Route path="/coo" element={<CooLayout />}>
             <Route index element={<Navigate to="/coo/dashboard" replace />} />
-            <Route path="dashboard"               element={<CooDashboard />} />
-            <Route path="prf-approvals"           element={<ManpowerApprovals />} />
-            <Route path="job-library-approvals"   element={<JobLibraryApprovals />} />
-            <Route path="job-posting-approvals"   element={<JobPostingApprovals />} />
-            <Route path="notifications"           element={<CooNotifications />} />
+            <Route path="dashboard" element={<CooDashboard />} />
+            
+            {/* Protected by permissions */}
+            <Route
+              path="prf-approvals"
+              element={
+                <PermissionProtectedRoute permission="view_prf_approvals">
+                  <ManpowerApprovals />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="job-library-approvals"
+              element={
+                <PermissionProtectedRoute permission="view_job_library_approvals">
+                  <JobLibraryApprovals />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="job-posting-approvals"
+              element={
+                <PermissionProtectedRoute permission="view_job_posting_approvals">
+                  <JobPostingApprovals />
+                </PermissionProtectedRoute>
+              }
+            />
+            
+            <Route path="notifications" element={<CooNotifications />} />
           </Route>
         </Route>
 
@@ -128,11 +252,49 @@ export default function AppRoutes() {
           <Route path="/superadmin" element={<SuperAdminLayout />}>
             <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
             <Route path="dashboard" element={<SuperAdminDashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="departments" element={<Departments />} />
-            <Route path="roles" element={<Roles />} />
+            
+            {/* Protected by permissions */}
+            <Route
+              path="users"
+              element={
+                <PermissionProtectedRoute permission="view_users">
+                  <Users />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="departments"
+              element={
+                <PermissionProtectedRoute permission="view_departments">
+                  <Departments />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <PermissionProtectedRoute permission="view_roles">
+                  <Roles />
+                </PermissionProtectedRoute>
+              }
+            />
+            
             <Route path="settings" element={<SuperAdminSettings />} />
             <Route path="audit-logs" element={<AuditLogs />} />
+            
+            {/* Debug Page (temporary) */}
+            <Route path="debug-permissions" element={<DebugPermissions />} />
+            
+            {/* HR Admin Access within SuperAdmin Layout */}
+            <Route path="hr-manpower-requests" element={<HrManpowerRequests />} />
+            <Route path="hr-job-library" element={<HrJobLibrary />} />
+            <Route path="hr-job-posting" element={<HrJobPosting />} />
+            <Route path="hr-applicants" element={<HrApplicants />} />
+            <Route path="hr-ai-screening" element={<HrAiScreening />} />
+            <Route path="hr-interviews" element={<HrInterviews />} />
+            <Route path="hr-pipeline" element={<HrPipeline />} />
+            <Route path="hr-employees" element={<HrEmployees />} />
+            <Route path="hr-reports" element={<HrReports />} />
           </Route>
         </Route>
 

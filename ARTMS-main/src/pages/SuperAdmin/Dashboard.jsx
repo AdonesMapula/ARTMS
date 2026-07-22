@@ -37,7 +37,7 @@ export default function SuperAdminDashboard() {
       {/* Header */}
       <div>
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">Governance</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Super Admin Dashboard</h1>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">Super Admin Dashboard</h1>
         <p className="mt-1 text-sm text-slate-500">Live user and system overview.</p>
       </div>
 

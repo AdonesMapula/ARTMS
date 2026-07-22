@@ -72,11 +72,23 @@ class ManpowerRequestController extends Controller
 
     public function destroy(ManpowerRequest $manpowerRequest): JsonResponse
     {
-        if ($manpowerRequest->status !== 'pending') {
-            return response()->json(['message' => 'Only pending requests can be deleted.'], 409);
+        // Allow deletion of pending requests without restriction
+        if ($manpowerRequest->status === 'pending') {
+            $manpowerRequest->delete();
+            AuditLog::record('delete', 'manpower_request', "Pending PRF deleted: {$manpowerRequest->position_needed}");
+            return response()->json(['message' => 'Request deleted.']);
         }
 
+        // For approved/rejected requests, check if they have associated job postings
+        if ($manpowerRequest->jobPostings()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete this PRF. It has been used to create job postings. Please delete the associated job postings first.'
+            ], 409);
+        }
+
+        // Allow deletion if no job postings are linked
         $manpowerRequest->delete();
+        AuditLog::record('delete', 'manpower_request', "PRF deleted: {$manpowerRequest->position_needed} (Status: {$manpowerRequest->status})");
 
         return response()->json(['message' => 'Request deleted.']);
     }

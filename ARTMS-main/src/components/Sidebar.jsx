@@ -181,7 +181,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
               {initials}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-extrabold text-slate-900">{user?.name ?? "User"}</p>
+              <p className="truncate text-sm font-extrabold text-[#111A62]">{user?.name ?? "User"}</p>
               <p className="truncate text-xs capitalize text-slate-500">
                 {user?.role?.replace(/_/g, " ") ?? ""}
               </p>

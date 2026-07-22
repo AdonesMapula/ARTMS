@@ -24,7 +24,7 @@ export default function Topbar({ title, subtitle, right }) {
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         {/* Left — title */}
         <div className="min-w-0">
-          <p className="truncate text-sm font-extrabold text-slate-900">{title}</p>
+          <p className="truncate text-sm font-extrabold text-[#111A62]">{title}</p>
           {subtitle && <p className="truncate text-xs text-slate-500">{subtitle}</p>}
         </div>
 
@@ -41,7 +41,7 @@ export default function Topbar({ title, subtitle, right }) {
           </Button>
 
           {/* User dropdown */}
-          <div className="relative">
+          <div className="relative ">
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className="flex items-center gap-2 rounded-xl border border-[var(--artms-border)] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none"

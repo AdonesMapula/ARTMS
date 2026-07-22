@@ -15,9 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Bearer token auth — stateful mode is NOT needed (no CSRF cookies required)
         // $middleware->statefulApi();
 
-        // Register role-based middleware alias
+        // Register role-based and permission middleware aliases
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
 
         // Allow CORS for API routes
