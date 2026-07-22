@@ -110,6 +110,60 @@ class PermissionController extends Controller
     }
 
     /**
+     * GET /api/permissions/my-permissions
+     * Get permissions for the currently authenticated user's role
+     * This endpoint allows any authenticated user to fetch their own role's permissions
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getMyPermissions(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $role = $user->role;
+
+            // Validate role
+            $validRoles = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+            if (!in_array($role, $validRoles)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid user role',
+                ], 400);
+            }
+
+            // For Super Admin, return ALL permissions
+            if ($role === 'super_admin') {
+                $permissions = DB::table('permissions')
+                    ->orderBy('resource')
+                    ->orderBy('name')
+                    ->get();
+            } else {
+                // For other roles, only return permissions where their column is 1
+                $permissions = DB::table('permissions')
+                    ->where($role, 1)
+                    ->orderBy('resource')
+                    ->orderBy('name')
+                    ->get();
+            }
+
+            return response()->json([
+                'success' => true,
+                'role' => $role,
+                'permissions' => $permissions,
+                'count' => $permissions->count(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch my permissions: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch permissions',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
+    }
+
+    /**
      * POST /api/permissions/role/{role}
      * Update permissions for a specific role
      * Sets the role's column to 1 for selected permissions, 0 for others

@@ -75,7 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('audit-logs', [AuditLogController::class, 'index']);
         Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
         
-        // Permissions Management
+        // Permissions Management (Super Admin only)
         Route::get('permissions', [PermissionController::class, 'index']);
         Route::get('permissions/role/{role}', [PermissionController::class, 'getByRole']);
         Route::post('permissions/role/{role}', [PermissionController::class, 'updateRolePermissions']);
@@ -88,6 +88,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('roles/{id}', [\App\Http\Controllers\RoleController::class, 'update']);
         Route::delete('roles/{id}', [\App\Http\Controllers\RoleController::class, 'destroy']);
     });
+
+    // ── Permissions for Current User (All authenticated users) ──────────────
+    // This allows any logged-in user to fetch their own role's permissions
+    Route::get('permissions/my-permissions', [PermissionController::class, 'getMyPermissions']);
 
     // ── Departments  (Super Admin + HR Admin) ────────────────────────────────
     Route::middleware('role:super_admin,hr_admin')->group(function () {

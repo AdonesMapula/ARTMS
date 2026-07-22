@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARTMS Auth Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #111A62;
+            margin-top: 0;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #111A62;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #111A62;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0d1449;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔒 ARTMS Authentication Test</h1>
+        <p>This page helps diagnose the 403 Forbidden error when accessing the permissions API.</p>
+    </div>
+
+    <div class="card">
+        <h2>📦 LocalStorage Check</h2>
+        <div id="localStorageStatus"></div>
+        <button onclick="checkLocalStorage()">Refresh LocalStorage</button>
+    </div>
+
+    <div class="card">
+        <h2>🔑 Token Validation</h2>
+        <div id="tokenStatus"></div>
+        <button onclick="testMeEndpoint()">Test /api/me Endpoint</button>
+    </div>
+
+    <div class="card">
+        <h2>🛡️ Permissions API Test</h2>
+        <div id="permissionsStatus"></div>
+        <button onclick="testPermissionsEndpoint()">Test /api/permissions/role/hr_admin</button>
+    </div>
+
+    <div class="card">
+        <h2>🚀 Actions</h2>
+        <button onclick="window.location.href='/login'">Go to Login Page</button>
+        <button onclick="clearAuth()" style="background: #dc3545;">Clear Auth & Reload</button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function checkLocalStorage() {
+            const token = localStorage.getItem('artms_token');
+            const userStr = localStorage.getItem('artms_user');
+            
+            let html = '';
+            
+            if (!token) {
+                html += '<div class="status error">❌ No token found in localStorage</div>';
+                html += '<p><strong>Key checked:</strong> <span class="code">artms_token</span></p>';
+                html += '<p><strong>Solution:</strong> Please login to the application first.</p>';
+            } else {
+                html += '<div class="status success">✅ Token found in localStorage</div>';
+                html += '<p><strong>Token (first 50 chars):</strong></p>';
+                html += '<pre>' + token.substring(0, 50) + '...</pre>';
+            }
+            
+            if (!userStr) {
+                html += '<div class="status error">❌ No user data found in localStorage</div>';
+                html += '<p><strong>Key checked:</strong> <span class="code">artms_user</span></p>';
+            } else {
+                try {
+                    const user = JSON.parse(userStr);
+                    html += '<div class="status success">✅ User data found in localStorage</div>';
+                    html += '<p><strong>User Info:</strong></p>';
+                    html += '<pre>' + JSON.stringify(user, null, 2) + '</pre>';
+                    
+                    if (user.role === 'super_admin') {
+                        html += '<div class="status success">✅ User is Super Admin (can access permissions API)</div>';
+                    } else {
+                        html += '<div class="status warning">⚠️ User role is "' + user.role + '" (needs super_admin to access permissions API)</div>';
+                    }
+                } catch (e) {
+                    html += '<div class="status error">❌ User data is invalid JSON</div>';
+                }
+            }
+            
+            document.getElementById('localStorageStatus').innerHTML = html;
+        }
+
+        async function testMeEndpoint() {
+            const token = localStorage.getItem('artms_token');
+            const statusDiv = document.getElementById('tokenStatus');
+            
+            if (!token) {
+                statusDiv.innerHTML = '<div class="status error">❌ No token found. Please login first.</div>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div class="status info">⏳ Testing /api/me endpoint...</div>';
+            
+            try {
+                const response = await fetch(API_URL + '/me', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">✅ Token is valid! User is authenticated.</div>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">❌ Token is invalid or expired (Status: ${response.status})</div>
+                        <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        <p><strong>Solution:</strong> Please login again to get a fresh token.</p>
+                    `;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="status error">❌ Network error: ${error.message}</div>
+                    <p><strong>Possible causes:</strong></p>
+                    <ul>
+                        <li>Backend server is not running</li>
+                        <li>CORS issue</li>
+                        <li>Network connection problem</li>
+                    </ul>
+                `;
+            }
+        }
+
+        async function testPermissionsEndpoint() {
+            const token = localStorage.getItem('artms_token');
+            const statusDiv = document.getElementById('permissionsStatus');
+            
+            if (!token) {
+                statusDiv.innerHTML = '<div class="status error">❌ No token found. Please login first.</div>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div class="status info">⏳ Testing /api/permissions/role/hr_admin endpoint...</div>';
+            
+            try {
+                const response = await fetch(API_URL + '/permissions/role/hr_admin', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">✅ SUCCESS! Permissions endpoint is working!</div>
+                        <p><strong>Found ${data.count} permissions for hr_admin</strong></p>
+                        <p><strong>Response:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2).substring(0, 1000)}...</pre>
+                    `;
+                } else if (response.status === 403) {
+                    statusDiv.innerHTML = `
+                        <div class="status error">❌ 403 Forbidden - Authorization failed</div>
+                        <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        <p><strong>Possible causes:</strong></p>
+                        <ul>
+                            <li>User is not Super Admin (role must be 'super_admin')</li>
+                            <li>User account is deactivated (is_active = 0)</li>
+                            <li>Token belongs to a different user</li>
+                        </ul>
+                        <p><strong>Solution:</strong> Login as Super Admin and try again.</p>
+                    `;
+                } else if (response.status === 401) {
+                    statusDiv.innerHTML = `
+                        <div class="status error">❌ 401 Unauthorized - Token is invalid</div>
+                        <p><strong>Solution:</strong> Please login again to get a fresh token.</p>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">❌ Unexpected error (Status: ${response.status})</div>
+                        <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="status error">❌ Network error: ${error.message}</div>
+                    <p><strong>Possible causes:</strong></p>
+                    <ul>
+                        <li>Backend server is not running (check http://localhost:8000)</li>
+                        <li>CORS configuration issue</li>
+                        <li>Network connection problem</li>
+                    </ul>
+                `;
+            }
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('artms_token');
+            localStorage.removeItem('artms_user');
+            alert('Authentication data cleared. Page will reload.');
+            window.location.reload();
+        }
+
+        // Auto-check localStorage on page load
+        checkLocalStorage();
+    </script>
+</body>
+</html>

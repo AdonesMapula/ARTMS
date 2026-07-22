@@ -31,8 +31,7 @@ export function usePermissions() {
 
   /**
    * Load permissions from backend
-   * For Super Admin: Automatically grants all permissions without API call
-   * For other roles: Fetches from backend
+   * Uses /api/permissions/my-permissions which works for all authenticated users
    */
   const loadPermissions = async () => {
     try {
@@ -62,9 +61,10 @@ export function usePermissions() {
 
       // ============================================================
       // OTHER ROLES: Fetch permissions from backend
+      // Using /api/permissions/my-permissions (works for all users)
       // ============================================================
       try {
-        const res = await api.get(`/permissions/role/${user.role}`);
+        const res = await api.get(`/permissions/my-permissions`);
         const permissionNames = res.data.permissions.map((p) => p.name);
         setPermissions(permissionNames);
       } catch (apiError) {
