@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, UserCheck, Clock, XCircle, Mail, Eye, CheckCircle, Trash2, Filter, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
@@ -169,7 +169,7 @@ export default function Applicants() {
             Applicant Management
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            View and manage all job applications • AI-powered screening
+            View and manage all job applications ΓÇó AI-powered screening
           </p>
         </div>
         <Button
@@ -339,7 +339,7 @@ export default function Applicants() {
                         </TD>
                         <TD className="max-w-[180px]">
                           <div className="truncate font-medium text-slate-900">
-                            {job?.job_title || "—"}
+                            {job?.job_title || "ΓÇö"}
                           </div>
                           {a.application_id && (
                             <div className="text-xs text-slate-400">{a.application_id}</div>
@@ -366,7 +366,7 @@ export default function Applicants() {
                               {FIT_LABEL[eval_.fit_label]}
                             </Badge>
                           ) : (
-                            <span className="text-xs text-slate-400">—</span>
+                            <span className="text-xs text-slate-400">ΓÇö</span>
                           )}
                         </TD>
                         <TD className="text-right">

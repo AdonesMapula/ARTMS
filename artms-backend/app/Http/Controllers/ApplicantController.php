@@ -22,15 +22,18 @@ class ApplicantController extends Controller
     {
         $applicants = Applicant::with(['jobPosting.jobLibrary', 'jobPosting.department', 'aiEvaluation'])
             ->when($request->search, fn ($q) =>
-                $q->where('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%")
-                  ->orWhere('application_id', 'like', "%{$request->search}%")
+                // Grouped so OR doesn't bleed into AND filters (status, shortlisted, etc.)
+                $q->where(fn ($q2) =>
+                    $q2->where('first_name', 'like', "%{$request->search}%")
+                       ->orWhere('last_name', 'like', "%{$request->search}%")
+                       ->orWhere('email', 'like', "%{$request->search}%")
+                       ->orWhere('application_id', 'like', "%{$request->search}%")
+                )
             )
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->job_posting_id, fn ($q) => $q->where('job_posting_id', $request->job_posting_id))
             ->when($request->is_shortlisted, fn ($q) => $q->where('is_shortlisted', true))
-            ->orderByDesc(fn ($q) => $q->select('overall_score')->from('ai_evaluations')->whereColumn('applicant_id', 'applicants.id'))
+            ->orderByDesc(fn ($q) => $q->select('ai_score')->from('ai_evaluations')->whereColumn('applicant_id', 'applicants.id'))
             ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);
 
