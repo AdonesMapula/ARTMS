@@ -12,7 +12,7 @@ import { JobDetailsModal, ApplyModal } from "../../modals";
 import Reveal from "../../components/ui/Reavel";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);

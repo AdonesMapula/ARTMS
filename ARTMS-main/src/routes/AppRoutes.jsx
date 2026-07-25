@@ -39,6 +39,7 @@ import JobPosting from "../pages/Admin/JobPosting";
 import Applicants from "../pages/Admin/Applicants";
 import AiScreening from "../pages/Admin/AiScreening";
 import Interviews from "../pages/Admin/Interviews";
+import InterviewCalendar from "../pages/Admin/InterviewCalendar";
 import Pipeline from "../pages/Admin/Pipeline";
 import Employees from "../pages/Admin/Employees";
 import Reports from "../pages/Admin/Reports";
@@ -201,6 +202,14 @@ export default function AppRoutes() {
               element={
                 <PermissionProtectedRoute permission="view_interviews">
                   <Interviews />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="interviews/calendar"
+              element={
+                <PermissionProtectedRoute permission="view_interviews">
+                  <InterviewCalendar />
                 </PermissionProtectedRoute>
               }
             />

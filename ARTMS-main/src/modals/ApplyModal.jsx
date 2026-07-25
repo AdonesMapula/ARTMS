@@ -6,7 +6,7 @@ import Badge from "../components/ui/Badge";
 import axios from "axios";
 import applicantService from "../services/applicantService";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 const EMPTY_FORM = {
   firstName: "", lastName: "", middleName: "",

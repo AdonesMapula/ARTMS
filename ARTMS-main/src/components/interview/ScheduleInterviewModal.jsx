@@ -1,49 +1,66 @@
 /**
- * ScheduleInterviewModal
- * ─────────────────────
- * Opens a form to schedule an interview for a selected applicant and
- * automatically sends the email invitation on save via the backend.
- *
- * Props:
- *   open                bool
- *   onClose             fn
- *   onSaved             fn(newInterview)   called after successful save
- *   applicants          array   (optional) pre-loaded list of applicants
- *                               [{id, first_name, last_name, email, job_posting_id, jobPosting}]
- *                               If not supplied, the modal fetches from the API.
- *   prefillApplicantId  number|null        pre-select an applicant (optional)
+ * ScheduleInterviewModal.jsx
+ * ──────────────────────────
+ * Redesigned Schedule & Edit Interview Modal matching user reference design.
+ * Features applicant banner, 2-column form layout, mode pills, tags, notes, summary box,
+ * and automatic invitation email dispatch via Laravel backend.
  */
-import { useState, useEffect } from "react";
-import Modal from "../ui/Modal";
-import Input from "../ui/Input";
-import Select from "../ui/Select";
+
+import { useState, useEffect, useMemo } from "react";
+import { FiX, FiInfo, FiUser, FiCalendar, FiClock, FiPlus } from "react-icons/fi";
 import Button from "../ui/Button";
 import interviewService from "../../services/interviewService";
 import applicantService from "../../services/applicantService";
 
-const STAGE_OPTIONS = [
-  { value: "", label: "Select stage…", disabled: true },
-  { value: "interview_1", label: "Interview 1" },
-  { value: "interview_2", label: "Interview 2" },
-  { value: "final",       label: "Final Interview" },
-];
-
 const TYPE_OPTIONS = [
-  { value: "", label: "Select type…", disabled: true },
-  { value: "in_person", label: "In-Person" },
-  { value: "online",    label: "Online / Video Call" },
-  { value: "phone",     label: "Phone Call" },
+  { value: "Technical Assessment", label: "Technical Assessment" },
+  { value: "Initial Screening",    label: "Initial Screening" },
+  { value: "HR Interview",         label: "HR Interview" },
+  { value: "Managerial Interview", label: "Managerial Interview" },
+  { value: "Final Interview",      label: "Final Interview" },
 ];
 
-const EMPTY = {
-  applicant_id:    "",
-  job_posting_id:  "",
-  interview_stage: "",
-  interview_type:  "",
-  scheduled_at:    "",
-  location:        "",
-  meeting_link:    "",
-};
+const DURATION_OPTIONS = [
+  { value: "15 Minutes", label: "15 Minutes" },
+  { value: "30 Minutes", label: "30 Minutes" },
+  { value: "45 Minutes", label: "45 Minutes" },
+  { value: "60 Minutes", label: "60 Minutes" },
+  { value: "90 Minutes", label: "90 Minutes" },
+];
+
+const TIME_SLOTS = [
+  "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
+  "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+  "05:00 PM", "05:30 PM", "06:00 PM"
+];
+
+function buildScheduledAt(dateStr, timeStr) {
+  const d = dateStr || new Date().toISOString().split("T")[0];
+  let hours = 10;
+  let minutes = 0;
+
+  if (timeStr) {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+      if (ampm === "PM" && hours < 12) hours += 12;
+      if (ampm === "AM" && hours === 12) hours = 0;
+    }
+  }
+
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  return `${d} ${hh}:${mm}:00`;
+}
+
+const TIMEZONE_OPTIONS = [
+  { value: "(GMT+08:00) Philippine Standard Time (Asia/Manila)", label: "(GMT+08:00) Philippine Standard Time (Asia/Manila)" },
+  { value: "(GMT+00:00) UTC", label: "(GMT+00:00) UTC" },
+  { value: "(GMT-05:00) Eastern Time (US & Canada)", label: "(GMT-05:00) Eastern Time (US & Canada)" },
+];
 
 export default function ScheduleInterviewModal({
   open,
@@ -51,243 +68,527 @@ export default function ScheduleInterviewModal({
   onSaved,
   applicants: applicantsProp = [],
   prefillApplicantId = null,
+  prefillInterview = null,
 }) {
-  const [form, setForm]           = useState(EMPTY);
-  const [errors, setErrors]       = useState({});
-  const [loading, setLoading]     = useState(false);
-  const [sent, setSent]           = useState(false);
-  const [applicants, setApplicants] = useState([]);
-  const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [applicants, setApplicants]   = useState([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [sent, setSent]               = useState(false);
+  const [errors, setErrors]           = useState({});
 
-  // ── Load applicants ────────────────────────────────────────────────────
-  // If a list was passed in (e.g. from ApplicantDetails), use it directly.
-  // Otherwise fetch from API when the modal opens.
+  // Form state matching design
+  const [selectedApplicantId, setSelectedApplicantId] = useState("");
+  const [interviewType, setInterviewType]             = useState("Technical Assessment");
+  const [interviewDate, setInterviewDate]             = useState("");
+  const [interviewTime, setInterviewTime]             = useState("10:00 AM");
+  const [timeZone, setTimeZone]                       = useState("(GMT+08:00) Philippine Standard Time (Asia/Manila)");
+  const [interviewDuration, setInterviewDuration]     = useState("45 Minutes");
+  
+  const [interviewMode, setInterviewMode]             = useState("VIRTUAL"); // VIRTUAL | ON-SITE | PHONE
+  const [interviewers, setInterviewers]               = useState(["Cristian Jeff", "Rye Nicholas"]);
+  const [newInterviewer, setNewInterviewer]           = useState("");
+  const [showAddInterviewer, setShowAddInterviewer]   = useState(false);
+
+  const [contactEmail, setContactEmail]               = useState("hr@artms.com");
+  const [contactNumber, setContactNumber]             = useState("+639171234567");
+  const [notes, setNotes]                             = useState("");
+
+  const [notifyApplicant, setNotifyApplicant]         = useState(true);
+  const [notifyInterviewer, setNotifyInterviewer]     = useState(true);
+
+  // Load applicants if not provided
   useEffect(() => {
     if (!open) { setSent(false); setErrors({}); return; }
 
     if (applicantsProp.length > 0) {
       setApplicants(applicantsProp);
     } else {
-      setLoadingApplicants(true);
-      // Fetch all applicants that are in a schedulable state
+      setLoadingApps(true);
       applicantService
         .getAll({ per_page: 200 })
-        .then(({ data }) => {
-          const rows = data.data ?? data;
-          setApplicants(rows);
-        })
+        .then(({ data }) => setApplicants(data.data ?? data ?? []))
         .catch(() => setApplicants([]))
-        .finally(() => setLoadingApplicants(false));
+        .finally(() => setLoadingApps(false));
     }
-  }, [open]);
+  }, [open, applicantsProp]);
 
-  // Keep in sync if the parent updates the list after open
-  useEffect(() => {
-    if (applicantsProp.length > 0) setApplicants(applicantsProp);
-  }, [applicantsProp]);
-
-  // Build applicant options for the select
-  const applicantOptions = [
-    { value: "", label: loadingApplicants ? "Loading applicants…" : "Select applicant…", disabled: true },
-    ...applicants.map((a) => {
-      const jobTitle =
-        a.job_posting?.job_library?.job_title ??
-        a.jobPosting?.jobLibrary?.job_title ??
-        a.jobPosting?.jobLibrary?.title ??
-        a.jobPosting?.title ??
-        a.job_posting?.title ??
-        "General Application";
-      return {
-        value: a.id,
-        label: `${a.first_name} ${a.last_name} (${a.application_id ?? `ID #${a.id}`}) — ${jobTitle}`,
-      };
-    }),
-  ];
-
-  // Pre-fill applicant when opened with a specific one
+  // Handle prefill applicant or existing interview
   useEffect(() => {
     if (!open) return;
-    if (prefillApplicantId) {
-      const a = applicants.find((x) => x.id === prefillApplicantId);
-      setForm((f) => ({
-        ...EMPTY,
-        applicant_id:   prefillApplicantId,
-        job_posting_id: a?.job_posting_id ?? "",
-      }));
-    } else {
-      setForm(EMPTY);
+
+    if (prefillInterview) {
+      setSelectedApplicantId(prefillInterview.applicant_id || prefillInterview.applicant?.id || "");
+      if (prefillInterview.scheduled_at) {
+        const dt = new Date(prefillInterview.scheduled_at);
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, "0");
+        const dd = String(dt.getDate()).padStart(2, "0");
+        setInterviewDate(`${yyyy}-${mm}-${dd}`);
+        
+        let hh = dt.getHours();
+        const m = String(dt.getMinutes()).padStart(2, "0");
+        const ampm = hh >= 12 ? "PM" : "AM";
+        hh = hh % 12 || 12;
+        setInterviewTime(`${String(hh).padStart(2, "0")}:${m} ${ampm}`);
+      }
+      if (prefillInterview.interview_type === "in_person") setInterviewMode("ON-SITE");
+      else if (prefillInterview.interview_type === "phone") setInterviewMode("PHONE");
+      else setInterviewMode("VIRTUAL");
+    } else if (prefillApplicantId) {
+      setSelectedApplicantId(prefillApplicantId);
+    } else if (applicants.length > 0 && !selectedApplicantId) {
+      setSelectedApplicantId(applicants[0].id);
     }
-  }, [open, prefillApplicantId, applicants]);
+  }, [open, prefillApplicantId, prefillInterview, applicants]);
 
-  // When applicant changes, auto-fill job_posting_id
-  function handleApplicantChange(id) {
-    const a = applicants.find((x) => String(x.id) === String(id));
-    setForm((f) => ({
-      ...f,
-      applicant_id:   id,
-      job_posting_id: a?.job_posting_id ?? "",
-    }));
-  }
+  // Current selected applicant object
+  const currentApplicant = useMemo(() => {
+    return applicants.find((a) => String(a.id) === String(selectedApplicantId)) || applicants[0] || null;
+  }, [applicants, selectedApplicantId]);
 
-  function set(field, val) {
-    setForm((f) => ({ ...f, [field]: val }));
-    setErrors((e) => ({ ...e, [field]: null }));
-  }
+  // Derived applicant info
+  const applicantName = currentApplicant
+    ? `${currentApplicant.first_name || ""} ${currentApplicant.last_name || ""}`.trim()
+    : "Greg Baring Gotot";
 
-  function validate() {
-    const e = {};
-    if (!form.applicant_id)    e.applicant_id    = "Required";
-    if (!form.interview_stage) e.interview_stage = "Required";
-    if (!form.interview_type)  e.interview_type  = "Required";
-    if (!form.scheduled_at)    e.scheduled_at    = "Required";
-    if (form.interview_type === "in_person" && !form.location)
-      e.location = "Location is required for in-person interviews";
-    return e;
-  }
+  const applicantStage = currentApplicant?.status
+    ? currentApplicant.status.replace(/_/g, " ")
+    : "Screening";
 
-  async function handleSubmit(e) {
+  const jobCategory = currentApplicant?.job_posting?.job_library?.job_title ??
+    currentApplicant?.job_posting?.title ??
+    "Medical / Healthcare";
+
+  const appDateFormatted = currentApplicant?.created_at
+    ? new Date(currentApplicant.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "Oct 12, 2023";
+
+  // Add interviewer tag
+  const addInterviewerTag = () => {
+    if (newInterviewer.trim() && !interviewers.includes(newInterviewer.trim())) {
+      setInterviewers([...interviewers, newInterviewer.trim()]);
+      setNewInterviewer("");
+      setShowAddInterviewer(false);
+    }
+  };
+
+  const removeInterviewerTag = (name) => {
+    setInterviewers(interviewers.filter((i) => i !== name));
+  };
+
+  // Submit Handler
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (!selectedApplicantId) {
+      setErrors({ general: "Please select a candidate for this interview." });
+      return;
+    }
 
     setLoading(true);
     try {
+      // Build ISO datetime
+      const scheduledIso = buildScheduledAt(interviewDate, interviewTime);
+      const jobPostingId = currentApplicant?.job_posting_id || currentApplicant?.jobPosting?.id || 1;
+
+      let stageKey = "interview_1";
+      if (interviewType.includes("Final")) stageKey = "final";
+      else if (interviewType.includes("Managerial") || interviewType.includes("HR")) stageKey = "interview_2";
+
+      let typeKey = "online";
+      if (interviewMode === "ON-SITE") typeKey = "in_person";
+      else if (interviewMode === "PHONE") typeKey = "phone";
+
       const payload = {
-        applicant_id:    Number(form.applicant_id),
-        job_posting_id:  Number(form.job_posting_id),
-        interview_stage: form.interview_stage,
-        interview_type:  form.interview_type,
-        scheduled_at:    form.scheduled_at,
-        location:        form.location || null,
-        meeting_link:    null,
+        applicant_id: Number(selectedApplicantId),
+        job_posting_id: Number(jobPostingId),
+        interview_stage: stageKey,
+        interview_type: typeKey,
+        scheduled_at: scheduledIso,
+        location: interviewMode === "ON-SITE" ? "Head Office" : null,
       };
+
       const { data } = await interviewService.create(payload);
       setSent(true);
       onSaved?.(data.interview);
     } catch (err) {
-      const serverErrors = err.response?.data?.errors ?? {};
-      setErrors(serverErrors);
-      if (!Object.keys(serverErrors).length) {
-        setErrors({ _general: err.response?.data?.message ?? "Failed to schedule interview." });
-      }
+      setErrors({ general: err.response?.data?.message || "Failed to schedule interview." });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // ── Success screen ────────────────────────────────────────────────────────
-  if (sent) {
-    return (
-      <Modal
-        open={open}
-        onClose={onClose}
-        title="Interview Scheduled"
-        footer={
-          <div className="flex justify-end">
-            <Button onClick={onClose}>Done</Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col items-center gap-3 py-6 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-3xl">
-            ✉️
-          </span>
-          <p className="font-bold text-slate-900">Invitation Sent!</p>
-          <p className="text-sm text-slate-500">
-            The interview has been scheduled and an email invitation containing the video room link has been
-            sent to the applicant automatically.
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-4xl rounded-3xl bg-white p-7 shadow-2xl border border-slate-200 relative my-8">
+        
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 transition"
+        >
+          <FiX className="h-6 w-6" />
+        </button>
+
+        {/* Modal Header */}
+        <div className="mb-6">
+          <h2 className="text-xl font-extrabold text-[#1e293b]">Schedule Interview</h2>
+          <p className="text-xs text-slate-500 font-medium">
+            Set the interview details for this applicant
           </p>
         </div>
-      </Modal>
-    );
-  }
 
-  // ── Form screen ───────────────────────────────────────────────────────────
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Schedule Interview & Send Invitation"
-      description="An email invitation will be sent to the applicant automatically."
-      className="max-w-xl"
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button form="schedule-form" type="submit" disabled={loading}>
-            {loading ? "Scheduling…" : "Schedule & Send Invitation ✉️"}
-          </Button>
-        </div>
-      }
-    >
-      <form
-        id="schedule-form"
-        onSubmit={handleSubmit}
-        className="space-y-4 overflow-y-auto max-h-[60vh] pr-1"
-      >
-        {errors._general && (
-          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-            {errors._general}
+        {/* Success Banner if sent */}
+        {sent ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl">
+              ✓
+            </div>
+            <h3 className="text-xl font-extrabold text-slate-900">Interview Scheduled!</h3>
+            <p className="text-sm text-slate-500 max-w-md">
+              The invitation has been successfully sent to <strong>{applicantName}</strong>. The LiveKit video room link has been emailed automatically.
+            </p>
+            <Button onClick={onClose} className="bg-[#3730a3] hover:bg-[#312e81] text-white font-bold px-8">
+              Close & Done
+            </Button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* ── Top Applicant Summary Banner (Matching Image) ──────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl bg-[#f5f3ff] border border-[#e2d9f7] p-4 gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#4f46e5] text-white shadow-md">
+                  <FiUser className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-[#1e293b]">
+                      {applicantName}
+                    </h3>
+                    <span className="rounded-full bg-[#ede9fe] px-3 py-0.5 text-[11px] font-extrabold text-[#6d28d9] capitalize">
+                      {applicantStage}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-500">
+                    {jobCategory}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  APPLICATION DATE
+                </p>
+                <p className="text-xs font-extrabold text-slate-800">
+                  {appDateFormatted}
+                </p>
+              </div>
+            </div>
+
+            {/* Candidate Selector (if multiple) */}
+            {applicants.length > 1 && !prefillApplicantId && (
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                  Switch Candidate
+                </label>
+                <select
+                  value={selectedApplicantId}
+                  onChange={(e) => setSelectedApplicantId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none"
+                >
+                  {applicants.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.first_name} {a.last_name} ({a.application_id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ── 2 Columns Form Fields ──────────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* ── Left Column ────────────────────────────────────────── */}
+              <div className="space-y-4">
+                
+                {/* Interview Type */}
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                    Interview Type
+                  </label>
+                  <select
+                    value={interviewType}
+                    onChange={(e) => setInterviewType(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                  >
+                    {TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Interview Date & Interview Time */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                      Interview Date
+                    </label>
+                    <input
+                      type="date"
+                      value={interviewDate}
+                      onChange={(e) => setInterviewDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                      Interview Time
+                    </label>
+                    <select
+                      value={interviewTime}
+                      onChange={(e) => setInterviewTime(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                    >
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Time Zone */}
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                    Time Zone
+                  </label>
+                  <select
+                    value={timeZone}
+                    onChange={(e) => setTimeZone(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                  >
+                    {TIMEZONE_OPTIONS.map((tz) => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Interview Duration */}
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                    Interview Duration
+                  </label>
+                  <select
+                    value={interviewDuration}
+                    onChange={(e) => setInterviewDuration(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                  >
+                    {DURATION_OPTIONS.map((dur) => (
+                      <option key={dur.value} value={dur.value}>{dur.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+              </div>
+
+              {/* ── Right Column ───────────────────────────────────────── */}
+              <div className="space-y-4">
+                
+                {/* Interview Mode Pills */}
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                    Interview Mode
+                  </label>
+                  <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
+                    {["VIRTUAL", "ON-SITE", "PHONE"].map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setInterviewMode(mode)}
+                        className={`flex-1 rounded-lg py-2 text-xs font-extrabold transition-all ${
+                          interviewMode === mode
+                            ? "bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5] shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interviewer(s) Tag Input */}
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                    Interviewer(s)
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 min-h-[44px]">
+                    {interviewers.map((name) => (
+                      <span
+                        key={name}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 border border-blue-100"
+                      >
+                        {name}
+                        <button
+                          type="button"
+                          onClick={() => removeInterviewerTag(name)}
+                          className="text-blue-400 hover:text-blue-700 text-xs font-black"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+
+                    {showAddInterviewer ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Name…"
+                          value={newInterviewer}
+                          onChange={(e) => setNewInterviewer(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addInterviewerTag();
+                            }
+                          }}
+                          className="w-24 rounded px-2 py-0.5 text-xs border border-slate-300 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={addInterviewerTag}
+                          className="text-xs font-bold text-blue-600"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddInterviewer(true)}
+                        className="text-xs font-bold text-orange-600 hover:text-orange-700 px-2 py-1"
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contact Email & Contact Number */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                      Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                      Contact Number
+                    </label>
+                    <input
+                      type="text"
+                      value={contactNumber}
+                      onChange={(e) => setContactNumber(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* ── Full Width Field: Notes ────────────────────────────────── */}
+            <div>
+              <label className="block text-xs font-extrabold text-slate-700 mb-1">
+                Notes or Instructions
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Add preparation notes, dress code, or specific topics to cover…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+              />
+            </div>
+
+            {/* ── Bottom Section: Summary Alert + Checkboxes + Action Buttons ── */}
+            <div className="pt-2 border-t border-slate-100 space-y-4">
+              
+              {/* Summary Box (Matching Image) */}
+              <div className="flex items-start gap-3 rounded-2xl bg-[#f4f3ff] border border-[#e0e7ff] p-3.5 text-xs text-[#3730a3]">
+                <FiInfo className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
+                <p className="leading-relaxed">
+                  <strong>Summary:</strong> {interviewMode} Interview with <strong>{applicantName}</strong> on <strong className="text-orange-600">{interviewDate || "Oct 24"} @ {interviewTime}</strong>. Video link included in invites.
+                </p>
+              </div>
+
+              {/* Action Controls Footer */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                
+                {/* Left Checkboxes */}
+                <div className="space-y-1.5 text-xs font-bold text-slate-700">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyApplicant}
+                      onChange={(e) => setNotifyApplicant(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    <span>Send notification to applicant</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyInterviewer}
+                      onChange={(e) => setNotifyInterviewer(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    <span>Send calendar invite to interviewer</span>
+                  </label>
+                </div>
+
+                {/* Right Action Buttons */}
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="text-xs font-extrabold text-slate-500 hover:text-slate-800 px-3 py-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-xl bg-[#ede9fe] hover:bg-[#ddd6fe] px-4 py-2.5 text-xs font-extrabold text-[#5b21b6] transition"
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="rounded-xl bg-[#3730a3] hover:bg-[#312e81] px-6 py-2.5 text-xs font-extrabold text-white shadow-md transition"
+                  >
+                    {loading ? "Scheduling…" : "Schedule Interview"}
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </form>
         )}
 
-        {/* Applicant */}
-        <Select
-          label="Applicant"
-          name="applicant_id"
-          value={form.applicant_id}
-          options={applicantOptions}
-          onChange={(e) => handleApplicantChange(e.target.value)}
-          error={errors.applicant_id}
-        />
-
-        {/* Stage + Type */}
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            label="Interview Stage"
-            name="interview_stage"
-            value={form.interview_stage}
-            options={STAGE_OPTIONS}
-            onChange={(e) => set("interview_stage", e.target.value)}
-            error={errors.interview_stage}
-          />
-          <Select
-            label="Interview Type"
-            name="interview_type"
-            value={form.interview_type}
-            options={TYPE_OPTIONS}
-            onChange={(e) => set("interview_type", e.target.value)}
-            error={errors.interview_type}
-          />
-        </div>
-
-        {/* Date & Time */}
-        <Input
-          label="Date & Time"
-          name="scheduled_at"
-          type="datetime-local"
-          value={form.scheduled_at}
-          onChange={(e) => set("scheduled_at", e.target.value)}
-          error={errors.scheduled_at}
-        />
-
-        {/* Location (in-person) */}
-        {(form.interview_type === "in_person" || form.interview_type === "") && (
-          <Input
-            label="Location"
-            name="location"
-            placeholder="e.g. Room 301, Head Office"
-            value={form.location}
-            onChange={(e) => set("location", e.target.value)}
-            error={errors.location}
-          />
-        )}
-
-        {/* Info box */}
-        <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-          <span className="font-bold">📧 Auto Invitation:</span> An email invitation with date, time, and{" "}
-          {form.interview_type === "online" ? "the video room link" : "location details"} will be sent to the applicant's email address immediately after scheduling.
-        </div>
-      </form>
-    </Modal>
+      </div>
+    </div>
   );
 }

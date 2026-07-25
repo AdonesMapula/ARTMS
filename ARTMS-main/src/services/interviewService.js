@@ -23,6 +23,13 @@ const interviewService = {
 
   /** Fetch the AI report + full transcript for a completed interview */
   getReport:    (id)          => api.get(`/interviews/${id}/report`),
+
+  // ── Real-time speech transcript & live Grok AI endpoints ──────────────
+  storeTranscript:       (id, text, speakerRole = 'hr', offset = 0) => api.post(`/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
+  storePublicTranscript: (id, text, offset = 0)                     => api.post(`/public/interviews/${id}/transcript`, { text, segment_offset: offset }),
+  getTranscripts:        (id)                                       => api.get(`/interviews/${id}/transcripts`),
+  saveNotes:             (id, notes)                                => api.post(`/interviews/${id}/notes`, { notes }),
+  analyzeLive:           (id)                                       => api.post(`/interviews/${id}/analyze-live`),
 };
 
 export default interviewService;

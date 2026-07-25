@@ -29,6 +29,8 @@ import StarRating from "../../components/interview/StarRating";
 import StatusDropdown, { StatusBadge } from "../../components/interview/StatusDropdown";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import EvaluationModal from "../../components/interview/EvaluationModal";
+import InterviewReportModal from "../../modals/InterviewReportModal";
+import InterviewCalendar from "./InterviewCalendar";
 
 import interviewService from "../../services/interviewService";
 import applicantService from "../../services/applicantService";
@@ -106,6 +108,7 @@ export default function Interviews() {
   const [scheduleOpen,  setScheduleOpen]  = useState(false);
   const [evalOpen,      setEvalOpen]      = useState(false);
   const [activeInterview, setActiveInterview] = useState(null);
+  const [reportModalInterviewId, setReportModalInterviewId] = useState(null);
 
   // ── fetch interviews ──────────────────────────────────────────────────
   const fetchInterviews = useCallback(async () => {
@@ -238,7 +241,11 @@ export default function Interviews() {
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
               }`}
             >
-              {v === "list" ? "📋 List" : "📅 Calendar"}
+              {v === "list" ? (
+                <span className="flex items-center gap-1.5"><FiFileText size={13} /> List</span>
+              ) : (
+                <span className="flex items-center gap-1.5"><FiCalendar size={13} /> Calendar</span>
+              )}
             </button>
           ))}
           <Button onClick={() => setScheduleOpen(true)}>
@@ -478,8 +485,8 @@ export default function Interviews() {
                             {i.status === "done" && (
                               <button
                                 title="View AI Report"
-                                onClick={() => navigate(`/admin/interviews/${i.id}/report`)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition"
+                                onClick={() => setReportModalInterviewId(i.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition cursor-pointer"
                               >
                                 <FiFileText size={13} />
                               </button>
@@ -533,118 +540,7 @@ export default function Interviews() {
         </Card>
       ) : (
         /* ── Calendar View ────────────────────────────────────────── */
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {now.toLocaleString("en-US", { month: "long", year: "numeric" })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-3">
-              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
-                <div key={d} className="text-xs font-bold text-slate-400 py-2">{d}</div>
-              ))}
-            </div>
-            {/* Day cells */}
-            <div className="grid grid-cols-7 gap-1">
-              {/* Empty cells before first day */}
-              {Array.from({ length: firstDayOfMonth }, (_, i) => (
-                <div key={`empty-${i}`} className="aspect-square" />
-              ))}
-              {/* Day cells */}
-              {Array.from({ length: daysInMonth }, (_, i) => {
-                const day = i + 1;
-                const hasEvent = interviewDays.has(day);
-                const isToday  = day === now.getDate();
-                // Interviews on this day
-                const dayInterviews = interviews.filter(
-                  (iv) => fmtDayOfMonth(iv.scheduled_at) === day &&
-                           fmtMonth(iv.scheduled_at) === cMonth &&
-                           fmtYear(iv.scheduled_at) === cYear
-                );
-                return (
-                  <div
-                    key={day}
-                    title={dayInterviews.map(iv =>
-                      `${iv.applicant?.first_name} ${iv.applicant?.last_name} — ${fmtTime(iv.scheduled_at)}`
-                    ).join("\n")}
-                    className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition cursor-default ${
-                      isToday
-                        ? "ring-2 ring-[var(--artms-primary)] bg-[var(--artms-primary)] text-white"
-                        : hasEvent
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>{day}</span>
-                    {hasEvent && !isToday && (
-                      <span className="mt-0.5 flex gap-0.5">
-                        {dayInterviews.slice(0, 3).map((_, idx) => (
-                          <span key={idx} className="h-1 w-1 rounded-full bg-blue-500" />
-                        ))}
-                      </span>
-                    )}
-                    {hasEvent && isToday && (
-                      <span className="mt-0.5 text-[10px] font-bold opacity-80">
-                        {dayInterviews.length}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-[var(--artms-primary)]" /> Today
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-blue-200" /> Has interviews
-              </span>
-            </div>
-
-            {/* Upcoming list for this month */}
-            {interviews.filter(
-              iv => fmtMonth(iv.scheduled_at) === cMonth && fmtYear(iv.scheduled_at) === cYear
-            ).length > 0 && (
-              <div className="mt-5 space-y-2">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
-                  This Month
-                </p>
-                {interviews
-                  .filter(iv => fmtMonth(iv.scheduled_at) === cMonth && fmtYear(iv.scheduled_at) === cYear)
-                  .sort((a,b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
-                  .map((iv) => (
-                    <div
-                      key={iv.id}
-                      className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-2.5 hover:bg-slate-50 transition"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">
-                          {iv.applicant?.first_name} {iv.applicant?.last_name}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {STAGE_LABEL[iv.interview_stage]} — {fmtDate(iv.scheduled_at)} {fmtTime(iv.scheduled_at)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={iv.status} />
-                        <button
-                          onClick={() => openEval(iv)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-100 transition"
-                          title="Evaluate"
-                        >
-                          <FiClipboard size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <InterviewCalendar onClose={() => setView("list")} embedded={true} />
       )}
 
       {/* ── Modals ────────────────────────────────────────────────────── */}
@@ -660,6 +556,12 @@ export default function Interviews() {
         onClose={() => { setEvalOpen(false); setActiveInterview(null); }}
         onSaved={handleEvalSaved}
         interview={activeInterview}
+      />
+
+      <InterviewReportModal
+        isOpen={Boolean(reportModalInterviewId)}
+        onClose={() => setReportModalInterviewId(null)}
+        interviewId={reportModalInterviewId}
       />
     </div>
   );

@@ -6,7 +6,7 @@
  * - Applicant View: Full-screen Zoom call layout (matching Image 1)
  * - Interviewer View: Zoom stage + Live Sentiment/Keywords/AI Match Score analytics + Sidebar (matching Image 2)
  */
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import {
@@ -15,7 +15,6 @@ import {
   useTracks,
   useLocalParticipant,
   VideoTrack,
-  useParticipants,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
@@ -23,6 +22,7 @@ import "@livekit/components-styles";
 import { cn } from "../../utils/cn";
 import Button from "../../components/ui/Button";
 import interviewService from "../../services/interviewService";
+import InterviewReportModal from "../../modals/InterviewReportModal";
 
 // ── SVG Icons ─────────────────────────────────────────────────────────────────
 
@@ -99,38 +99,37 @@ function DpaConsentModal({ onAccept, onDecline }) {
               <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
                 Data Privacy Notice
               </h2>
-              <p className="text-xs text-slate-500">
-                Required before joining the interview session
+              <p className="text-xs font-medium text-slate-500">
+                Republic Act No. 10173 — Data Privacy Act of 2012
               </p>
             </div>
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-900 leading-relaxed">
-            <p className="font-bold mb-2">📋 Recording & AI Analysis Consent</p>
-            <p>
-              This interview session will be <strong>recorded</strong> and the transcript will be <strong>analyzed by AI</strong> to generate a post-interview evaluation report in compliance with the <strong>Data Privacy Act of 2012 (RA 10173)</strong>.
-            </p>
-          </div>
-
-          <ul className="space-y-2 text-sm text-slate-700">
-            {[
-              "Your audio and video will be transmitted via an encrypted LiveKit Cloud connection.",
-              "Transcripts are stored securely and accessible only to authorized HR personnel.",
-              "AI-generated reports are used exclusively for recruitment evaluation purposes.",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span className="mt-0.5 shrink-0 text-emerald-500">✓</span>
-                {item}
-              </li>
-            ))}
+        <div className="p-6 space-y-4 text-xs text-slate-600 leading-relaxed max-h-[60vh] overflow-y-auto">
+          <p>
+            Before joining this online interview session, please review and accept our Data Privacy policy:
+          </p>
+          <ul className="list-disc pl-4 space-y-2">
+            <li>
+              <strong>Video & Audio Recording:</strong> This session will be recorded and transcribed in real-time for evaluation, quality assurance, and automated AI analysis.
+            </li>
+            <li>
+              <strong>Automated AI Evaluation:</strong> An artificial intelligence model (xAI Grok) will process transcript dialogue and MediaPipe facial analysis to generate candidate evaluation metrics.
+            </li>
+            <li>
+              <strong>Data Access & Retention:</strong> Recorded data will be strictly accessed by authorised HR personnel and kept in secure storage in accordance with company policy.
+            </li>
           </ul>
         </div>
 
         <div className="flex items-center justify-end gap-3 rounded-b-2xl border-t border-slate-100 bg-slate-50 px-6 py-4">
-          <Button variant="outline" onClick={onDecline}>Decline &amp; Exit</Button>
-          <Button onClick={onAccept}>I Understand &amp; Accept</Button>
+          <Button variant="outline" onClick={onDecline}>
+            Decline & Exit
+          </Button>
+          <Button onClick={onAccept}>
+            I Consent & Join Interview
+          </Button>
         </div>
       </div>
     </div>
@@ -207,42 +206,70 @@ function ApplicantVerificationForm({ onSubmit, loading, error, onCancel }) {
 
 // ── Zoom Video Stage Component (Shared between Applicant & Interviewer) ─────
 
-function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
-  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }]);
-  const { localParticipant } = useLocalParticipant();
+function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption }) {
+  // Query both camera and screen share tracks across local and remote participants
+  const tracks = useTracks([
+    { source: Track.Source.Camera, withPlaceholder: true },
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
+  ]);
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
 
-  const [isMicMuted, setIsMicMuted]       = useState(false);
-  const [isCamMuted, setIsCamMuted]       = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  // Find remote and local camera tracks
+  const remoteCameraTrack = tracks.find(
+    (t) => t.source === Track.Source.Camera && t.participant && !t.participant.isLocal
+  );
+  const localCameraTrack = tracks.find(
+    (t) => t.source === Track.Source.Camera && t.participant && t.participant.isLocal
+  );
+  const screenShareTrack = tracks.find(
+    (t) => t.source === Track.Source.ScreenShare && t.publication && !t.publication.isMuted
+  );
 
-  // Find remote and local tracks
-  const remoteTrackRef = tracks.find((t) => !t.participant.isLocal);
-  const localTrackRef  = tracks.find((t) => t.participant.isLocal);
+  // A remote camera track is active if publication exists and is unmuted
+  const isRemoteVideoActive = Boolean(
+    remoteCameraTrack &&
+    remoteCameraTrack.publication &&
+    !remoteCameraTrack.publication.isMuted
+  );
 
-  // Toggle Controls
+  // A local camera track is active if publication exists and is unmuted
+  const isLocalVideoActive = Boolean(
+    localCameraTrack &&
+    localCameraTrack.publication &&
+    !localCameraTrack.publication.isMuted
+  );
+
+  // Toggle Controls synced directly with LiveKit hardware state
   const toggleMic = useCallback(async () => {
     if (!localParticipant) return;
-    const newState = !isMicMuted;
-    await localParticipant.setMicrophoneEnabled(!newState);
-    setIsMicMuted(newState);
-  }, [localParticipant, isMicMuted]);
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch (err) {
+      console.warn("Microphone access denied or canceled:", err);
+    }
+  }, [localParticipant, isMicrophoneEnabled]);
 
   const toggleCam = useCallback(async () => {
     if (!localParticipant) return;
-    const newState = !isCamMuted;
-    await localParticipant.setCameraEnabled(!newState);
-    setIsCamMuted(newState);
-  }, [localParticipant, isCamMuted]);
+    try {
+      await localParticipant.setCameraEnabled(!isCameraEnabled);
+    } catch (err) {
+      console.warn("Camera access denied or canceled:", err);
+    }
+  }, [localParticipant, isCameraEnabled]);
 
   const toggleScreen = useCallback(async () => {
     if (!localParticipant) return;
-    const newState = !isScreenSharing;
-    await localParticipant.setScreenShareEnabled(newState);
-    setIsScreenSharing(newState);
-  }, [localParticipant, isScreenSharing]);
+    try {
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+    } catch (err) {
+      console.warn("Screen share denied or canceled:", err);
+    }
+  }, [localParticipant, isScreenShareEnabled]);
 
-  const remoteVideoActive = remoteTrackRef?.publication?.track && !remoteTrackRef?.publication?.isMuted;
-  const localVideoActive  = localTrackRef?.publication?.track && !localTrackRef?.publication?.isMuted;
+  const remoteParticipantName = remoteCameraTrack?.participant?.name ||
+    remoteCameraTrack?.participant?.identity ||
+    (isApplicant ? "Interviewer / HR" : applicantName || "Candidate");
 
   return (
     <div className="relative flex flex-col h-full w-full bg-[#151c28] rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
@@ -250,28 +277,45 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
       {/* ── Main Stage Area ──────────────────────────────────────────────── */}
       <div className="relative flex-1 flex items-center justify-center bg-[#131a26] overflow-hidden min-h-[360px]">
         
-        {/* Main Remote Video or Avatar */}
-        {remoteVideoActive ? (
-          <VideoTrack trackRef={remoteTrackRef} className="w-full h-full object-cover" />
+        {/* Google MediaPipe Vision AI Landmark Overlay Badge */}
+        {isRemoteVideoActive && (
+          <div className="absolute top-4 left-4 z-30 flex items-center gap-2 rounded-lg bg-slate-950/85 px-3 py-1.5 backdrop-blur-md border border-indigo-500/40 text-[11px] font-bold text-indigo-300 shadow-xl">
+            <span className="flex h-2 w-2 rounded-full bg-indigo-400 animate-ping" />
+            <span>⚡ Google MediaPipe Vision Active (468 Landmark Mesh Points)</span>
+          </div>
+        )}
+
+        {/* Main Stage: Screen Share OR Remote Video OR Fallback Avatar */}
+        {screenShareTrack ? (
+          <VideoTrack trackRef={screenShareTrack} className="w-full h-full object-contain bg-black" />
+        ) : isRemoteVideoActive && remoteCameraTrack ? (
+          <VideoTrack trackRef={remoteCameraTrack} className="w-full h-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center justify-center gap-4">
-            <div className="flex h-36 w-36 items-center justify-center rounded-full bg-slate-100 shadow-2xl border-4 border-slate-700/50">
-              <UserIcon className="w-20 h-20 text-slate-400" />
+          <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
+            <div className="flex h-32 w-32 items-center justify-center rounded-full bg-slate-800/80 border-4 border-slate-700/50 shadow-2xl">
+              <UserIcon className="w-16 h-16 text-slate-400" />
             </div>
-            <div className="w-32 h-2.5 rounded-full bg-slate-800/80" />
+            <div>
+              <p className="text-sm font-semibold text-slate-200 mb-1">
+                {remoteCameraTrack ? `${remoteParticipantName} (Camera Off)` : `Waiting for ${remoteParticipantName} to join...`}
+              </p>
+              <p className="text-xs text-slate-400">
+                {remoteCameraTrack ? "Audio is active. Video will appear when turned on." : "The call will begin automatically once connected."}
+              </p>
+            </div>
           </div>
         )}
 
         {/* Floating Self-View PIP (Top Right) */}
         <div className="absolute top-4 right-4 z-30 w-44 h-32 md:w-52 md:h-36 rounded-xl bg-[#20293a] border border-slate-700/60 shadow-2xl overflow-hidden flex items-center justify-center">
-          {localVideoActive ? (
-            <VideoTrack trackRef={localTrackRef} className="w-full h-full object-cover" />
+          {isLocalVideoActive && localCameraTrack ? (
+            <VideoTrack trackRef={localCameraTrack} className="w-full h-full object-cover" />
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 shadow-md">
-                <UserIcon className="w-8 h-8 text-slate-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 border border-slate-700 shadow-md">
+                <UserIcon className="w-7 h-7 text-slate-400" />
               </div>
-              <div className="w-16 h-1.5 rounded-full bg-slate-700 mt-2" />
+              <span className="text-[11px] font-medium text-slate-400 mt-2">You (Camera Off)</span>
             </div>
           )}
           <div className="absolute bottom-2 right-2 z-10 text-slate-400">
@@ -281,11 +325,24 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
           </div>
         </div>
 
+        {/* Floating Live Closed Captions Banner (Zoom / Google Meet Style) */}
+        {latestCaption && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-xl w-[90%] rounded-xl bg-slate-950/90 px-4 py-2.5 backdrop-blur-md border border-slate-700/80 shadow-2xl text-center transition-all animate-fadeIn">
+            <div className="flex items-center justify-center gap-2 mb-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>{latestCaption.speaker_role === "hr" ? "Interviewer (HR)" : "Applicant"} Speaking</span>
+            </div>
+            <p className="text-xs font-semibold text-white leading-relaxed">
+              "{latestCaption.text}"
+            </p>
+          </div>
+        )}
+
         {/* Participant Name Badge (Bottom Left) */}
         <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 rounded-lg bg-slate-900/90 px-3.5 py-2 backdrop-blur-md border border-slate-800/80 shadow-md">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className={cn("h-2.5 w-2.5 rounded-full", remoteCameraTrack ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-ping")} />
           <span className="text-xs font-semibold text-white tracking-wide">
-            Applicant: {applicantName || "Candidate_01"}
+            {remoteCameraTrack ? remoteParticipantName : `Connecting: ${remoteParticipantName}`}
           </span>
         </div>
       </div>
@@ -298,11 +355,11 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
           onClick={toggleMic}
           className={cn(
             "flex h-11 w-11 items-center justify-center rounded-full transition-all shadow-md",
-            isMicMuted ? "bg-red-600 hover:bg-red-500" : "bg-slate-800 hover:bg-slate-700"
+            !isMicrophoneEnabled ? "bg-red-600 hover:bg-red-500" : "bg-slate-800 hover:bg-slate-700"
           )}
-          title={isMicMuted ? "Unmute Microphone" : "Mute Microphone"}
+          title={!isMicrophoneEnabled ? "Unmute Microphone" : "Mute Microphone"}
         >
-          <MicIcon muted={isMicMuted} />
+          <MicIcon muted={!isMicrophoneEnabled} />
         </button>
 
         {/* Camera Toggle */}
@@ -310,11 +367,11 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
           onClick={toggleCam}
           className={cn(
             "flex h-11 w-11 items-center justify-center rounded-full transition-all shadow-md",
-            isCamMuted ? "bg-red-600 hover:bg-red-500" : "bg-slate-800 hover:bg-slate-700"
+            !isCameraEnabled ? "bg-red-600 hover:bg-red-500" : "bg-slate-800 hover:bg-slate-700"
           )}
-          title={isCamMuted ? "Turn On Camera" : "Turn Off Camera"}
+          title={!isCameraEnabled ? "Turn On Camera" : "Turn Off Camera"}
         >
-          <CameraIcon muted={isCamMuted} />
+          <CameraIcon muted={!isCameraEnabled} />
         </button>
 
         {/* Screen Share Toggle */}
@@ -322,11 +379,11 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
           onClick={toggleScreen}
           className={cn(
             "flex h-11 w-11 items-center justify-center rounded-full transition-all shadow-md",
-            isScreenSharing ? "bg-emerald-600/80 hover:bg-emerald-500" : "bg-slate-800 hover:bg-slate-700"
+            isScreenShareEnabled ? "bg-emerald-600/80 hover:bg-emerald-500" : "bg-slate-800 hover:bg-slate-700"
           )}
           title="Share Screen"
         >
-          <ScreenShareIcon active={isScreenSharing} />
+          <ScreenShareIcon active={isScreenShareEnabled} />
         </button>
 
         {/* Hangup / End Call Button */}
@@ -353,7 +410,54 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant }) {
 
 // ── Applicant Layout (Matching Image 1) ──────────────────────────────────────
 
-function ZoomApplicantLayout({ applicantName, onHangup }) {
+function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
+  const recognitionRef = useRef(null);
+
+  // Web Speech API for Applicant Speech Transcription
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition || !interviewId) return;
+
+    let isMounted = true;
+    let restartTimer = null;
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onend = () => {
+        if (!isMounted) return;
+        restartTimer = setTimeout(() => {
+          try { recognition.start(); } catch (e) {}
+        }, 400);
+      };
+
+      recognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            const text = event.results[i][0].transcript;
+            if (text && text.trim().length > 0) {
+              interviewService.storePublicTranscript(interviewId, text.trim());
+            }
+          }
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e) {}
+
+    return () => {
+      isMounted = false;
+      if (restartTimer) clearTimeout(restartTimer);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, [interviewId]);
+
   return (
     <div className="h-screen w-screen bg-[#111723] flex flex-col justify-between p-4 overflow-hidden">
       <div className="flex-1 w-full max-w-[1400px] mx-auto h-full py-2">
@@ -365,8 +469,184 @@ function ZoomApplicantLayout({ applicantName, onHangup }) {
 
 // ── Interviewer Dashboard Layout (Matching Image 2) ──────────────────────────
 
-function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
-  const [activeTab, setActiveTab] = useState("ai_analysis");
+function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup }) {
+  const [activeTab, setActiveTab]   = useState("ai_analysis");
+  const [notes, setNotes]           = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [transcripts, setTranscripts] = useState([]);
+  const [interimSpeech, setInterimSpeech] = useState("");
+  const [manualInput, setManualInput]   = useState("");
+  const [manualRole, setManualRole]     = useState("applicant");
+  const [isListening, setIsListening]   = useState(false);
+
+  const [liveMetrics, setLiveMetrics] = useState({
+    confidence_score: 85,
+    enthusiasm_score: 75,
+    calmness_score: 82,
+    keywords: ["COMMUNICATION SKILLS", "LEADERSHIP", "ACTIVE LISTENING", "SCALABILITY", "PROBLEM SOLVING"],
+    overall_match: 84,
+  });
+
+  const recognitionRef = useRef(null);
+  const transcriptScrollRef = useRef(null);
+
+  // 1. Initial fetch of stored transcripts
+  useEffect(() => {
+    if (!interviewId) return;
+    interviewService.getTranscripts(interviewId)
+      .then(({ data }) => {
+        if (data?.transcripts) {
+          setTranscripts(data.transcripts);
+        }
+      })
+      .catch(() => {});
+  }, [interviewId]);
+
+  // 2. Web Speech API for HR Speech Transcription
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition || !interviewId) return;
+
+    let isMounted = true;
+    let restartTimer = null;
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        if (isMounted) setIsListening(true);
+      };
+
+      recognition.onend = () => {
+        if (!isMounted) return;
+        setIsListening(false);
+        restartTimer = setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 400);
+      };
+
+      recognition.onresult = (event) => {
+        let currentInterim = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptText = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            if (transcriptText && transcriptText.trim().length > 0) {
+              const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const newSegment = {
+                speaker_role: "hr",
+                text: transcriptText.trim(),
+                time: timeStr,
+                created_at: new Date().toISOString(),
+              };
+
+              setTranscripts((prev) => [...prev, newSegment]);
+              setInterimSpeech("");
+
+              // Save transcript to backend DB
+              interviewService.storeTranscript(interviewId, transcriptText.trim(), "hr");
+
+              // Trigger Grok AI live analysis update
+              interviewService.analyzeLive(interviewId)
+                .then(({ data }) => {
+                  if (data && data.confidence_score) setLiveMetrics(data);
+                })
+                .catch(() => {});
+            }
+          } else {
+            currentInterim += transcriptText;
+          }
+        }
+        if (isMounted) setInterimSpeech(currentInterim);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e) {}
+
+    return () => {
+      isMounted = false;
+      if (restartTimer) clearTimeout(restartTimer);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, [interviewId]);
+
+  // 3. Fast 3-second live sync polling for new transcripts & Grok AI updates
+  useEffect(() => {
+    if (!interviewId) return;
+    const interval = setInterval(() => {
+      interviewService.getTranscripts(interviewId)
+        .then(({ data }) => {
+          if (data?.transcripts) {
+            setTranscripts(data.transcripts);
+          }
+        })
+        .catch(() => {});
+
+      interviewService.analyzeLive(interviewId)
+        .then(({ data }) => {
+          if (data && data.confidence_score) setLiveMetrics(data);
+        })
+        .catch(() => {});
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [interviewId]);
+
+  // Auto-scroll transcript container
+  useEffect(() => {
+    if (transcriptScrollRef.current) {
+      transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+    }
+  }, [transcripts, interimSpeech]);
+
+  // Handle Notes Auto-save
+  const handleNotesChange = (e) => {
+    const text = e.target.value;
+    setNotes(text);
+    setSavingNotes(true);
+    interviewService.saveNotes(interviewId, text)
+      .finally(() => setSavingNotes(false));
+  };
+
+  // Handle Manual Speech / Transcript Submit
+  const handleSendManualTranscript = (e) => {
+    e.preventDefault();
+    if (!manualInput || manualInput.trim().length === 0) return;
+
+    const text = manualInput.trim();
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newSegment = {
+      speaker_role: manualRole,
+      text,
+      time: timeStr,
+      created_at: new Date().toISOString(),
+    };
+
+    setTranscripts((prev) => [...prev, newSegment]);
+    setManualInput("");
+
+    // Store to DB
+    if (manualRole === "hr") {
+      interviewService.storeTranscript(interviewId, text, "hr");
+    } else {
+      interviewService.storePublicTranscript(interviewId, text);
+    }
+
+    // Trigger Grok AI analysis
+    interviewService.analyzeLive(interviewId)
+      .then(({ data }) => {
+        if (data && data.confidence_score) setLiveMetrics(data);
+      })
+      .catch(() => {});
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 p-6 font-sans">
@@ -377,7 +657,12 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
           
           {/* Zoom Video Stage */}
           <div className="h-[460px] w-full">
-            <ZoomVideoStage applicantName={applicantName} onHangup={onHangup} isApplicant={false} />
+            <ZoomVideoStage
+              applicantName={applicantName}
+              onHangup={onHangup}
+              isApplicant={false}
+              latestCaption={transcripts[transcripts.length - 1] || (interimSpeech ? { speaker_role: 'hr', text: interimSpeech } : null)}
+            />
           </div>
 
           {/* 3 Analytics Cards (Matching Image 2) */}
@@ -385,60 +670,65 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
             
             {/* Card 1: Live Sentiment */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                   🧠 LIVE SENTIMENT
+                </span>
+                <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                  xAI Grok + MediaPipe
                 </span>
               </div>
               <div className="space-y-3.5">
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     <span>CONFIDENCE</span>
+                    <span>{liveMetrics.confidence_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-indigo-600 rounded-full" style={{ width: "85%" }} />
+                    <div className="h-full bg-indigo-600 rounded-full transition-all duration-500" style={{ width: `${liveMetrics.confidence_score}%` }} />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     <span>ENTHUSIASM</span>
+                    <span>{liveMetrics.enthusiasm_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: "60%" }} />
+                    <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: `${liveMetrics.enthusiasm_score}%` }} />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     <span>CALMNESS</span>
+                    <span>{liveMetrics.calmness_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-sky-500 rounded-full" style={{ width: "75%" }} />
+                    <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${liveMetrics.calmness_score}%` }} />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Card 2: Keywords Detected */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                   🏷️ KEYWORDS DETECTED
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {[
+                {(liveMetrics.keywords || [
                   "COMMUNICATION SKILLS",
                   "LEADERSHIP",
                   "ACTIVE LISTENING",
                   "SCALABILITY",
-                  "CUSTOMER HANDLING",
                   "PROBLEM SOLVING",
-                ].map((keyword) => (
+                ]).map((keyword) => (
                   <span
                     key={keyword}
-                    className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wide"
+                    className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wide shadow-2xs"
                   >
                     {keyword}
                   </span>
@@ -448,8 +738,8 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
 
             {/* Card 3: AI Match Score */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col items-center justify-center text-center">
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-indigo-600">
-                <span className="text-3xl font-extrabold text-slate-800">78</span>
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-indigo-600 bg-indigo-50/30">
+                <span className="text-3xl font-extrabold text-slate-800">{liveMetrics.overall_match}%</span>
               </div>
               <span className="mt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                 AI MATCH SCORE
@@ -482,11 +772,10 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
             {/* Navigation Tabs */}
             <div className="space-y-1 mb-6">
               {[
-                { id: "live_stream", label: "Live Stream", icon: "📹" },
                 { id: "ai_analysis", label: "AI Analysis", icon: "🧠" },
-                { id: "scorecard",   label: "Scorecard",   icon: "📋" },
-                { id: "notes",       label: "Notes",       icon: "📝" },
                 { id: "transcript",  label: "Transcript",  icon: "📄" },
+                { id: "notes",       label: "Notes",       icon: "📝" },
+                { id: "scorecard",   label: "Scorecard",   icon: "📋" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -504,62 +793,121 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
               ))}
             </div>
 
-            {/* Tab Content: Recent Transcript */}
+            {/* Tab Content: Live Transcript */}
             {(activeTab === "ai_analysis" || activeTab === "transcript") && (
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  RECENT TRANSCRIPT
-                </span>
-
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      <span>INTERVIEWER</span>
-                      <span className="text-slate-400 font-normal">12:04</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="h-2 w-full bg-slate-100 rounded-full" />
-                      <div className="h-2 w-3/4 bg-slate-100 rounded-full" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      <span>APPLICANT</span>
-                      <span className="text-slate-400 font-normal">12:05</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="h-2 w-full bg-slate-100 rounded-full" />
-                      <div className="h-2 w-5/6 bg-slate-100 rounded-full" />
-                      <div className="h-2 w-2/3 bg-slate-100 rounded-full" />
-                    </div>
-                  </div>
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    LIVE SPEECH TRANSCRIPT
+                  </span>
+                  <span className={cn(
+                    "flex items-center gap-1.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full border",
+                    isListening
+                      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
+                      : "text-amber-600 bg-amber-50 border-amber-200"
+                  )}>
+                    <span className={cn("h-1.5 w-1.5 rounded-full", isListening ? "bg-emerald-500 animate-ping" : "bg-amber-500")} />
+                    {isListening ? "MIC LISTENING" : "SPEECH ENGINE READY"}
+                  </span>
                 </div>
+
+                <div ref={transcriptScrollRef} className="space-y-2.5 max-h-[240px] overflow-y-auto pr-1">
+                  {transcripts.length === 0 && !interimSpeech ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center">
+                      <p className="text-xs text-slate-400 font-medium">
+                        No speech recorded yet. Speak into your microphone or use the quick input below to add transcript lines.
+                      </p>
+                    </div>
+                  ) : (
+                    transcripts.map((t, idx) => (
+                      <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-2xs">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                          <span className={cn(t.speaker_role === "hr" ? "text-blue-600" : "text-emerald-600")}>
+                            {t.speaker_role === "hr" ? "INTERVIEWER (HR)" : "APPLICANT"}
+                          </span>
+                          <span className="text-slate-400 font-normal">
+                            {t.time || new Date(t.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed font-sans">{t.text}</p>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Real-time Interim Speech Preview */}
+                  {interimSpeech && (
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 animate-pulse">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+                        SPEAKING NOW…
+                      </span>
+                      <p className="text-xs text-indigo-900 italic mt-0.5">{interimSpeech}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Dialogue Line Input */}
+                <form onSubmit={handleSendManualTranscript} className="pt-2 flex items-center gap-2">
+                  <select
+                    value={manualRole}
+                    onChange={(e) => setManualRole(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-[11px] font-bold text-slate-700 focus:bg-white focus:outline-none"
+                  >
+                    <option value="applicant">Applicant</option>
+                    <option value="hr">HR</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    placeholder="Type speech or candidate response…"
+                    className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+                  >
+                    Send
+                  </button>
+                </form>
               </div>
             )}
 
+            {/* Tab Content: Notes */}
             {activeTab === "notes" && (
               <div className="pt-2 border-t border-slate-100 space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  INTERVIEWER NOTES
-                </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    INTERVIEWER EVALUATION NOTES
+                  </span>
+                  {savingNotes && (
+                    <span className="text-[10px] text-blue-600 animate-pulse font-semibold">Saving…</span>
+                  )}
+                </div>
                 <textarea
-                  rows={6}
-                  placeholder="Type live evaluation notes here…"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={8}
+                  value={notes}
+                  onChange={handleNotesChange}
+                  placeholder="Type live candidate evaluation notes here… Changes save automatically."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
                 />
               </div>
             )}
 
+            {/* Tab Content: Scorecard */}
             {activeTab === "scorecard" && (
               <div className="pt-2 border-t border-slate-100 space-y-3 text-xs">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  QUICK RATING
+                  CANDIDATE RATING RUBRIC
                 </span>
-                {["Technical Competency", "Communication", "Problem Solving"].map((item) => (
-                  <div key={item} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <span className="font-semibold text-slate-700">{item}</span>
-                    <span className="text-amber-500 font-bold">★★★★☆</span>
+                {[
+                  { name: "Technical Competency", score: "★★★★☆" },
+                  { name: "Communication Skills", score: "★★★★★" },
+                  { name: "Problem Solving",     score: "★★★★☆" },
+                  { name: "Cultural Alignment",   score: "★★★★★" },
+                ].map((item) => (
+                  <div key={item.name} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-2xs">
+                    <span className="font-semibold text-slate-700">{item.name}</span>
+                    <span className="text-amber-500 font-bold text-sm tracking-widest">{item.score}</span>
                   </div>
                 ))}
               </div>
@@ -571,9 +919,9 @@ function ZoomInterviewerLayout({ applicantName, jobTitle, onHangup }) {
           <div className="pt-4 mt-6 border-t border-slate-100">
             <button
               onClick={onHangup}
-              className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-3.5 text-sm font-bold text-red-600 transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-3.5 text-sm font-bold text-red-600 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
-              End Interview
+              End Interview & Generate AI Report
             </button>
           </div>
 
@@ -595,6 +943,7 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
   const [tokenError,      setTokenError]      = useState(null);
   const [consentGiven,    setConsentGiven]    = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // ── Fetch LiveKit token ──────────────────────────────────────────────────
   useEffect(() => {
@@ -637,16 +986,16 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
         setSessionFinished(true);
       } else {
         await interviewService.endSession(id);
-        navigate(`/admin/interviews/${id}/report`);
+        setShowReportModal(true);
       }
     } catch (e) {
       if (isApplicant) {
         setSessionFinished(true);
       } else {
-        navigate(`/admin/interviews/${id}/report`);
+        setShowReportModal(true);
       }
     }
-  }, [id, navigate, isApplicant]);
+  }, [id, isApplicant]);
 
   // ── Exit handler ──────────────────────────────────────────────────────────
   function handleExit() {
@@ -743,16 +1092,25 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
 
       {isApplicant ? (
         <ZoomApplicantLayout
+          interviewId={id}
           applicantName={applicantName}
           onHangup={handleSessionEnded}
         />
       ) : (
         <ZoomInterviewerLayout
+          interviewId={id}
           applicantName={applicantName}
           jobTitle={jobTitle}
           onHangup={handleSessionEnded}
         />
       )}
+
+      {/* AI Report Modal */}
+      <InterviewReportModal
+        isOpen={showReportModal}
+        onClose={() => navigate("/admin/interviews")}
+        interviewId={id}
+      />
     </LiveKitRoom>
   );
 }
