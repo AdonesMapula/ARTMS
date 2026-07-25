@@ -1,4 +1,5 @@
 import DashboardShell from "./DashboardShell";
+import ScrollToTop from "../components/ScrollToTop";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import {
@@ -68,15 +69,18 @@ export default function SuperAdminLayout() {
   ];
 
   return (
-    <DashboardShell
-      sidebar={<Sidebar brand="Accel4U" items={items} />}
-      topbar={
-        <Topbar
-          title={roleLabel.toUpperCase()}
-          subtitle="System administration • users • departments • HR operations"
-        />
-      }
-    />
+    <>
+      <ScrollToTop />
+      <DashboardShell
+        sidebar={<Sidebar brand="Accel4U" items={items} />}
+        topbar={
+          <Topbar
+            title={roleLabel.toUpperCase()}
+            subtitle="System administration • users • departments • HR operations"
+          />
+        }
+      />
+    </>
   );
 }
 

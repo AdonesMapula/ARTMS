@@ -9,6 +9,10 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Mail\UserCreatedMail;
 
 class UserController extends Controller
 {
@@ -54,8 +58,19 @@ class UserController extends Controller
 
         AuditLog::record('create', 'user', "Created user: {$user->email}", null, $user->toArray(), User::class, $user->id);
 
+        $token = Str::random(60);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => $token, 'created_at' => now()]
+        );
+
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        $setupUrl = $frontendUrl . '/setup-account?token=' . $token . '&email=' . urlencode($user->email);
+
+        Mail::to($user->email)->send(new UserCreatedMail($user, $request->password, $setupUrl));
+
         return response()->json([
-            'message' => 'User created successfully.',
+            'message' => 'User created successfully and email sent.',
             'user'    => $user->load('department'),
         ], 201);
     }
