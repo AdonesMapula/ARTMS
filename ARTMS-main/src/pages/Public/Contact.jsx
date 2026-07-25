@@ -1,23 +1,24 @@
 import { useState } from "react";
 import {
-  Mail,
-  MapPin,
-  Phone,
   Send,
   Loader2,
   CheckCircle2,
-  Quote,
+  Mail,
+  Phone,
+  MapPin,
   Clock,
-  Sparkles,
+  User,
+  AtSign,
+  MessageSquare,
+  FileText,
 } from "lucide-react";
-import Button from "../../components/ui/Button";
+import { FiFacebook } from "react-icons/fi";
 import Input from "../../components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import AlertModal from "../../components/ui/AlertModal";
 import Reveal from "../../components/ui/Reavel";
+import CompanyMap from "../../components/map/CompanyMap";
 
-// Same token system as Home.jsx — keeps this page visually consistent
-// with the landing page instead of drifting into its own palette.
 const TOKENS = {
   navy: "#060F5A",
   navyInk: "#0B1B78",
@@ -30,9 +31,31 @@ const TOKENS = {
 };
 
 const QUICK_CONTACTS = [
-  { icon: MapPin, label: "Location", value: "PH · Enterprise Hiring Operations" },
-  { icon: Mail, label: "Email", value: "talent@artms.example", href: "mailto:talent@artms.example" },
-  { icon: Phone, label: "Phone", value: "+63 000 000 0000", href: "tel:+630000000000" },
+  {
+    icon: FiFacebook,
+    label: "Facebook",
+    value: "facebook.com/artms.hr",
+    href: "https://www.facebook.com/profile.php?id=61569137152505",
+    external: true,
+  },
+  {
+    icon: Mail,
+    label: "Email",
+    value: "talent@artms.example",
+    href: "mailto:talent@artms.example",
+  },
+  {
+    icon: Phone,
+    label: "Phone",
+    value: "+63 000 000 0000",
+    href: "tel:+630000000000",
+  },
+  {
+    icon: MapPin,
+    label: "Location",
+    value: "PDI Condominium Building, Gov M. Cuenco Ave, Banilad, Cebu City, Philippines, 6000",
+    href: null,
+  },
 ];
 
 const initialForm = { name: "", email: "", subject: "", message: "" };
@@ -54,7 +77,6 @@ export default function Contact() {
     if (submitting) return;
 
     setSubmitting(true);
-    // Simulated round-trip — swap for a real API call when the backend is ready.
     setTimeout(() => {
       setSubmitting(false);
       setSent(true);
@@ -70,12 +92,20 @@ export default function Contact() {
   return (
     <div style={{ backgroundColor: TOKENS.paper, fontFamily: "Inter, sans-serif" }}>
       {/* ---------------- Intro ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 pt-16 lg:px-10">
+      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 pt-28 pb-8 lg:px-10 lg:pt-32">
+        <div
+          className="pointer-events-none absolute -right-24 -top-10 h-72 w-72 rounded-full blur-3xl -z-10"
+          style={{ backgroundColor: TOKENS.navy, opacity: 0.05 }}
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute -left-20 top-40 h-56 w-56 rounded-full blur-3xl -z-10"
+          style={{ backgroundColor: TOKENS.accent, opacity: 0.05 }}
+          aria-hidden="true"
+        />
+
         <Reveal>
-          <p
-            className="text-xs font-black uppercase tracking-[0.22em]"
-            style={{ color: TOKENS.accent }}
-          >
+          <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
             Contact
           </p>
           <h1
@@ -91,16 +121,19 @@ export default function Contact() {
           </p>
         </Reveal>
 
-        {/* Quick contact chips */}
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        {/* Quick contact cards */}
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {QUICK_CONTACTS.map((c, i) => {
             const Icon = c.icon;
             const content = (
               <div
-                className="group flex h-full items-center gap-3 rounded-[12px] border bg-white p-4 transition-all duration-300 hover:-translate-y-0.5"
-                style={{ borderColor: TOKENS.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)" }}
+                className="group flex h-full flex-col gap-3 rounded-2xl border bg-white p-5 transition-all duration-300 hover:-translate-y-1"
+                style={{
+                  borderColor: TOKENS.line,
+                  boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)",
+                }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 16px 32px -16px rgba(6,15,90,0.20)";
+                  e.currentTarget.style.boxShadow = "0 20px 40px -18px rgba(6,15,90,0.20)";
                   e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
                 }}
                 onMouseLeave={(e) => {
@@ -109,16 +142,19 @@ export default function Contact() {
                 }}
               >
                 <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
                 >
-                  <Icon size={17} />
+                  <Icon size={18} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: TOKENS.slateSoft }}>
                     {c.label}
                   </p>
-                  <p className="truncate text-sm font-semibold" style={{ color: TOKENS.slate }}>
+                  <p
+                    className="mt-0.5 break-words text-sm font-semibold leading-snug"
+                    style={{ color: TOKENS.slate }}
+                  >
                     {c.value}
                   </p>
                 </div>
@@ -128,7 +164,12 @@ export default function Contact() {
             return (
               <Reveal key={c.label} delay={i * 80}>
                 {c.href ? (
-                  <a href={c.href} className="block">
+                  <a
+                    href={c.href}
+                    target={c.external ? "_blank" : undefined}
+                    rel={c.external ? "noopener noreferrer" : undefined}
+                    className="block h-full"
+                  >
                     {content}
                   </a>
                 ) : (
@@ -140,57 +181,129 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* ---------------- Form + Info ---------------- */}
+      {/* ---------------- Form + Map ---------------- */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
-        <div className="grid gap-6 lg:grid-cols-5">
-          {/* Message form */}
-          <Reveal className="lg:col-span-3" delay={60}>
-            <Card
-              className="h-full border-0"
-              style={{ borderColor: TOKENS.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)" }}
-            >
-              <CardHeader>
-                <CardTitle className="text-base" style={{ color: TOKENS.navy }}>
-                  Send us a message
-                </CardTitle>
-                <p className="mt-1 text-sm" style={{ color: TOKENS.slateSoft }}>
-                  Frontend-only for now — this form is ready to wire up to an API.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit}>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      label="Full Name"
-                      name="name"
-                      placeholder="Your name"
-                      value={form.name}
-                      onChange={(e) => set("name", e.target.value)}
-                    />
-                    <Input
-                      label="Email"
-                      name="email"
-                      type="email"
-                      placeholder="you@email.com"
-                      value={form.email}
-                      onChange={(e) => set("email", e.target.value)}
-                    />
-                    <Input
-                      label="Subject"
-                      name="subject"
-                      placeholder="How can we help?"
-                      className="sm:col-span-2"
-                      value={form.subject}
-                      onChange={(e) => set("subject", e.target.value)}
-                    />
-                    <div className="sm:col-span-2">
-                      <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="message">
-                        Message
-                      </label>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Message form */}
+        <Reveal className="lg:col-span-1" delay={60}>
+          <Card
+            className="h-full border-0"
+            style={{ borderColor: TOKENS.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)" }}
+          >
+            <CardHeader>
+              <CardTitle className="text-base" style={{ color: TOKENS.navy }}>
+                Send us a message
+              </CardTitle>
+              <p className="mt-1 text-sm" style={{ color: TOKENS.slateSoft }}>
+                Frontend-only for now — this form is ready to wire up to an API.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Full Name with Icon */}
+                  <div className="w-full">
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="name">
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                        <User size={18} style={{ color: TOKENS.slateSoft }} />
+                      </div>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="Your name"
+                        value={form.name}
+                        onChange={(e) => set("name", e.target.value)}
+                        className="h-11 w-full rounded-xl border bg-white pl-11 pr-3 text-sm outline-none transition"
+                        style={{ borderColor: TOKENS.line, color: TOKENS.slate }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.navy;
+                          e.currentTarget.style.boxShadow = `0 0 0 4px rgba(6,15,90,0.08)`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.line;
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email with Icon */}
+                  <div className="w-full">
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="email">
+                      Email
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                        <AtSign size={18} style={{ color: TOKENS.slateSoft }} />
+                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@email.com"
+                        value={form.email}
+                        onChange={(e) => set("email", e.target.value)}
+                        className="h-11 w-full rounded-xl border bg-white pl-11 pr-3 text-sm outline-none transition"
+                        style={{ borderColor: TOKENS.line, color: TOKENS.slate }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.navy;
+                          e.currentTarget.style.boxShadow = `0 0 0 4px rgba(6,15,90,0.08)`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.line;
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subject with Icon */}
+                  <div className="w-full sm:col-span-2">
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="subject">
+                      Subject
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                        <FileText size={18} style={{ color: TOKENS.slateSoft }} />
+                      </div>
+                      <input
+                        id="subject"
+                        name="subject"
+                        type="text"
+                        placeholder="How can we help?"
+                        value={form.subject}
+                        onChange={(e) => set("subject", e.target.value)}
+                        className="h-11 w-full rounded-xl border bg-white pl-11 pr-3 text-sm outline-none transition"
+                        style={{ borderColor: TOKENS.line, color: TOKENS.slate }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.navy;
+                          e.currentTarget.style.boxShadow = `0 0 0 4px rgba(6,15,90,0.08)`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = TOKENS.line;
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Message with Icon */}
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-800" htmlFor="message">
+                      Message
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-3 flex items-center pointer-events-none">
+                        <MessageSquare size={18} style={{ color: TOKENS.slateSoft }} />
+                      </div>
                       <textarea
                         id="message"
                         rows={5}
-                        className="w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none transition"
+                        className="w-full rounded-xl border bg-white pl-11 pr-3 py-2.5 text-sm outline-none transition resize-none"
                         style={{ borderColor: TOKENS.line, color: TOKENS.slate }}
                         onFocus={(e) => {
                           e.currentTarget.style.borderColor = TOKENS.navy;
@@ -206,135 +319,78 @@ export default function Contact() {
                       />
                     </div>
                   </div>
-
-                  <div className="mt-5 flex items-center justify-end gap-3">
-                    <p className="mr-auto text-xs" style={{ color: TOKENS.slateSoft }}>
-                      We typically reply within one business day.
-                    </p>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(249,115,22,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-10px_rgba(249,115,22,0.65)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
-                      style={{ backgroundColor: sent ? "#16A34A" : TOKENS.accent }}
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          Sending…
-                        </>
-                      ) : sent ? (
-                        <>
-                          <CheckCircle2 size={16} />
-                          Sent
-                        </>
-                      ) : (
-                        <>
-                          <Send size={16} className="transition-transform duration-300 group-hover:translate-x-0.5" />
-                          Submit
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </Reveal>
-
-          {/* Reach us + Quote */}
-          <div className="flex flex-col gap-6 lg:col-span-2">
-            <Reveal delay={120}>
-              <Card
-                className="border-0"
-                style={{ borderColor: TOKENS.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)" }}
-              >
-                <CardHeader>
-                  <CardTitle className="text-base" style={{ color: TOKENS.navy }}>
-                    Reach us directly
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1">
-                    {QUICK_CONTACTS.map((c) => {
-                      const Icon = c.icon;
-                      return (
-                        <li key={c.label}>
-                          <a
-                            href={c.href || undefined}
-                            className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors"
-                            style={{ color: TOKENS.slate }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F8FAFC")}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                          >
-                            <span
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                              style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-                            >
-                              <Icon size={14} />
-                            </span>
-                            {c.value}
-                          </a>
-                        </li>
-                      );
-                    })}
-                    <li className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm" style={{ color: TOKENS.slate }}>
-                      <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-                      >
-                        <Clock size={14} />
-                      </span>
-                      Mon–Fri, 9:00 AM – 6:00 PM (PHT)
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </Reveal>
-
-            {/* Quote card — navy, matches Home.jsx's About strip treatment */}
-            <Reveal delay={180}>
-              <div
-                className="group relative flex-1 overflow-hidden rounded-[12px] p-6 transition-transform duration-300 hover:-translate-y-0.5"
-                style={{ backgroundColor: TOKENS.navy }}
-              >
-                <div
-                  className="absolute -right-8 -top-8 h-32 w-32 rounded-full transition-transform duration-500 group-hover:scale-110"
-                  style={{ backgroundColor: "rgba(249,115,22,0.12)" }}
-                  aria-hidden="true"
-                />
-                <div className="relative">
-                  <div
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: "rgba(255,255,255,0.1)", color: TOKENS.accent }}
-                  >
-                    <Quote size={20} />
-                  </div>
-                  <p className="mt-4 text-lg font-semibold italic leading-snug text-white">
-                    "ARTMS cut our time-to-hire in half — the AI screening actually
-                    understands what our teams need."
-                  </p>
-                  <div className="mt-5 flex items-center gap-3">
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black"
-                      style={{ backgroundColor: TOKENS.accent, color: TOKENS.navy }}
-                    >
-                      JR
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Jamie Reyes</p>
-                      <p className="text-xs text-indigo-100/60">HR Manager, Partner Company</p>
-                    </div>
-                  </div>
-                  <div
-                    className="mt-5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide"
-                    style={{ backgroundColor: "rgba(249,115,22,0.14)", color: TOKENS.accent }}
-                  >
-                    <Sparkles size={11} /> Trusted by growing teams
-                  </div>
                 </div>
+
+                <div className="mt-5 flex items-center justify-end gap-3">
+                  <p className="mr-auto text-xs" style={{ color: TOKENS.slateSoft }}>
+                    We typically reply within one business day.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(249,115,22,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-10px_rgba(249,115,22,0.65)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+                    style={{ backgroundColor: sent ? "#16A34A" : TOKENS.accent }}
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Sending…
+                      </>
+                    ) : sent ? (
+                      <>
+                        <CheckCircle2 size={16} />
+                        Sent
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                        Submit
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </Reveal>
+
+        {/* Map */}
+        <Reveal className="lg:col-span-1" delay={120}>
+          <div className="flex h-full flex-col gap-4">
+            <div
+              className="overflow-hidden rounded-[16px] border"
+              style={{
+                borderColor: TOKENS.line,
+                boxShadow: "0 4px 24px -8px rgba(6,15,90,0.16)",
+                minHeight: "380px",
+              }}
+            >
+              <CompanyMap height="380px" />
+            </div>
+
+            {/* Office hours strip under the map */}
+            <div
+              className="flex items-center gap-3 rounded-xl border bg-white px-4 py-3"
+              style={{ borderColor: TOKENS.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.10)" }}
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
+              >
+                <Clock size={15} />
+              </span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: TOKENS.slateSoft }}>
+                  Office Hours
+                </p>
+                <p className="text-sm font-semibold" style={{ color: TOKENS.slate }}>
+                  Mon–Fri, 9:00 AM – 6:00 PM (PHT)
+                </p>
               </div>
-            </Reveal>
+            </div>
           </div>
-        </div>
+        </Reveal>
+      </div>
       </section>
 
       <AlertModal

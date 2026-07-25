@@ -16,6 +16,7 @@ import Jobs from "../pages/Public/Jobs";
 import JobDetails from "../pages/Public/JobDetails";
 import Apply from "../pages/Public/Apply";
 import Contact from "../pages/Public/Contact";
+import ApplicationGuide from "../pages/Public/ApplicationGuide";
 import NotFound from "../pages/Public/NotFound";
 import AccessDenied from "../pages/Public/AccessDenied";
 
@@ -89,6 +90,7 @@ export default function AppRoutes() {
           <Route path="/jobs/:id" element={<JobDetails />} />
           <Route path="/apply/:id" element={<Apply />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/application-guide" element={<ApplicationGuide />} />
         </Route>
 
         {/* ── Applicant Video Interview Room (Public link sent in invitation email) ── */}

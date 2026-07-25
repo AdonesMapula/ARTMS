@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Award,
   Target,
+  ChevronDown,
 } from "lucide-react";
 
 /* Swap for your own photo — a wide, high-res office / team shot works best
@@ -151,6 +152,11 @@ const FEATURED_JOBS = [
   },
 ];
 
+const HERO_HEADLINES = [
+  { prefix: "Connecting Top Talent with", highlight: "Exceptional Opportunities" },
+  { prefix: "AI Recruitment and Talent ", highlight: "Management System" },
+];
+
 /** Fades + slides children up the first time they enter the viewport. */
 function Reveal({ children, delay = 0, className = "" }) {
   const ref = useRef(null);
@@ -184,6 +190,34 @@ function Reveal({ children, delay = 0, className = "" }) {
     >
       {children}
     </div>
+  );
+}
+
+function StatCounter({ value, suffix = "" }) {
+  const numericValue = parseInt(value.replace(/\D/g, ""), 10);
+  const [count, setIsActive] = useCountAnimation(numericValue, 1800, 0);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsActive(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [setIsActive]);
+
+  return (
+    <p ref={ref} className="text-3xl font-extrabold sm:text-4xl" style={{ color: TOKENS.accent }}>
+      {count}{suffix}
+    </p>
   );
 }
 
@@ -284,6 +318,38 @@ function CountingBadge() {
   );
 }
 
+function FlipHeadline({ headlines, interval = 4500 }) {
+  const [index, setIndex] = useState(0);
+  const [isFlipping, setIsFlipping] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIsFlipping(true); // start exit animation
+      setTimeout(() => {
+        setIndex((i) => (i + 1) % headlines.length);
+        setIsFlipping(false); // start enter animation
+      }, 350); // matches the exit animation duration below
+    }, interval);
+    return () => clearInterval(timer);
+  }, [headlines.length, interval]);
+
+  const current = headlines[index];
+
+  return (
+    <span
+      className="inline-block"
+      style={{
+        animation: isFlipping
+          ? "flip-out 350ms ease forwards"
+          : "flip-in 350ms ease forwards",
+      }}
+    >
+      {current.prefix}{" "}
+      <span style={{ color: TOKENS.accent }}>{current.highlight}</span>
+    </span>
+  );
+}
+
 export default function JobBoardLanding() {
   const [heroLoaded, setHeroLoaded] = useState(false);
 
@@ -319,6 +385,21 @@ export default function JobBoardLanding() {
           aria-hidden="true"
         />
 
+        {/* Animated grid background */}
+        <div
+          className="absolute inset-0 -z-10 animate-grid-pan"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)
+            `,
+            backgroundSize: "24px 24px",
+            maskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+          }}
+          aria-hidden="true"
+        />
+
         <div className="mx-auto flex min-h-[620px] max-w-7xl flex-col items-center justify-center px-6 py-24 text-center lg:px-10">
           <div
             className="mb-6 transition-all duration-700"
@@ -338,8 +419,7 @@ export default function JobBoardLanding() {
               transitionDelay: "100ms",
             }}
           >
-            Connecting Top Talent with{" "}
-            <span style={{ color: TOKENS.accent }}>Exceptional Opportunities</span>
+          <FlipHeadline headlines={HERO_HEADLINES} />
           </h1>
 
           <p
@@ -372,116 +452,319 @@ export default function JobBoardLanding() {
               <SecondaryButton>Learn More About Us</SecondaryButton>
             </Link>
           </div>
-
         </div>
+
+        {/* Scroll cue */}
+        <div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce-slow"
+          style={{ opacity: heroLoaded ? 0.7 : 0, transition: "opacity 700ms ease 600ms" }}
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
+            Scroll to explore
+          </span>
+          <ChevronDown size={18} className="text-white/70" />
+        </div>
+
       </section>
 
       {/* ---------------- Infinite Stats Marquee ---------------- */}
       <InfiniteStatsMarquee />
 
       {/* ---------------- What is ARTMS ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10 bg-[#FCF8F8]">
-        <Reveal>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_1fr] lg:items-end">
-            <div>
-              <p
-                className="text-xs font-black uppercase tracking-[0.22em]"
-                style={{ color: TOKENS.accent }}
-              >
-                What is ARTMS
-              </p>
-              <h2
-                className="mt-3 text-2xl font-extrabold leading-snug tracking-tight sm:text-3xl"
-                style={{ color: TOKENS.navy }}
-              >
-                One system for hiring, growing, and managing your people
-              </h2>
-            </div>
-            <p className="text-sm leading-relaxed sm:text-base" style={{ color: TOKENS.slateSoft }}>
-              ARTMS is a centralized AI Recruitment and Talent Management System that
-              replaces scattered spreadsheets and manual tracking with a single source
-              of truth — from the moment a candidate applies to the day they become
-              part of the team.
-            </p>
-          </div>
-        </Reveal>
+      <section className="relative isolate overflow-hidden py-24">
+        
+        {/* Animated gradient background */}
+        <div 
+          className="absolute inset-0 -z-20"
+          style={{
+            background: `linear-gradient(135deg, 
+              rgba(6,15,90,0.03) 0%, 
+              rgba(249,115,22,0.02) 25%,
+              rgba(6,15,90,0.02) 50%,
+              rgba(249,115,22,0.03) 75%,
+              rgba(6,15,90,0.03) 100%)`,
+            backgroundSize: "400% 400%",
+            animation: "gradient-shift 15s ease infinite",
+          }}
+        />
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {ARTMS_FEATURES.map((f, i) => {
-            const FeatureIcon = f.icon;
-            return (
-              <Reveal key={f.title} delay={i * 80}>
-                <div
-                  className="group h-full rounded-[12px] border bg-white p-6 transition-all duration-300 hover:-translate-y-1"
-                  style={{
-                    borderColor: TOKENS.line,
-                    boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 20px 40px -18px rgba(6,15,90,0.20)";
-                    e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "0 4px 16px -10px rgba(6,15,90,0.12)";
-                    e.currentTarget.style.borderColor = TOKENS.line;
-                  }}
-                >
-                  <div
-                    className="flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-300"
-                    style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-                  >
-                    <FeatureIcon size={20} />
-                  </div>
-                  <h3 className="mt-4 text-base font-extrabold" style={{ color: TOKENS.navy }}>
-                    {f.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: TOKENS.slateSoft }}>
-                    {f.desc}
-                  </p>
-                </div>
-              </Reveal>
-            );
-          })}
+        {/* Animated floating shapes */}
+        <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div
+            className="absolute -left-20 top-20 h-64 w-64 rounded-full opacity-[0.06] blur-3xl animate-float-slow"
+            style={{ backgroundColor: TOKENS.navy }}
+          />
+          <div
+            className="absolute -right-20 top-40 h-80 w-80 rounded-full opacity-[0.08] blur-3xl animate-float-slower"
+            style={{ backgroundColor: TOKENS.accent }}
+          />
+          <div
+            className="absolute bottom-20 left-1/3 h-72 w-72 rounded-full opacity-[0.05] blur-3xl animate-float-slowest"
+            style={{ backgroundColor: TOKENS.navyInk }}
+          />
         </div>
+
+        {/* Animated particle dots */}
+        <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div className="absolute inset-0 animate-particle-float" style={{
+            backgroundImage: `radial-gradient(circle, ${TOKENS.accent} 1.5px, transparent 1.5px)`,
+            backgroundSize: "50px 50px",
+            opacity: 0.04,
+          }} />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <Reveal>
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_1fr] lg:items-end">
+              <div>
+                <p
+                  className="text-xs font-black uppercase tracking-[0.22em]"
+                  style={{ color: TOKENS.accent }}
+                >
+                  What is ARTMS
+                </p>
+                <h2
+                  className="mt-3 text-2xl font-extrabold leading-snug tracking-tight sm:text-3xl"
+                  style={{ color: TOKENS.navy }}
+                >
+                  One system for hiring, growing, and managing your people
+                </h2>
+              </div>
+              <p className="text-sm leading-relaxed sm:text-base" style={{ color: TOKENS.slateSoft }}>
+                ARTMS is a centralized AI Recruitment and Talent Management System that
+                replaces scattered spreadsheets and manual tracking with a single source
+                of truth — from the moment a candidate applies to the day they become
+                part of the team.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {ARTMS_FEATURES.map((f, i) => {
+              const FeatureIcon = f.icon;
+              return (
+                <Reveal key={f.title} delay={i * 80}>
+                  <div
+                    className="group relative h-full overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-2"
+                    style={{
+                      borderColor: TOKENS.line,
+                      boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "0 24px 48px -20px rgba(6,15,90,0.25)";
+                      e.currentTarget.style.borderColor = "rgba(249,115,22,0.4)";
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.95)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "0 4px 16px -10px rgba(6,15,90,0.12)";
+                      e.currentTarget.style.borderColor = TOKENS.line;
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.8)";
+                    }}
+                  >
+                    {/* Animated accent line */}
+                    <div
+                      className="absolute left-0 top-0 h-1 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+                      style={{ 
+                        background: `linear-gradient(90deg, ${TOKENS.accent}, ${TOKENS.accentDark})` 
+                      }}
+                      aria-hidden="true"
+                    />
+                    
+                    {/* Icon with glow effect on hover */}
+                    <div className="relative">
+                      <div
+                        className="absolute inset-0 rounded-xl opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-30"
+                        style={{ backgroundColor: TOKENS.accent }}
+                        aria-hidden="true"
+                      />
+                      <div
+                        className="relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+                        style={{ 
+                          backgroundColor: "#EEF1FB", 
+                          color: TOKENS.navy 
+                        }}
+                      >
+                        <FeatureIcon size={22} />
+                      </div>
+                    </div>
+
+                    <h3 className="mt-5 text-base font-extrabold transition-colors duration-300" 
+                      style={{ color: TOKENS.navy }}
+                    >
+                      {f.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed" style={{ color: TOKENS.slateSoft }}>
+                      {f.desc}
+                    </p>
+
+                    {/* Decorative corner element */}
+                    <div
+                      className="absolute -bottom-8 -right-8 h-24 w-24 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-[0.05]"
+                      style={{ backgroundColor: TOKENS.accent }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+          }
+          
+          @keyframes float-slow {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+          }
+          
+          @keyframes float-slower {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-40px, 30px) rotate(3deg); }
+            66% { transform: translate(30px, -20px) rotate(-3deg); }
+          }
+          
+          @keyframes float-slowest {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(20px, 30px) scale(1.05); }
+          }
+
+          @keyframes particle-float {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-20px); }
+          }
+          
+          .animate-float-slow {
+            animation: float-slow 20s ease-in-out infinite;
+          }
+          
+          .animate-float-slower {
+            animation: float-slower 25s ease-in-out infinite;
+          }
+          
+          .animate-float-slowest {
+            animation: float-slowest 30s ease-in-out infinite;
+          }
+
+          .animate-particle-float {
+            animation: particle-float 8s linear infinite;
+          }
+        `}</style>
       </section>
 
       {/* ---------------- How ARTMS Works (interactive process) ---------------- */}
       <ProcessSection />
 
       {/* ---------------- Featured Jobs Preview ---------------- */}
-      <section id="jobs" className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
-        <Reveal>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p
-                className="text-xs font-black uppercase tracking-[0.22em]"
-                style={{ color: TOKENS.accent }}
-              >
-                Featured Jobs Preview
-              </p>
-              <h2
-                className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl"
+      <section id="jobs" className="relative isolate overflow-hidden py-24">
+        
+        {/* Wave pattern background */}
+        <div
+          className="absolute inset-0 -z-20"
+          style={{
+            backgroundColor: "#F1F5F9",
+          }}
+          aria-hidden="true"
+        />
+        
+        {/* Animated SVG waves */}
+        <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <svg
+            className="absolute bottom-0 left-0 w-full opacity-[0.07]"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1440 320"
+            preserveAspectRatio="none"
+            style={{ height: "300px" }}
+          >
+            <path
+              fill={TOKENS.navy}
+              fillOpacity="1"
+              d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,106.7C1248,96,1344,96,1392,96L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+              style={{
+                animation: "wave-move 10s ease-in-out infinite",
+                transformOrigin: "center",
+              }}
+            />
+          </svg>
+          <svg
+            className="absolute bottom-0 left-0 w-full opacity-[0.05]"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1440 320"
+            preserveAspectRatio="none"
+            style={{ height: "280px" }}
+          >
+            <path
+              fill={TOKENS.accent}
+              fillOpacity="1"
+              d="M0,192L48,176C96,160,192,128,288,128C384,128,480,160,576,165.3C672,171,768,149,864,149.3C960,149,1056,171,1152,181.3C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+              style={{
+                animation: "wave-move-reverse 12s ease-in-out infinite",
+                transformOrigin: "center",
+              }}
+            />
+          </svg>
+        </div>
+
+        {/* Floating job icons */}
+        <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div
+            className="absolute left-[12%] top-[20%] opacity-[0.04] animate-float-icon"
+            style={{ fontSize: "48px", color: TOKENS.navy }}
+          >
+            💼
+          </div>
+          <div
+            className="absolute right-[18%] top-[35%] opacity-[0.04] animate-float-icon-delayed"
+            style={{ fontSize: "40px", color: TOKENS.accent }}
+          >
+            🎯
+          </div>
+          <div
+            className="absolute left-[25%] bottom-[25%] opacity-[0.04] animate-float-icon-slow"
+            style={{ fontSize: "44px", color: TOKENS.navy }}
+          >
+            ⚡
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <Reveal>
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+              <div>
+                <p
+                  className="text-xs font-black uppercase tracking-[0.22em]"
+                  style={{ color: TOKENS.accent }}
+                >
+                  Featured Jobs Preview
+                </p>
+                <h2
+                  className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl"
+                  style={{ color: TOKENS.navy }}
+                >
+                  Roles hiring managers are prioritizing this week
+                </h2>
+              </div>
+              <Link
+                to="/jobs"
+                className="inline-flex items-center gap-1.5 text-sm font-bold transition-all duration-200 hover:gap-2"
                 style={{ color: TOKENS.navy }}
               >
-                Roles hiring managers are prioritizing this week
-              </h2>
+                Browse all jobs <ArrowRight size={15} />
+              </Link>
             </div>
-            <a
-              href="#jobs"
-              className="inline-flex items-center gap-1.5 text-sm font-bold transition-colors"
-              style={{ color: TOKENS.navy }}
-            >
-              Browse all jobs <ArrowRight size={15} />
-            </a>
-          </div>
-        </Reveal>
+          </Reveal>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {FEATURED_JOBS.map((job, i) => (
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {FEATURED_JOBS.map((job, i) => (
             <Reveal key={job.id} delay={i * 100}>
               <JobCard job={job} />
             </Reveal>
           ))}
+        </div>
         </div>
       </section>
 
@@ -496,9 +779,7 @@ export default function JobBoardLanding() {
             ].map((stat, i) => (
               <Reveal key={stat.label} delay={i * 90}>
                 <div className="border-t pt-6" style={{ borderColor: "rgba(255,255,255,0.14)" }}>
-                  <p className="text-3xl font-extrabold sm:text-4xl" style={{ color: TOKENS.accent }}>
-                    {stat.value}
-                  </p>
+                  <StatCounter value={stat.value} suffix={stat.value.replace(/[0-9]/g, "")} />
                   <p className="mt-2 text-sm text-indigo-100/70">{stat.label}</p>
                 </div>
               </Reveal>
@@ -508,26 +789,70 @@ export default function JobBoardLanding() {
       </section>
 
       {/* ---------------- Contact CTA ---------------- */}
-      <section id="contact" className="mx-auto max-w-7xl px-6 py-24 text-center lg:px-10">
-        <Reveal>
-          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: TOKENS.navy }}>
-            Ready to find your next great hire — or your next great role?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base" style={{ color: TOKENS.slateSoft }}>
-            Reach the team behind ARTMS and we'll get back to you within one business day.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <PrimaryButton style={{ backgroundColor: TOKENS.accent }}>
-              Contact Us <ArrowUpRight size={16} />
-            </PrimaryButton>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 px-6 py-3.5 text-sm font-bold transition-all duration-200 hover:-translate-y-0.5"
-              style={{ borderColor: TOKENS.navy, color: TOKENS.navy }}
-            >
-              View Job Post Guide
-            </button>
-          </div>
-        </Reveal>
+      <section id="contact" className="relative isolate overflow-hidden py-24">
+        
+        {/* Radial gradient background */}
+        <div
+          className="absolute inset-0 -z-20"
+          style={{
+            background: `radial-gradient(circle at 50% 50%, rgba(249,115,22,0.03) 0%, rgba(6,15,90,0.02) 50%, transparent 100%)`,
+          }}
+          aria-hidden="true"
+        />
+        
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 -z-10 opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(${TOKENS.line} 1px, transparent 1px),
+              linear-gradient(90deg, ${TOKENS.line} 1px, transparent 1px)
+            `,
+            backgroundSize: "40px 40px",
+          }}
+          aria-hidden="true"
+        />
+        
+        {/* Floating accent circle */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl -z-10 animate-pulse-gentle"
+          style={{ backgroundColor: TOKENS.accent, opacity: 0.06 }}
+          aria-hidden="true"
+        />
+
+        <div className="mx-auto max-w-7xl px-6 text-center lg:px-10">
+          <Reveal>
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: TOKENS.navy }}>
+              Ready to find your next great hire — or your next great role?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed" style={{ color: TOKENS.slateSoft }}>
+              Reach the team behind ARTMS and we'll get back to you within one business day.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <PrimaryButton style={{ backgroundColor: TOKENS.accent }}>
+                Contact Us <ArrowUpRight size={16} />
+              </PrimaryButton>
+              <Link to="/application-guide">
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border-2 px-6 py-3.5 text-sm font-bold transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ borderColor: TOKENS.navy, color: TOKENS.navy }}
+                >
+                  View Application Guide
+                </button>
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+
+        <style>{`
+          @keyframes pulse-gentle {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.06; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.09; }
+          }
+          .animate-pulse-gentle {
+            animation: pulse-gentle 6s ease-in-out infinite;
+          }
+        `}</style>
       </section>
     </div>
   );
@@ -609,143 +934,239 @@ function ProcessSection() {
   const total = PROCESS_STEPS.length;
   const activeStep = PROCESS_STEPS[active];
   const Icon = activeStep.icon;
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused) return;
+    const timer = setInterval(() => {
+      setActive((a) => (a + 1) % total);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isPaused, total]);
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
-      <Reveal>
-        <p
-          className="text-xs font-black uppercase tracking-[0.22em]"
-          style={{ color: TOKENS.accent }}
-        >
-          How ARTMS Works
-        </p>
-        <h2
-          className="mt-2 max-w-2xl text-2xl font-extrabold tracking-tight sm:text-3xl"
-          style={{ color: TOKENS.navy }}
-        >
-          From application to onboarding, guided by AI, decided by HR
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm sm:text-base" style={{ color: TOKENS.slateSoft }}>
-          Tap a stage to see how it works.
-        </p>
-      </Reveal>
+    <section className="relative isolate overflow-hidden py-24">
+      
+      {/* Diagonal striped background pattern */}
+      <div
+        className="absolute inset-0 -z-20"
+        style={{
+          backgroundColor: "#FAFBFC",
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 60px,
+            rgba(6,15,90,0.02) 60px,
+            rgba(6,15,90,0.02) 120px
+          )`,
+        }}
+        aria-hidden="true"
+      />
 
-      <Reveal delay={100}>
-        <div className="mt-12">
-          {/* Stepper rail */}
-          <div className="relative">
-            <div
-              className="absolute left-0 right-0 top-5 h-[3px] rounded-full"
-              style={{ backgroundColor: TOKENS.line }}
-              aria-hidden="true"
-            />
-            <div
-              className="absolute left-0 top-5 h-[3px] rounded-full transition-all duration-500 ease-out"
-              style={{
-                backgroundColor: TOKENS.accent,
-                width: `${(active / (total - 1)) * 100}%`,
-              }}
-              aria-hidden="true"
-            />
+      {/* Animated circles with blur */}
+      <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div
+          className="absolute left-[10%] top-[15%] h-96 w-96 rounded-full opacity-[0.08] blur-3xl animate-pulse-slow"
+          style={{ backgroundColor: TOKENS.accent }}
+        />
+        <div
+          className="absolute right-[15%] bottom-[20%] h-80 w-80 rounded-full opacity-[0.06] blur-3xl animate-pulse-slower"
+          style={{ backgroundColor: TOKENS.navy }}
+        />
+      </div>
 
-            <div className="relative grid grid-cols-5 gap-2">
-              {PROCESS_STEPS.map((step, i) => {
-                const StepIcon = step.icon;
-                const isActive = i === active;
-                const isDone = i < active;
-                return (
-                  <button
-                    key={step.id}
-                    onClick={() => setActive(i)}
-                    className="group flex flex-col items-center gap-3 rounded-xl py-1 text-center focus:outline-none"
-                    aria-current={isActive ? "step" : undefined}
-                  >
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-xs font-black transition-all duration-300"
-                      style={{
-                        backgroundColor: isActive || isDone ? TOKENS.accent : "#FFFFFF",
-                        borderColor: isActive || isDone ? TOKENS.accent : TOKENS.line,
-                        color: isActive || isDone ? "#FFFFFF" : TOKENS.slateSoft,
-                        boxShadow: isActive
-                          ? "0 8px 18px -6px rgba(249,115,22,0.55)"
-                          : "none",
-                        transform: isActive ? "scale(1.08)" : "scale(1)",
-                      }}
-                    >
-                      {step.id}
-                    </span>
-                    <span
-                      className="hidden text-xs font-bold leading-tight transition-colors duration-200 sm:block"
-                      style={{ color: isActive ? TOKENS.navy : TOKENS.slateSoft }}
-                    >
-                      {step.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+      {/* Geometric shapes */}
+      <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div
+          className="absolute left-[5%] top-[30%] h-32 w-32 rotate-45 opacity-[0.03] animate-spin-very-slow"
+          style={{ backgroundColor: TOKENS.accent }}
+        />
+        <div
+          className="absolute right-[8%] top-[60%] h-24 w-24 rotate-12 rounded-lg opacity-[0.04] animate-spin-reverse-slow"
+          style={{ backgroundColor: TOKENS.navy }}
+        />
+      </div>
 
-          {/* Active step detail panel */}
-          <div
-            key={activeStep.id}
-            className="mt-10 grid gap-8 rounded-[12px] border bg-white p-8 sm:p-10 lg:grid-cols-[auto_1fr] lg:items-start"
-            style={{
-              borderColor: TOKENS.line,
-              boxShadow: "0 20px 48px -24px rgba(6,15,90,0.18)",
-              animation: "artms-fade-in 420ms ease",
-            }}
+      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+        <Reveal>
+          <p
+            className="text-xs font-black uppercase tracking-[0.22em]"
+            style={{ color: TOKENS.accent }}
           >
-            <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-            >
-              <Icon size={28} />
-            </div>
-            <div>
-              <span
-                className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide"
-                style={{ backgroundColor: "rgba(249,115,22,0.1)", color: TOKENS.accentDark }}
-              >
-                {activeStep.module}
-              </span>
-              <h3
-                className="mt-3 text-xl font-extrabold tracking-tight sm:text-2xl"
-                style={{ color: TOKENS.navy }}
-              >
-                {activeStep.title}
-              </h3>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed sm:text-base" style={{ color: TOKENS.slate }}>
-                {activeStep.description}
-              </p>
+            How ARTMS Works
+          </p>
+          <h2
+            className="mt-2 max-w-2xl text-2xl font-extrabold tracking-tight sm:text-3xl"
+            style={{ color: TOKENS.navy }}
+          >
+            From application to onboarding, guided by AI, decided by HR
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm sm:text-base" style={{ color: TOKENS.slateSoft }}>
+            Tap a stage to see how it works.
+          </p>
+        </Reveal>
 
-              <div className="mt-6 flex items-center gap-3">
-                <button
-                  onClick={() => setActive((a) => Math.max(0, a - 1))}
-                  disabled={active === 0}
-                  className="rounded-lg border px-4 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ borderColor: TOKENS.line, color: TOKENS.navy }}
+        <Reveal delay={100}>
+          <div className="mt-12">
+            {/* Stepper rail - FIXED width calculation */}
+            <div className="relative">
+              <div
+                className="absolute left-0 right-0 top-5 h-[3px] rounded-full"
+                style={{ backgroundColor: TOKENS.line }}
+                aria-hidden="true"
+              />
+              <div
+                className="absolute left-0 top-5 h-[3px] rounded-full transition-all duration-500 ease-out"
+                style={{
+                  backgroundColor: TOKENS.accent,
+                  width: `${(active / (total - 1)) * 100}%`,
+                }}
+                aria-hidden="true"
+              />
+
+              <div className="relative flex justify-between">
+                
+                {PROCESS_STEPS.map((step, i) => {
+                  const StepIcon = step.icon;
+                  const isActive = i === active;
+                  const isDone = i < active;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => {
+                      setActive(i);
+                      setIsPaused(true);
+                      }}
+                      className="group flex w-20 flex-col items-center gap-3 rounded-xl py-1 text-center focus:outline-none sm:w-24"
+                      aria-current={isActive ? "step" : undefined}
+                    >
+                      <span
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-xs font-black transition-all duration-300"
+                        style={{
+                          backgroundColor: isActive || isDone ? TOKENS.accent : "#FFFFFF",
+                          borderColor: isActive || isDone ? TOKENS.accent : TOKENS.line,
+                          color: isActive || isDone ? "#FFFFFF" : TOKENS.slateSoft,
+                          boxShadow: isActive
+                            ? "0 8px 18px -6px rgba(249,115,22,0.55)"
+                            : "none",
+                          transform: isActive ? "scale(1.08)" : "scale(1)",
+                        }}
+                      >
+                        {step.id}
+                      </span>
+                      <span
+                        className="hidden text-xs font-bold leading-tight transition-colors duration-200 sm:block"
+                        style={{ color: isActive ? TOKENS.navy : TOKENS.slateSoft }}
+                      >
+                        {step.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active step detail - NO BOX, plain white background */}
+            <div
+              key={activeStep.id}
+              className="mt-16 grid gap-8 lg:grid-cols-[auto_1fr] lg:items-start"
+              style={{
+                animation: "artms-fade-in 420ms ease",
+              }}
+            >
+              <div
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-md"
+                style={{ backgroundColor: TOKENS.accent }}
+              >
+                <Icon size={28} className="text-white" />
+              </div>
+              <div>
+                <span
+                  className="inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide"
+                  style={{ backgroundColor: "rgba(249,115,22,0.12)", color: TOKENS.accentDark }}
                 >
-                  Back
-                </button>
-                <button
-                  onClick={() => setActive((a) => Math.min(total - 1, a + 1))}
-                  disabled={active === total - 1}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ backgroundColor: TOKENS.navy }}
+                  {activeStep.module}
+                </span>
+                <h3
+                  className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl"
+                  style={{ color: TOKENS.navy }}
                 >
-                  Next stage <ArrowRight size={13} />
-                </button>
+                  {activeStep.title}
+                </h3>
+                <p className="mt-3 max-w-2xl text-base leading-relaxed" style={{ color: TOKENS.slate }}>
+                  {activeStep.description}
+                </p>
+
+                <div className="mt-8 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setActive((a) => Math.max(0, a - 1));
+                      setIsPaused(true);
+                    }}
+                    disabled={active === 0}
+                    className="rounded-xl border-2 px-5 py-2.5 text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+                    style={{ borderColor: TOKENS.line, color: TOKENS.navy }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActive((a) => Math.min(total - 1, a + 1));
+                      setIsPaused(true);
+                    }}
+                    disabled={active === total - 1}
+                    className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+                    style={{ backgroundColor: TOKENS.accent }}
+                  >
+                    Next stage <ArrowRight size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </Reveal>
+        </Reveal>
+      </div>
 
       <style>{`
         @keyframes artms-fade-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse-slow {
+          0%, 100% { transform: scale(1); opacity: 0.08; }
+          50% { transform: scale(1.1); opacity: 0.12; }
+        }
+        
+        @keyframes pulse-slower {
+          0%, 100% { transform: scale(1); opacity: 0.06; }
+          50% { transform: scale(1.15); opacity: 0.1; }
+        }
+        
+        @keyframes spin-very-slow {
+          from { transform: rotate(45deg); }
+          to { transform: rotate(405deg); }
+        }
+        
+        @keyframes spin-reverse-slow {
+          from { transform: rotate(12deg); }
+          to { transform: rotate(-348deg); }
+        }
+        
+        .animate-pulse-slow {
+          animation: pulse-slow 8s ease-in-out infinite;
+        }
+        
+        .animate-pulse-slower {
+          animation: pulse-slower 10s ease-in-out infinite;
+        }
+        
+        .animate-spin-very-slow {
+          animation: spin-very-slow 40s linear infinite;
+        }
+        
+        .animate-spin-reverse-slow {
+          animation: spin-reverse-slow 35s linear infinite;
         }
       `}</style>
     </section>
@@ -826,6 +1247,69 @@ function JobCard({ job }) {
           />
         </span>
       </button>
+
+      <style>{`
+        @keyframes grid-pan {
+          0%   { background-position: 0px 0px; }
+          100% { background-position: 40px 40px; }
+        }
+        .animate-grid-pan {
+          animation: grid-pan 6s linear infinite;
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(8px); }
+        }
+        .animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
+
+        @keyframes flip-out {
+          0% { opacity: 1; transform: translateY(0) rotateX(0deg); }
+          100% { opacity: 0; transform: translateY(-14px) rotateX(40deg); }
+        }
+        @keyframes flip-in {
+          0% { opacity: 0; transform: translateY(14px) rotateX(-40deg); }
+          100% { opacity: 1; transform: translateY(0) rotateX(0deg); }
+        }
+        
+        @keyframes wave-move {
+          0%, 100% { transform: translateX(0) scaleY(1); }
+          50% { transform: translateX(-25px) scaleY(1.05); }
+        }
+        
+        @keyframes wave-move-reverse {
+          0%, 100% { transform: translateX(0) scaleY(1); }
+          50% { transform: translateX(25px) scaleY(0.95); }
+        }
+        
+        @keyframes float-icon {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(10px, -15px) rotate(5deg); }
+          66% { transform: translate(-5px, -25px) rotate(-3deg); }
+        }
+        
+        @keyframes float-icon-delayed {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(-12px, -20px) rotate(-4deg); }
+          66% { transform: translate(8px, -10px) rotate(6deg); }
+        }
+        
+        @keyframes float-icon-slow {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(5px, -30px) scale(1.1); }
+        }
+        
+        .animate-float-icon {
+          animation: float-icon 15s ease-in-out infinite;
+        }
+        
+        .animate-float-icon-delayed {
+          animation: float-icon-delayed 18s ease-in-out infinite;
+        }
+        
+        .animate-float-icon-slow {
+          animation: float-icon-slow 20s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

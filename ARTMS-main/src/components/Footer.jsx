@@ -6,6 +6,7 @@ const EXPLORE_LINKS = [
   { label: "Home", to: "/" },
   { label: "About", to: "/about" },
   { label: "Job Postings", to: "/jobs" },
+  { label: "Application Guide", to: "/application-guide" },
   { label: "Contact", to: "/contact" },
 ];
 

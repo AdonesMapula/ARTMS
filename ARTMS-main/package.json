@@ -16,9 +16,11 @@
     "axios": "^1.12.2",
     "livekit-client": "^2.20.2",
     "lucide-react": "^1.22.0",
+    "maplibre-gl": "^6.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.5.0",
+    "react-map-gl": "^8.1.1",
     "react-router-dom": "^7.18.1",
     "tailwindcss": "^4.3.2"
   },
