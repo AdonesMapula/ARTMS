@@ -1,6 +1,6 @@
-# ARTMS — Documentation of Changes & Module Upgrades
+# ARTMS — Documentation of Changes & Technical Architecture
 
-This document outlines all technical updates, newly added features, architectural changes, bug fixes, and removed legacy elements made since the initial branch checkout and remote pull.
+This document provides a comprehensive record of all technical updates, module specifications, architectural designs, API additions, bug fixes, and legacy element removals since the initial branch checkout.
 
 ---
 
@@ -14,35 +14,88 @@ This document outlines all technical updates, newly added features, architectura
 
 ---
 
-## 2. Detailed Breakdown: What Was Added
+## 2. Full Video Conferencing Module Specifications
 
-### 🎥 LiveKit Video Conferencing & Applicant Access Gate
-- **Zoom-Style Video Call UI (`ActiveInterviewRoom.jsx`)**:
-  - Implemented full-screen Zoom stage on dark navy background (`#131a26`) with picture-in-picture (PIP) floating self-view window in the top right.
-  - Added participant status badge (`🟢 Applicant: [Candidate Name]`) in the bottom left corner.
-  - Built Zoom control toolbar: Microphone Mute/Unmute, Camera On/Off, Screen Share Toggle, **Red Circular End Call Button**, and More Options (`...`).
-- **Public Applicant Video Room Route (`/interview/:id/room`)**:
-  - Created dedicated public route allowing applicants to join video interviews directly from email links without requiring HR system credentials.
-  - Implemented `ApplicantVerificationForm` identity gate requiring applicants to verify their registered email address before entering the room.
-- **LiveKit Service REST Scheme Conversion (`LiveKitService.php`)**:
-  - Built automated scheme converter (`wss://` / `ws://` $\rightarrow$ `https://` / `http://`) for LiveKit REST client requests to prevent Guzzle invalid protocol exceptions.
+### 🛠️ Tech Stack & Dependencies Used
+| Component | Technology / Library Used | Purpose |
+| :--- | :--- | :--- |
+| **Frontend WebRTC Engine** | `@livekit/components-react` v2.x | UI components (`LiveKitRoom`, `VideoTrack`, `RoomAudioRenderer`) & custom hooks (`useTracks`, `useLocalParticipant`) |
+| **Client Core SDK** | `livekit-client` v2.x | Real-time WebRTC media engine, DataChannel audio/video track publishing, and event listeners |
+| **Styling & Icons** | Vanilla Tailwind CSS v4 & `react-icons/fi` | Custom Zoom UI styling, picture-in-picture frames, progress bars, and SVG control icons |
+| **Backend Server SDK** | `livekit/server-sdk` (PHP) | Room creation (`RoomServiceClient`) and signed JWT token generation (`AccessToken`) |
+| **AI Intelligence Engine** | `openai-php/client` (Grok `grok-4.5`) | Analyzes transcripts, computes scores, extracts keywords, and evaluates sentiment |
+| **Tunneling & Networking** | `ngrok` HTTPS Tunnel & LiveKit Cloud | Hosts public entry endpoints and handles encrypted WebSockets (`wss://artms-8tdvtcz7.livekit.cloud`) |
+
+---
+
+### 📐 Architecture & Protocol Workflow
+
+```
+┌─────────────────────────┐          1. Request Token          ┌─────────────────────────┐
+│ Applicant / HR Browser  ├───────────────────────────────────►│   Laravel Backend API   │
+│ (React + LiveKit Client)│                                    │(InterviewController.php)│
+└───────────┬─────────────┘                                    └────────────┬────────────┘
+            │                                                               │
+            │ 2. Signed JWT Token Returned                                  │ 3. REST HTTPS Call
+            │                                                               ▼
+            │ 4. Connect WebSockets (wss://)                    ┌─────────────────────────┐
+            └──────────────────────────────────────────────────►│  LiveKit Cloud Server   │
+                                                                │(wss://livekit.cloud)    │
+                                                                └───────────┬─────────────┘
+                                                                            │
+                                                                            │ 5. Webhook room_finished
+                                                                            ▼
+                                                                ┌─────────────────────────┐
+                                                                │  xAI Grok API (grok-4.5)│
+                                                                │ (AI Analysis Report)    │
+                                                                └─────────────────────────┘
+```
+
+1. **Token Provisioning (`GET /api/public/interviews/{id}/livekit-token`)**:
+   - When an applicant or interviewer joins, the backend validates their session and generates a signed JWT token containing room name (`interview_{id}`), identity (`applicant_{email}` or `interviewer_{id}`), and permissions (`canPublish: true`, `canSubscribe: true`).
+2. **WebSocket Connection (`wss://`)**:
+   - The React client connects directly to LiveKit Cloud WebSockets (`wss://artms-8tdvtcz7.livekit.cloud`) using the signed JWT token.
+3. **Media Publishing & Subscribing**:
+   - Camera and microphone tracks are published to the room. The custom UI uses `useTracks([{ source: Track.Source.Camera }])` to render remote and local video streams dynamically.
+4. **Session Termination & AI Dispatch (`POST /api/interviews/{id}/end-session`)**:
+   - Clicking **End Interview** closes the LiveKit room and dispatches `GenerateAIInterviewReportJob.php` to analyze the complete dialogue transcript via xAI Grok API (`grok-4.5`).
 
 ---
 
-### 🧠 AI Real-Time Analytics & Report Generation
-- **Interviewer Analytics Dashboard (`ZoomInterviewerLayout`)**:
-  - Designed 2-column interviewer view featuring video stage on the left and real-time AI Analytics cards below:
-    1. **Live Sentiment Progress Bars**: Tracks candidate Confidence (85%), Enthusiasm (60%), and Calmness (75%).
-    2. **Keywords Detected Badges**: Highlights candidate competencies (`COMMUNICATION SKILLS`, `LEADERSHIP`, `ACTIVE LISTENING`, `SCALABILITY`, `CUSTOMER HANDLING`, `PROBLEM SOLVING`).
-    3. **AI Match Score Ring**: Displays candidate score (`78 / AI MATCH SCORE`).
-  - Added interviewer sidebar with navigation tabs (`🎥 Live Stream`, `🧠 AI Analysis`, `📋 Scorecard`, `📝 Notes`, `📄 Transcript`) and live timestamped transcript feed (`INTERVIEWER 12:04`, `APPLICANT 12:05`).
-- **Grok AI Analysis Pipeline (`GenerateAIInterviewReportJob.php`)**:
-  - Integrated OpenAI PHP SDK configured for xAI Grok API (`grok-4.5`) to analyze complete interview transcripts.
-  - Calculates overall scores, technical competency, communication skills, confidence ratings, key strengths, weaknesses, and hiring recommendations stored in `ai_interview_reports`.
-- **Interview Evaluation Dashboard (`InterviewReport.jsx`)**:
-  - Post-interview report dashboard featuring overall score visualization, key takeaway cards, full transcript viewer, and downloadable PDF/CSV reports.
+### 🎨 Frontend UI Architecture
+
+#### 1. Custom Video Stage & Control Bar (`ZoomVideoStage`)
+- **Main Stage Display**: Renders the remote participant's video feed in high definition. If video is disabled or connecting, displays a large avatar circle with user icon (`w-36 h-36 bg-slate-100 border-4 border-slate-700/50`).
+- **Floating Self-View PIP (Top Right)**: Inset window (`w-52 h-36 rounded-xl bg-[#20293a] border border-slate-700/60 shadow-2xl`) displaying the local user's video feed with a camera indicator icon.
+- **Participant Badge (Bottom Left)**: Floating dark pill badge with green online status pulse (`🟢 Applicant: [Candidate Name]`).
+- **Zoom Control Bar (Bottom)**: 5 circular control buttons:
+  - 🎤 Mute / Unmute Microphone (`setMicrophoneEnabled`)
+  - 📹 Turn On / Off Camera (`setCameraEnabled`)
+  - 🖥️ Share Screen Toggle (`setScreenShareEnabled`)
+  - 📞 **Red Circular End Call Button** (Hang up and trigger AI analysis)
+  - 💬 More Options (`...`)
+
+#### 2. Applicant View (`ZoomApplicantLayout` — Matching Image 1)
+- **Full-Screen Dark Canvas**: Optimized for candidate focus on dark navy slate (`#111723`).
+- **Data Privacy Consent Gate (`DpaConsentModal`)**: Prompts candidate to review and accept Data Privacy Act (RA 10173) terms before camera/microphone activation.
+- **Identity Gate (`ApplicantVerificationForm`)**: Requires candidates to enter their registered email address to verify identity before issuing tokens.
+
+#### 3. Interviewer Dashboard (`ZoomInterviewerLayout` — Matching Image 2)
+- **Left Column (Video Stage + Real-Time AI Analytics)**:
+  - Video stage matching Image 1 embedded in a rounded card (`bg-[#151c28] rounded-2xl shadow-2xl`).
+  - **3 Analytics Cards (Below Video Stage)**:
+    1. **Live Sentiment**: Progress bars for **Confidence** (85%), **Enthusiasm** (60%), and **Calmness** (75%).
+    2. **Keywords Detected**: Pill badges (`COMMUNICATION SKILLS`, `LEADERSHIP`, `ACTIVE LISTENING`, `SCALABILITY`, `CUSTOMER HANDLING`, `PROBLEM SOLVING`).
+    3. **AI Match Score**: Circular progress ring displaying candidate score (`78 / AI MATCH SCORE`).
+- **Right Column (Session Sidebar)**:
+  - Header displaying candidate info and position title (`Senior Dev Role`).
+  - Interactive navigation tabs (`🎥 Live Stream`, `🧠 AI Analysis`, `📋 Scorecard`, `📝 Notes`, `📄 Transcript`).
+  - Live timestamped transcript feed (`INTERVIEWER 12:04`, `APPLICANT 12:05`).
+  - Soft red **End Interview** button at the bottom of the sidebar.
 
 ---
+
+## 3. Detailed Breakdown: Additional Module Updates
 
 ### 📊 Functional Recruitment Pipeline (Kanban Board)
 - **Real-Time Data Integration (`Pipeline.jsx`)**:
@@ -86,7 +139,7 @@ This document outlines all technical updates, newly added features, architectura
 
 ---
 
-## 3. What Was Removed / Replaced
+## 4. What Was Removed / Replaced
 
 | Module / Component | Removed / Replaced Element | Replacement / New Implementation |
 | :--- | :--- | :--- |
@@ -98,7 +151,7 @@ This document outlines all technical updates, newly added features, architectura
 
 ---
 
-## 4. Verification & Build Status
+## 5. Verification & Build Status
 
 - **Frontend Build (`npm run build`)**: Compiled in **1.41s** with 0 build or linting errors.
 - **Backend Route Integrity (`php artisan route:list`)**: All 115 API routes compiled and verified.
