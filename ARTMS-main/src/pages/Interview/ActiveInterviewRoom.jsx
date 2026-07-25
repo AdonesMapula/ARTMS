@@ -98,14 +98,18 @@ function DpaConsentModal({ onAccept, onDecline }) {
 
 // ── End Interview Button (rendered inside the LiveKit room context) ───────────
 
-function EndInterviewButton({ interviewId, onEnd }) {
+function EndInterviewButton({ interviewId, isApplicant = false, onEnd }) {
   const [ending, setEnding] = useState(false);
 
   async function handleEnd() {
     if (!window.confirm("Are you sure you want to end this interview? The AI analysis report will be generated automatically.")) return;
     setEnding(true);
     try {
-      await interviewService.endSession(interviewId);
+      if (isApplicant) {
+        await interviewService.endPublicSession(interviewId);
+      } else {
+        await interviewService.endSession(interviewId);
+      }
       onEnd();
     } catch (e) {
       alert(e.response?.data?.message ?? "Failed to end session.");
@@ -135,41 +139,170 @@ function EndInterviewButton({ interviewId, onEnd }) {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
-export default function ActiveInterviewRoom() {
+// ── Applicant Email Verification Form ───────────────────────────────────────
+
+function ApplicantVerificationForm({ onSubmit, loading, error, onCancel }) {
+  const [email, setEmail] = useState("");
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!email) return;
+    onSubmit(email);
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600/20 text-blue-400 text-2xl">
+            👤
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-white">Applicant Verification</h2>
+            <p className="text-xs text-slate-400">ARTMS Interview Access Gate</p>
+          </div>
+        </div>
+
+        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+          Please enter your <strong>registered email address</strong> (used when submitting your application) to verify your identity for this interview session.
+        </p>
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-950/40 p-3.5 text-xs text-red-300 font-medium">
+            ⚠️ {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+              Registered Email Address
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="e.g. adonesmapula1@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Exit
+            </Button>
+            <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold">
+              {loading ? "Verifying…" : "Enter Interview 🎥"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
+
+export default function ActiveInterviewRoom({ isApplicant = false }) {
   const { id }   = useParams();
   const navigate = useNavigate();
 
-  const [tokenData,      setTokenData]      = useState(null);  // { token, room_name, livekit_host }
-  const [loadingToken,   setLoadingToken]   = useState(true);
-  const [tokenError,     setTokenError]     = useState(null);
-  const [consentGiven,   setConsentGiven]   = useState(false);
-  const [roomConnected,  setRoomConnected]  = useState(false);
+  const [tokenData,       setTokenData]       = useState(null);  // { token, room_name, livekit_host }
+  const [loadingToken,    setLoadingToken]    = useState(false);
+  const [tokenError,      setTokenError]      = useState(null);
+  const [consentGiven,    setConsentGiven]    = useState(false);
+  const [roomConnected,   setRoomConnected]   = useState(false);
+  const [sessionFinished, setSessionFinished] = useState(false);
 
-  // ── Fetch LiveKit token ──────────────────────────────────────────────────
+  // ── Fetch LiveKit token (auto-load) ──────────────────────────────────────
   useEffect(() => {
     setLoadingToken(true);
-    interviewService
-      .getLivekitToken(id)
+    const fetchToken = isApplicant
+      ? interviewService.getPublicLivekitToken(id)
+      : interviewService.getLivekitToken(id);
+
+    fetchToken
       .then(({ data }) => setTokenData(data))
-      .catch((err) =>
-        setTokenError(
-          err.response?.data?.message ?? "Failed to fetch session token."
-        )
-      )
+      .catch((err) => {
+        // Soft catch for applicant verification form
+        if (!isApplicant) {
+          setTokenError(err.response?.data?.message ?? "Failed to fetch session token.");
+        }
+      })
       .finally(() => setLoadingToken(false));
-  }, [id]);
+  }, [id, isApplicant]);
+
+  // ── Handle applicant email check ──────────────────────────────────────────
+  function handleApplicantVerify(email) {
+    setLoadingToken(true);
+    setTokenError(null);
+    interviewService
+      .getPublicLivekitToken(id, email)
+      .then(({ data }) => setTokenData(data))
+      .catch((err) => {
+        const msg = typeof err.response?.data?.message === "string"
+          ? err.response.data.message
+          : "The entered email address does not match the applicant record for this interview.";
+        setTokenError(msg);
+      })
+      .finally(() => setLoadingToken(false));
+  }
 
   // ── Session ended ────────────────────────────────────────────────────────
   const handleSessionEnded = useCallback(() => {
-    navigate(`/admin/interviews/${id}/report`);
-  }, [id, navigate]);
+    if (isApplicant) {
+      setSessionFinished(true);
+    } else {
+      navigate(`/admin/interviews/${id}/report`);
+    }
+  }, [id, navigate, isApplicant]);
 
-  // ── Decline consent ──────────────────────────────────────────────────────
-  function handleDecline() {
-    navigate("/admin/interviews");
+  // ── Decline consent / Exit ───────────────────────────────────────────────
+  function handleExit() {
+    if (isApplicant) {
+      navigate("/");
+    } else {
+      navigate("/admin/interviews");
+    }
   }
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Session finished screen (for applicants) ──────────────────────────────
+  if (sessionFinished) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="max-w-md rounded-2xl border border-emerald-500/30 bg-slate-900 px-8 py-10 text-center shadow-2xl">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-3xl mx-auto mb-4">
+            🎉
+          </span>
+          <h2 className="text-xl font-extrabold mb-2">Interview Completed</h2>
+          <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+            Thank you for attending your interview session! Your transcript and video feed have been processed. The HR recruitment team will review your session shortly.
+          </p>
+          <Button onClick={() => navigate("/")}>Return to Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Applicant Verification Form (if applicant and not verified yet) ─────
+  if (isApplicant && !tokenData) {
+    return (
+      <ApplicantVerificationForm
+        onSubmit={handleApplicantVerify}
+        loading={loadingToken}
+        error={tokenError}
+        onCancel={handleExit}
+      />
+    );
+  }
+
+  // ── Loading state for HR ──────────────────────────────────────────────────
   if (loadingToken) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -181,7 +314,7 @@ export default function ActiveInterviewRoom() {
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
+  // ── Error state for HR ────────────────────────────────────────────────────
   if (tokenError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
@@ -191,8 +324,8 @@ export default function ActiveInterviewRoom() {
             Could not start session
           </h2>
           <p className="text-sm text-red-300 mb-5">{tokenError}</p>
-          <Button variant="outline" onClick={() => navigate("/admin/interviews")}>
-            ← Back to Interviews
+          <Button variant="outline" onClick={handleExit}>
+            ← Exit Session
           </Button>
         </div>
       </div>
@@ -205,7 +338,7 @@ export default function ActiveInterviewRoom() {
       <div className="min-h-screen bg-slate-950">
         <DpaConsentModal
           onAccept={() => setConsentGiven(true)}
-          onDecline={handleDecline}
+          onDecline={handleExit}
         />
       </div>
     );
@@ -227,10 +360,10 @@ export default function ActiveInterviewRoom() {
           </span>
         </div>
         <p className="text-xs font-bold tracking-widest text-white/60 uppercase">
-          ARTMS — Interview Session
+          ARTMS — {isApplicant ? "Applicant Video Interview" : "Interview Session"}
         </p>
         <button
-          onClick={() => navigate("/admin/interviews")}
+          onClick={handleExit}
           className="rounded-lg px-3 py-1 text-xs font-semibold text-white/60 hover:text-white transition"
         >
           ← Exit
@@ -256,6 +389,7 @@ export default function ActiveInterviewRoom() {
       {/* End Interview button — floats above the video UI */}
       <EndInterviewButton
         interviewId={Number(id)}
+        isApplicant={isApplicant}
         onEnd={handleSessionEnded}
       />
     </div>

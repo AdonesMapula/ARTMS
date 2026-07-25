@@ -17,9 +17,14 @@ return [
         env('FRONTEND_URL', 'http://localhost:5173'),
         'http://localhost:3000',
         'http://localhost:5174',
+        'https://strategic-shifty-gauntlet.ngrok-free.dev',
+        '*',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '*.ngrok-free.app',
+        '*.ngrok-free.dev',
+    ],
 
     'allowed_headers' => ['*'],
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Agence104\LiveKit\AccessToken;
 use Agence104\LiveKit\AccessTokenOptions;
+use Agence104\LiveKit\RoomCreateOptions;
 use Agence104\LiveKit\RoomServiceClient;
 use Agence104\LiveKit\VideoGrant;
 
@@ -15,9 +16,12 @@ class LiveKitService
 
     public function __construct()
     {
-        $this->apiKey    = config('services.livekit.key');
-        $this->apiSecret = config('services.livekit.secret');
-        $this->host      = config('services.livekit.host');
+        $this->apiKey    = config('services.livekit.key') ?? '';
+        $this->apiSecret = config('services.livekit.secret') ?? '';
+        $rawHost         = config('services.livekit.host') ?? 'https://cloud.livekit.io';
+        
+        // RoomServiceClient requires HTTP/HTTPS scheme for REST API requests
+        $this->host      = str_replace(['wss://', 'ws://'], ['https://', 'http://'], $rawHost);
     }
 
     /**
@@ -62,20 +66,31 @@ class LiveKitService
      * @param  string  $roomName
      * @param  int     $emptyTimeout  Seconds before an empty room is destroyed (default 10 min)
      * @param  int     $maxParticipants
-     * @return object  LiveKit Room object
+     * @return object|null  LiveKit Room object or null on soft notice
      */
     public function ensureRoom(
         string $roomName,
         int    $emptyTimeout = 600,
         int    $maxParticipants = 10
-    ): object {
-        $svc = new RoomServiceClient($this->host, $this->apiKey, $this->apiSecret);
+    ): ?object {
+        if (empty($this->apiKey) || empty($this->apiSecret)) {
+            return null;
+        }
 
-        $opts = new \Agence104\LiveKit\CreateRoomRequest();
-        $opts->setName($roomName)
-             ->setEmptyTimeout($emptyTimeout)
-             ->setMaxParticipants($maxParticipants);
+        try {
+            $svc = new RoomServiceClient($this->host, $this->apiKey, $this->apiSecret);
 
-        return $svc->createRoom($opts);
+            $opts = (new RoomCreateOptions())
+                ->setName($roomName)
+                ->setEmptyTimeout($emptyTimeout)
+                ->setMaxParticipants($maxParticipants);
+
+            return $svc->createRoom($opts);
+        } catch (\Throwable $e) {
+            // LiveKit automatically provisions rooms when participants connect with a valid token
+            logger()->info('LiveKit ensureRoom notice (auto-created on join): ' . $e->getMessage());
+            return null;
+        }
     }
 }
+

@@ -131,7 +131,7 @@ export default function Interviews() {
   // ── fetch applicants once (for schedule modal) ─────────────────────────
   useEffect(() => {
     applicantService
-      .getAll({ per_page: 200, status: "shortlisted" })
+      .getAll({ per_page: 200 })
       .then(({ data }) => setApplicants(data.data ?? data))
       .catch(() => {});
   }, []);

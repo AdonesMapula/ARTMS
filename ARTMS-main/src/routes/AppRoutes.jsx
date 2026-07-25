@@ -91,6 +91,9 @@ export default function AppRoutes() {
           <Route path="/contact" element={<Contact />} />
         </Route>
 
+        {/* ── Applicant Video Interview Room (Public link sent in invitation email) ── */}
+        <Route path="/interview/:id/room" element={<ActiveInterviewRoom isApplicant={true} />} />
+
         {/* ── Auth pages (redirect to dashboard if already logged in) ───── */}
         <Route element={<GuestRoute />}>
           <Route path="/login" element={<Login />} />

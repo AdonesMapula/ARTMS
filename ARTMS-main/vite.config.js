@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    allowedHosts: true, // Allows ngrok and external tunnels
     // Proxy /api calls to Laravel during development — avoids CORS entirely
     proxy: {
       '/api': {

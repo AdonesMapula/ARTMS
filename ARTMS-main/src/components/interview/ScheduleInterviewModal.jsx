@@ -71,7 +71,7 @@ export default function ScheduleInterviewModal({
       setLoadingApplicants(true);
       // Fetch all applicants that are in a schedulable state
       applicantService
-        .getAll({ per_page: 200, is_shortlisted: true })
+        .getAll({ per_page: 200 })
         .then(({ data }) => {
           const rows = data.data ?? data;
           setApplicants(rows);
@@ -89,10 +89,19 @@ export default function ScheduleInterviewModal({
   // Build applicant options for the select
   const applicantOptions = [
     { value: "", label: loadingApplicants ? "Loading applicants…" : "Select applicant…", disabled: true },
-    ...applicants.map((a) => ({
-      value: a.id,
-      label: `${a.first_name} ${a.last_name} — ${a.jobPosting?.jobLibrary?.title ?? a.jobPosting?.title ?? ""}`,
-    })),
+    ...applicants.map((a) => {
+      const jobTitle =
+        a.job_posting?.job_library?.job_title ??
+        a.jobPosting?.jobLibrary?.job_title ??
+        a.jobPosting?.jobLibrary?.title ??
+        a.jobPosting?.title ??
+        a.job_posting?.title ??
+        "General Application";
+      return {
+        value: a.id,
+        label: `${a.first_name} ${a.last_name} (${a.application_id ?? `ID #${a.id}`}) — ${jobTitle}`,
+      };
+    }),
   ];
 
   // Pre-fill applicant when opened with a specific one
@@ -131,8 +140,6 @@ export default function ScheduleInterviewModal({
     if (!form.interview_stage) e.interview_stage = "Required";
     if (!form.interview_type)  e.interview_type  = "Required";
     if (!form.scheduled_at)    e.scheduled_at    = "Required";
-    if (form.interview_type === "online" && !form.meeting_link)
-      e.meeting_link = "Meeting link is required for online interviews";
     if (form.interview_type === "in_person" && !form.location)
       e.location = "Location is required for in-person interviews";
     return e;
@@ -152,7 +159,7 @@ export default function ScheduleInterviewModal({
         interview_type:  form.interview_type,
         scheduled_at:    form.scheduled_at,
         location:        form.location || null,
-        meeting_link:    form.meeting_link || null,
+        meeting_link:    null,
       };
       const { data } = await interviewService.create(payload);
       setSent(true);
@@ -187,7 +194,7 @@ export default function ScheduleInterviewModal({
           </span>
           <p className="font-bold text-slate-900">Invitation Sent!</p>
           <p className="text-sm text-slate-500">
-            The interview has been scheduled and an email invitation has been
+            The interview has been scheduled and an email invitation containing the video room link has been
             sent to the applicant automatically.
           </p>
         </div>
@@ -275,25 +282,10 @@ export default function ScheduleInterviewModal({
           />
         )}
 
-        {/* Meeting link (online) */}
-        {form.interview_type === "online" && (
-          <Input
-            label="Meeting Link"
-            name="meeting_link"
-            type="url"
-            placeholder="https://meet.google.com/..."
-            value={form.meeting_link}
-            onChange={(e) => set("meeting_link", e.target.value)}
-            error={errors.meeting_link}
-          />
-        )}
-
         {/* Info box */}
         <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-          <span className="font-bold">📧 Auto Email:</span> An invitation email
-          with date, time, and{" "}
-          {form.interview_type === "online" ? "meeting link" : "location"} will
-          be sent to the applicant immediately after scheduling.
+          <span className="font-bold">📧 Auto Invitation:</span> An email invitation with date, time, and{" "}
+          {form.interview_type === "online" ? "the video room link" : "location details"} will be sent to the applicant's email address immediately after scheduling.
         </div>
       </form>
     </Modal>

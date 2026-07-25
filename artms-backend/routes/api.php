@@ -31,10 +31,14 @@ Route::prefix('public')->group(function () {
     Route::post('applicants', [ApplicantController::class, 'store']); // online application form
     Route::post('applicants/track', [ApplicantController::class, 'track']); // track by application_id
     Route::post('parse-resume', [ResumeParserController::class, 'parse']); // AI resume parser
+    Route::match(['get', 'post'], 'interviews/{interview}/livekit-token', [InterviewController::class, 'publicGenerateToken']); // applicant video room token
+    Route::post('interviews/{interview}/end-session', [InterviewController::class, 'endSession']); // applicant end session
+    Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [InterviewController::class, 'confirm']); // applicant confirm interview
 });
 
 // ── LiveKit Webhook (no Sanctum auth — signature validated inside controller) ──
 Route::post('livekit/webhook', [LiveKitWebhookController::class, 'handle']);
+Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [InterviewController::class, 'confirm']);
 
 /*
 |--------------------------------------------------------------------------
@@ -49,7 +53,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Alias for direct login route
-Route::post('login', [AuthController::class, 'login']);
+Route::match(['get', 'post'], 'login', [AuthController::class, 'login'])->name('login');
 
 /*
 |--------------------------------------------------------------------------
@@ -163,8 +167,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('interviews/{interview}/end-session',    [InterviewController::class, 'endSession']);
         Route::get('interviews/{interview}/report',          [InterviewController::class, 'report']);
     });
-    // Public-facing confirm (applicant uses a secure token link in email)
-    Route::patch('interviews/{interview}/confirm', [InterviewController::class, 'confirm']);
 
     // ── Attendance ───────────────────────────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin')->group(function () {

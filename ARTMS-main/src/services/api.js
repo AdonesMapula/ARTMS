@@ -5,7 +5,7 @@ import axios from 'axios';
  * Reads the backend URL from .env — set VITE_API_URL in your .env file.
  */
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: false, // Bearer token auth — no cookies needed
   headers: {
     'Content-Type': 'application/json',
@@ -27,14 +27,19 @@ api.interceptors.request.use(
 );
 
 // ── Response Interceptor ────────────────────────────────────────────────────
-// Redirect to login on 401 (expired/invalid token).
+// Redirect to login on 401 (expired/invalid token) except for public routes/pages.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('artms_token');
-      localStorage.removeItem('artms_user');
-      window.location.href = '/login';
+      const isPublicUrl = error.config?.url?.includes('/public/');
+      const isPublicPage = window.location.pathname.startsWith('/interview/') || window.location.pathname.startsWith('/jobs') || window.location.pathname === '/';
+      
+      if (!isPublicUrl && !isPublicPage) {
+        localStorage.removeItem('artms_token');
+        localStorage.removeItem('artms_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   },

@@ -40,12 +40,18 @@ class InterviewController extends Controller
 
         $interview = Interview::create($data);
 
+        // Auto-generate ngrok meeting link for online interviews if not specified
+        if ($interview->interview_type === 'online' && empty($interview->meeting_link)) {
+            $baseUrl = rtrim(config('app.url'), '/');
+            $interview->update(['meeting_link' => "{$baseUrl}/interview/{$interview->id}/room"]);
+        }
+
         // Send email invitation to applicant
         $applicant = $interview->applicant;
         try {
             Mail::send('emails.interview_invitation', [
                 'applicant' => $applicant,
-                'interview' => $interview,
+                'interview' => $interview->fresh(),
             ], function ($mail) use ($applicant) {
                 $mail->to($applicant->email)
                      ->subject('Interview Invitation — ARTMS');
@@ -104,9 +110,9 @@ class InterviewController extends Controller
     }
 
     /**
-     * PATCH /api/interviews/{id}/confirm  — applicant confirms attendance
+     * /api/interviews/{id}/confirm — applicant confirms attendance
      */
-    public function confirm(Interview $interview): JsonResponse
+    public function confirm(Request $request, Interview $interview)
     {
         $interview->update([
             'applicant_confirmed'    => true,
@@ -114,7 +120,12 @@ class InterviewController extends Controller
             'status'                 => 'confirmed',
         ]);
 
-        return response()->json(['message' => 'Interview confirmed. A reminder will be sent before the interview.']);
+        if ($request->wantsJson() && ! $request->isMethod('get')) {
+            return response()->json(['message' => 'Interview confirmed. A reminder will be sent before the interview.']);
+        }
+
+        $roomUrl = rtrim(config('app.url'), '/') . "/interview/{$interview->id}/room";
+        return redirect()->away($roomUrl);
     }
 
     /**
@@ -245,5 +256,68 @@ class InterviewController extends Controller
         ]);
 
         return response()->json(['interview' => $interview]);
+    }
+
+    /**
+     * POST /api/public/interviews/{id}/livekit-token
+     *
+     * Generates a signed LiveKit JWT for the applicant to join the video room.
+     */
+    public function publicGenerateToken(Request $request, Interview $interview): JsonResponse
+    {
+        $applicant = $interview->applicant;
+        if (! $applicant) {
+            return response()->json(['message' => 'Applicant record not found for this interview.'], 404);
+        }
+
+        // Check if applicant entered email matches registered email in system
+        $email = trim($request->input('email', ''));
+        if (! empty($email) && strtolower($email) !== strtolower($applicant->email)) {
+            return response()->json([
+                'message' => 'The entered email address does not match the registered applicant for this interview.',
+            ], 403);
+        }
+
+        // Lazily create / reuse a room name
+        if (! $interview->livekit_room_name) {
+            $roomName = 'artms-interview-' . $interview->id . '-' . Str::random(8);
+            $interview->update(['livekit_room_name' => $roomName]);
+        } else {
+            $roomName = $interview->livekit_room_name;
+        }
+
+        $identity    = 'applicant_' . $applicant->id;
+        $displayName = $applicant->first_name . ' ' . $applicant->last_name . ' (Applicant)';
+
+        try {
+            $liveKit = new LiveKitService();
+            $liveKit->ensureRoom($roomName);
+
+            $token = $liveKit->generateToken(
+                roomName:            $roomName,
+                participantIdentity: $identity,
+                participantName:     $displayName,
+                canPublish:          true,
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to generate LiveKit token: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        if ($interview->status === 'confirmed' || $interview->status === 'scheduled') {
+            $interview->update(['status' => 'active']);
+        }
+
+        return response()->json([
+            'token'        => $token,
+            'room_name'    => $roomName,
+            'livekit_host' => config('services.livekit.host'),
+            'identity'     => $identity,
+            'applicant'    => [
+                'name'  => $applicant->first_name . ' ' . $applicant->last_name,
+                'email' => $applicant->email,
+            ],
+        ]);
     }
 }

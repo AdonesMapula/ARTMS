@@ -14,10 +14,12 @@ const interviewService = {
 
   // ── Video session endpoints ──────────────────────────────────────────
   /** Fetch a signed LiveKit JWT + room name from the backend */
-  getLivekitToken: (id)       => api.post(`/interviews/${id}/livekit-token`),
+  getLivekitToken:       (id) => api.post(`/interviews/${id}/livekit-token`),
+  getPublicLivekitToken: (id, email) => api.post(`/public/interviews/${id}/livekit-token`, { email }),
 
   /** Mark the session as done and dispatch the Grok AI report job */
-  endSession:   (id)          => api.post(`/interviews/${id}/end-session`),
+  endSession:       (id) => api.post(`/interviews/${id}/end-session`),
+  endPublicSession: (id) => api.post(`/public/interviews/${id}/end-session`),
 
   /** Fetch the AI report + full transcript for a completed interview */
   getReport:    (id)          => api.get(`/interviews/${id}/report`),
