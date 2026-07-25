@@ -12,8 +12,10 @@ class DepartmentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $departments = Department::withCount(['employees', 'users'])
+            ->with('departmentHeads')
             ->when($request->search, fn ($q) =>
                 $q->where('department_name', 'like', "%{$request->search}%")
+                    ->orWhere('department_code', 'like', "%{$request->search}%")
             )
             ->orderBy('department_name')
             ->get();
@@ -25,7 +27,9 @@ class DepartmentController extends Controller
     {
         $data = $request->validate([
             'department_name' => ['required', 'string', 'max:255', 'unique:departments,department_name'],
+            'department_code' => ['nullable', 'string', 'max:10', 'unique:departments,department_code'],
             'description'     => ['nullable', 'string'],
+            'is_active'       => ['sometimes', 'boolean'],
         ]);
 
         $dept = Department::create($data);
@@ -43,6 +47,7 @@ class DepartmentController extends Controller
     {
         $data = $request->validate([
             'department_name' => ['sometimes', 'string', 'max:255'],
+            'department_code' => ['nullable', 'string', 'max:10', 'unique:departments,department_code,' . $department->id],
             'description'     => ['nullable', 'string'],
             'is_active'       => ['sometimes', 'boolean'],
         ]);

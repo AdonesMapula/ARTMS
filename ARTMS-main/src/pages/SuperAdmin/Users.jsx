@@ -87,20 +87,43 @@ export default function Users() {
   const handleSave = async (formData) => {
     if (editUser) {
       const payload = {
-        name: formData.name,
         email: formData.email,
         role: formData.role,
         department_id: formData.department_id || null,
       };
+
+      // Only include name fields if they have values
+      if (formData.first_name) payload.first_name = formData.first_name;
+      if (formData.middle_name) payload.middle_name = formData.middle_name;
+      if (formData.last_name) payload.last_name = formData.last_name;
+
+      // Combined name for backend compatibility
+      payload.name = [formData.first_name, formData.middle_name, formData.last_name]
+        .filter(Boolean)
+        .join(" ");
+
+      // Handle empty department_id
+      if (formData.department_id === "") {
+        payload.department_id = null;
+      }
+
       if (formData.password) {
         payload.password = formData.password;
         payload.password_confirmation = formData.password_confirmation;
       }
       await userService.update(editUser.id, payload);
     } else {
+      // Build combined name for backends that expect a flat name field
+      const combinedName = [formData.first_name, formData.middle_name, formData.last_name]
+        .filter(Boolean)
+        .join(" ");
+
       await userService.create({
         ...formData,
+        name: combinedName,
         department_id: formData.department_id || null,
+        // Ensure password_confirmation is present
+        password_confirmation: formData.password_confirmation || formData.password,
       });
     }
     load();
@@ -145,8 +168,10 @@ export default function Users() {
     // Search filter
     if (q.trim()) {
       const s = q.toLowerCase();
+      const fullName = [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(" ").toLowerCase();
       const matchesSearch =
-        u.name?.toLowerCase().includes(s) ||
+        fullName.includes(s) ||
+        (u.name && u.name.toLowerCase().includes(s)) ||
         u.email?.toLowerCase().includes(s) ||
         u.role?.toLowerCase().includes(s);
       if (!matchesSearch) return false;
@@ -354,7 +379,7 @@ export default function Users() {
                   {paginated.map((u) => (
                     <tr key={u.id} className="hover:bg-slate-50">
                       <TD className="font-semibold text-slate-900">
-                        {u.name}
+                        {[u.first_name, u.middle_name, u.last_name].filter(Boolean).join(" ") || u.name}
                         {u.employee_id && (
                           <div className="text-xs text-slate-400">{u.employee_id}</div>
                         )}
@@ -475,8 +500,8 @@ export default function Users() {
         title={confirmUser?.is_active ? "Disable User Account?" : "Enable User Account?"}
         description={
           confirmUser?.is_active
-            ? `Are you sure you want to disable ${confirmUser?.name}'s account? They will no longer be able to log in to the system.`
-            : `Are you sure you want to enable ${confirmUser?.name}'s account? They will be able to log in to the system again.`
+            ? `Are you sure you want to disable ${[confirmUser?.first_name, confirmUser?.middle_name, confirmUser?.last_name].filter(Boolean).join(" ") || confirmUser?.name}'s account? They will no longer be able to log in to the system.`
+            : `Are you sure you want to enable ${[confirmUser?.first_name, confirmUser?.middle_name, confirmUser?.last_name].filter(Boolean).join(" ") || confirmUser?.name}'s account? They will be able to log in to the system again.`
         }
         confirmLabel={confirmUser?.is_active ? "Yes, Disable" : "Yes, Enable"}
         tone={confirmUser?.is_active ? "danger" : "primary"}
@@ -491,7 +516,7 @@ export default function Users() {
       <ConfirmDialog
         open={!!deleteId}
         title="Delete User Permanently?"
-        description={`Are you sure you want to permanently delete ${deleteUser?.name}? This action cannot be undone and all user data will be removed from the system.`}
+        description={`Are you sure you want to permanently delete ${[deleteUser?.first_name, deleteUser?.middle_name, deleteUser?.last_name].filter(Boolean).join(" ") || deleteUser?.name}? This action cannot be undone and all user data will be removed from the system.`}
         confirmLabel="Yes, Delete Permanently"
         cancelLabel="Cancel"
         tone="danger"

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class StoreUserRequest extends FormRequest
 {
@@ -15,11 +16,37 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'          => ['required', 'string', 'max:255'],
+            'first_name'    => ['required', 'string', 'max:255'],
+            'middle_name'   => ['nullable', 'string', 'max:255'],
+            'last_name'     => ['required', 'string', 'max:255'],
             'email'         => ['required', 'email', 'unique:users,email'],
             'password'      => ['required', 'string', 'min:8', 'confirmed'],
             'role'          => ['required', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
             'department_id' => ['nullable', 'exists:departments,id'],
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // Only check if all name fields are present
+            if ($this->filled('first_name') && $this->filled('last_name')) {
+                $firstName = trim($this->first_name);
+                $middleName = trim($this->middle_name ?? '');
+                $lastName = trim($this->last_name);
+                
+                // Construct full name
+                $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
+                
+                // Check if a user with the same full name already exists
+                $exists = DB::table('users')
+                    ->where('name', $fullName)
+                    ->exists();
+                
+                if ($exists) {
+                    $validator->errors()->add('name', 'A user with this name already exists.');
+                }
+            }
+        });
     }
 }

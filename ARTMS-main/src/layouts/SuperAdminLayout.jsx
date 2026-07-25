@@ -18,8 +18,20 @@ import {
   FiBell,
   FiUser,
 } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
+
+const ROLE_LABELS = {
+  super_admin:     "Super Admin",
+  hr_admin:        "HR Admin",
+  coo:             "COO",
+  department_head: "Department Head",
+  employee:        "Employee",
+};
 
 export default function SuperAdminLayout() {
+  const { user } = useAuth();
+  const roleLabel = ROLE_LABELS[user?.role] ?? (user?.role?.replace(/_/g, " ") ?? "Super Admin");
+
   const items = [
     // OVERVIEW Section
     { label: "OVERVIEW", type: "label" },
@@ -60,7 +72,7 @@ export default function SuperAdminLayout() {
       sidebar={<Sidebar brand="Accel4U" items={items} />}
       topbar={
         <Topbar
-          title="SUPER ADMIN"
+          title={roleLabel.toUpperCase()}
           subtitle="System administration • users • departments • HR operations"
         />
       }

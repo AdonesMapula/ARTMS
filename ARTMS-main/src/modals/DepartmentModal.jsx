@@ -104,7 +104,7 @@ export default function DepartmentModal({ open, editDept, onClose, onSave }) {
             <Input
               value={form.department_code}
               onChange={(e) =>
-                setForm({ ...form, department_code: e.target.value.toUpperCase() })
+                setForm({ ...form, department_code: e.target.value })
               }
               placeholder="e.g., HR, IT, FIN, OPS"
               error={errors.department_code?.[0]}

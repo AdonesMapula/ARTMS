@@ -19,7 +19,10 @@ class UserController extends Controller
     {
         $query = User::with('department')
             ->when($request->search, fn ($q) =>
-                $q->where('name', 'like', "%{$request->search}%")
+                $q->where('first_name', 'like', "%{$request->search}%")
+                  ->orWhere('middle_name', 'like', "%{$request->search}%")
+                  ->orWhere('last_name', 'like', "%{$request->search}%")
+                  ->orWhere('name', 'like', "%{$request->search}%")
                   ->orWhere('email', 'like', "%{$request->search}%")
             )
             ->when($request->role, fn ($q) => $q->where('role', $request->role))
@@ -35,8 +38,14 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
+        // Combine name fields for backward compatibility
+        $fullName = trim($request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name);
+        
         $user = User::create([
-            'name'          => $request->name,
+            'first_name'    => $request->first_name,
+            'middle_name'   => $request->middle_name,
+            'last_name'     => $request->last_name,
+            'name'          => $fullName,
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
             'role'          => $request->role,
@@ -66,6 +75,14 @@ class UserController extends Controller
     {
         $old = $user->toArray();
         $data = $request->validated();
+
+        // Combine name fields for backward compatibility if provided
+        if (isset($data['first_name']) || isset($data['middle_name']) || isset($data['last_name'])) {
+            $firstName = $data['first_name'] ?? $user->first_name;
+            $middleName = $data['middle_name'] ?? $user->middle_name;
+            $lastName = $data['last_name'] ?? $user->last_name;
+            $data['name'] = trim($firstName . ' ' . $middleName . ' ' . $lastName);
+        }
 
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
