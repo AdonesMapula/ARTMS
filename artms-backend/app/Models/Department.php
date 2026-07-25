@@ -11,6 +11,7 @@ class Department extends Model
 
     protected $fillable = [
         'department_name',
+        'department_code',
         'description',
         'is_active',
     ];
@@ -22,6 +23,11 @@ class Department extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function departmentHeads()
+    {
+        return $this->hasMany(User::class)->where('role', 'department_head');
     }
 
     public function employees()

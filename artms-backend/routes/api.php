@@ -51,6 +51,7 @@ Route::prefix('auth')->group(function () {
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('setup-account', [AuthController::class, 'setupAccount']);
 });
 
 // Alias for direct login route

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Clock, CheckCircle, XCircle, Eye, Filter, RefreshCw, X } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, Eye, Filter, RefreshCw, X, User, Building2, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Skeleton from "../../components/ui/Skeleton";
 import Modal from "../../components/ui/Modal";
@@ -244,18 +243,18 @@ export default function ManpowerApprovals() {
         </CardContent>
       </Card>
 
-      {/* Requests Table */}
+      {/* Requests Cards */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle>
             PRF Requests ({filtered.length} {filtered.length === 1 ? "request" : "requests"})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-64 rounded-xl" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -270,98 +269,122 @@ export default function ManpowerApprovals() {
             </div>
           ) : (
             <>
-              <Table>
-                <THead>
-                  <tr>
-                    <TH>Request ID</TH>
-                    <TH>Position</TH>
-                    <TH>Department</TH>
-                    <TH>Requested By</TH>
-                    <TH>Headcount</TH>
-                    <TH>Urgency</TH>
-                    <TH>Date Needed</TH>
-                    <TH>Status</TH>
-                    <TH className="text-right">Actions</TH>
-                  </tr>
-                </THead>
-                <tbody>
-                  {filtered.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <TD>
-                        <div className="font-semibold text-slate-900">
-                          PRF-{String(r.id).padStart(3, "0")}
-                        </div>
-                        {r.created_at && (
-                          <div className="text-xs text-slate-400">
-                            {fmt(r.created_at)}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((r) => (
+                  <Card
+                    key={r.id}
+                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                  >
+                    <CardContent className="p-5">
+                      {/* Header */}
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge tone="default" className="text-xs font-semibold">
+                              PRF-{String(r.id).padStart(3, "0")}
+                            </Badge>
+                            {r.created_at && (
+                              <span className="text-xs text-slate-400">
+                                {fmt(r.created_at)}
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </TD>
-                      <TD>
-                        <div className="max-w-[200px]">
-                          <div className="font-medium text-slate-900 truncate">
+                          <h3 className="text-lg font-extrabold text-[#111A62]">
                             {r.position_needed}
-                          </div>
+                          </h3>
                           {r.jobLibrary?.job_title && (
-                            <div className="text-xs text-slate-400 truncate">
+                            <p className="mt-1 text-xs text-slate-500 truncate">
                               {r.jobLibrary.job_title}
-                            </div>
+                            </p>
                           )}
                         </div>
-                      </TD>
-                      <TD className="text-slate-600">
-                        {r.department?.name || r.department?.department_name || "—"}
-                      </TD>
-                      <TD className="text-slate-600">{r.requester?.name ?? "—"}</TD>
-                      <TD className="text-center font-bold text-slate-900">{r.headcount}</TD>
-                      <TD>
-                        <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
-                          {r.urgency}
-                        </Badge>
-                      </TD>
-                      <TD className="text-slate-500 text-sm">{fmt(r.needed_by)}</TD>
-                      <TD>
-                        <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
+                        <Badge tone={STATUS_TONE[r.status] ?? "default"} className="text-xs capitalize">
                           {r.status}
                         </Badge>
-                      </TD>
-                      <TD className="text-right">
-                        <div className="inline-flex gap-1.5">
-                          {/* View details */}
-                          <button
-                            title="View details"
-                            onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                          >
-                            <Eye size={16} />
-                          </button>
+                      </div>
 
-                          {r.status === "pending" && (
-                            <>
-                              <button
-                                title="Approve"
-                                onClick={() => openReview(r, "approved")}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-green-500 hover:bg-green-50 hover:text-green-600 cursor-pointer"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                              <button
-                                title="Reject"
-                                onClick={() => openReview(r, "rejected")}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
+                      {/* Details Grid */}
+                      <div className="mb-4 grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Building2 size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Department</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {r.department?.name || r.department?.department_name || "—"}
+                            </p>
+                          </div>
                         </div>
-                      </TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <User size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Requested By</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {r.requester?.name ?? "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <FileText size={16} className="text-slate-400" />
+                          <div>
+                            <p className="text-xs text-slate-500">Headcount</p>
+                            <p className="text-sm font-extrabold text-slate-900">{r.headcount}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Calendar size={16} className="text-slate-400" />
+                          <div>
+                            <p className="text-xs text-slate-500">Needed By</p>
+                            <p className="text-sm font-semibold text-slate-900">{fmt(r.needed_by)}</p>
+                          </div>
+                        </div>
+                      </div>
 
-              <div className="mt-4">
+                      {/* Urgency Badge */}
+                      <div className="mb-4">
+                        <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
+                          {r.urgency} Priority
+                        </Badge>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
+                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                        >
+                          <Eye size={14} />
+                          View
+                        </Button>
+                        {r.status === "pending" && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReview(r, "approved")}
+                              className="border-green-200 bg-green-50/50 text-green-600 hover:bg-green-100 hover:border-green-300"
+                            >
+                              <CheckCircle size={14} />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReview(r, "rejected")}
+                              className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
+                            >
+                              <XCircle size={14} />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-6">
                 <Pagination
                   page={page}
                   pageSize={pageSize}

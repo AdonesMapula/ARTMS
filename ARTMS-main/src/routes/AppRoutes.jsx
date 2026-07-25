@@ -24,6 +24,7 @@ import AccessDenied from "../pages/Public/AccessDenied";
 import Login from "../pages/Auth/Login";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import OtpVerification from "../pages/Auth/OtpVerification";
+import SetupAccount from "../pages/Auth/SetupAccount";
 
 // Department Head
 import DepartmentHeadDashboard from "../pages/DepartmentHead/Dashboard";
@@ -102,6 +103,7 @@ export default function AppRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/otp" element={<OtpVerification />} />
+          <Route path="/setup-account" element={<SetupAccount />} />
         </Route>
 
         {/* ── Access Denied ─────────────────────────────────────────────── */}

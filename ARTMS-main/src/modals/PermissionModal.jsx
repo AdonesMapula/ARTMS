@@ -229,27 +229,47 @@ export default function PermissionModal({ open, role, onClose, onSave }) {
     .filter((p) => isPermissionAvailableForRole(p.name)).length;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-5xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">
-              Manage Permissions
-            </h2>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span
-                className={`rounded-lg border px-3 py-1.5 text-sm font-bold ${
-                  ROLE_COLORS[role] || ""
-                }`}
-              >
-                {ROLE_DISPLAY_NAMES[role] || role}
-              </span>
-              <span className="text-sm text-slate-500">
-                {selectedCount} of {availableForRole} available permissions selected
-              </span>
-            </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-5xl"
+      title="Manage Permissions"
+      footer={
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-slate-600">
+            <strong className="text-[#111A62]">{selectedCount}</strong> permissions will be assigned to{" "}
+            <strong>{ROLE_DISPLAY_NAMES[role]}</strong>
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              <X size={16} className="mr-1" />
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={saving || loading}
+            >
+              <Check size={16} className="mr-1" />
+              {saving ? "Saving..." : "Save Permissions"}
+            </Button>
           </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Role and count badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className={`rounded-lg border px-3 py-1.5 text-sm font-bold ${
+              ROLE_COLORS[role] || ""
+            }`}
+          >
+            {ROLE_DISPLAY_NAMES[role] || role}
+          </span>
+          <span className="text-sm text-slate-500">
+            {selectedCount} of {availableForRole} available permissions selected
+          </span>
         </div>
 
         {/* Role-specific Info Banner */}
@@ -406,30 +426,6 @@ export default function PermissionModal({ open, role, onClose, onSave }) {
             })}
           </div>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-slate-600">
-            <strong className="text-[#111A62]">{selectedCount}</strong> permissions will be assigned to{" "}
-            <strong>{ROLE_DISPLAY_NAMES[role]}</strong>
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={saving}>
-              <X size={16} className="mr-1" />
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSave}
-              disabled={saving || loading}
-            >
-              <Check size={16} className="mr-1" />
-              {saving ? "Saving..." : "Save Permissions"}
-            </Button>
-          </div>
-        </div>
       </div>
     </Modal>
   );

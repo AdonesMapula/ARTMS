@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -158,5 +159,39 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($request->password)]);
 
         return response()->json(['message' => 'Password changed successfully.']);
+    }
+
+    /**
+     * POST /api/setup-account
+     */
+    public function setupAccount(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email'    => ['required', 'email'],
+            'token'    => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $tokenRecord = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->where('token', $request->token)
+            ->first();
+
+        if (! $tokenRecord) {
+            return response()->json(['message' => 'Invalid or expired setup token.'], 422);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
+
+        $user->update([
+            'password' => Hash::make($request->password),
+            'email_verified_at' => now(),
+        ]);
+
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        AuditLog::record('account_setup', 'auth', "Account setup completed for {$user->email}.");
+
+        return response()->json(['message' => 'Account setup completed successfully.']);
     }
 }

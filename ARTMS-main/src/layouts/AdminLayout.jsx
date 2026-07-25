@@ -1,4 +1,5 @@
 import DashboardShell from "./DashboardShell";
+import ScrollToTop from "../components/ScrollToTop";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import {
@@ -15,8 +16,20 @@ import {
   FiBell,
   FiFileText,
 } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
+
+const ROLE_LABELS = {
+  super_admin:     "Super Admin",
+  hr_admin:        "HR Admin",
+  coo:             "COO",
+  department_head: "Department Head",
+  employee:        "Employee",
+};
 
 export default function AdminLayout() {
+  const { user } = useAuth();
+  const roleLabel = ROLE_LABELS[user?.role] ?? (user?.role?.replace(/_/g, " ") ?? "HR Admin");
+
   const items = [
     // OVERVIEW Section
     { label: "OVERVIEW", type: "label" },
@@ -53,15 +66,18 @@ export default function AdminLayout() {
   ];
 
   return (
-    <DashboardShell
-      sidebar={<Sidebar brand="Accel4U" items={items} />}
-      topbar={
-        <Topbar
-          title="HR ADMIN"
-          subtitle="Recruitment operations • pipeline • analytics"
-        />
-      }
-    />
+    <>
+      <ScrollToTop />
+      <DashboardShell
+        sidebar={<Sidebar brand="Accel4U" items={items} />}
+        topbar={
+          <Topbar
+            title={roleLabel.toUpperCase()}
+            subtitle="Recruitment operations • pipeline • analytics"
+          />
+        }
+      />
+    </>
   );
 }
 

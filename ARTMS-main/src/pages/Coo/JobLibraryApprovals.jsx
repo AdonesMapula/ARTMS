@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  FiCheckCircle,
-  FiXCircle,
-  FiEye,
-  FiFilter,
-  FiBookOpen,
-} from "react-icons/fi";
+import { CheckCircle, XCircle, Eye, Filter, RefreshCw, BookOpen, Briefcase, DollarSign, User, Calendar, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
-import StatusChip from "../../components/ui/StatusChip";
 import Badge from "../../components/ui/Badge";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
+import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
+import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
 import api from "../../services/api";
 
@@ -28,7 +22,12 @@ const fmt = (d) =>
 const fmtMoney = (v) =>
   v != null ? `₱${Number(v).toLocaleString("en-PH")}` : "—";
 
-const STATUS_FILTERS = ["All", "Pending", "Approved", "Rejected"];
+const STATUS_FILTERS = [
+  { value: "all", label: "All Status" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+];
 const PAGE_SIZE = 10;
 
 export default function JobLibraryApprovals() {
@@ -37,7 +36,7 @@ export default function JobLibraryApprovals() {
   const [page,         setPage]         = useState(1);
   const [total,        setTotal]        = useState(0);
   const [q,            setQ]            = useState("");
-  const [statusFilter, setStatusFilter] = useState("Pending");
+  const [statusFilter, setStatusFilter] = useState("pending");
 
   // Modal state
   const [selected, setSelected] = useState(null);
@@ -60,7 +59,7 @@ export default function JobLibraryApprovals() {
           page:     pageNum,
           per_page: PAGE_SIZE,
         };
-        if (statusFilter !== "All") params.approval_status = statusFilter.toLowerCase();
+        if (statusFilter !== "all") params.approval_status = statusFilter;
         const res = await api.get("/job-library", { params });
         const { data, current_page, last_page, total: tot } = res.data;
         setRows(data ?? []);
@@ -130,162 +129,254 @@ export default function JobLibraryApprovals() {
 
   return (
     <div className="space-y-4">
-      {/* Heading */}
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
-          Approvals
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          Job Library
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Review and approve job templates submitted by HR. Approved entries become
-          available in the PRF position dropdown.
-        </p>
+      {/* Header */}
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
+            Approvals
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
+            Job Library
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Review and approve job templates submitted by HR. Approved entries become available in the PRF position dropdown.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => fetchRows(page)}
+          disabled={loading}
+          className="gap-2"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
+        </Button>
       </div>
 
-      {/* Table card */}
+      {/* Statistics Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+              <BookOpen size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Total Entries</p>
+              <p className="text-2xl font-extrabold text-slate-900">{total}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+              <Clock size={24} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Pending</p>
+              <p className="text-2xl font-extrabold text-slate-900">{pendingCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <CheckCircle size={24} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Approved</p>
+              <p className="text-2xl font-extrabold text-slate-900">{approvedCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
+              <XCircle size={24} className="text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Rejected</p>
+              <p className="text-2xl font-extrabold text-slate-900">
+                {rows.filter((r) => r.approval_status === "rejected").length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters & Search */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>
-              Job Entries
-              {total > 0 && (
-                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">
-                  {total}
-                </span>
-              )}
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status filter pills */}
-              <div className="flex items-center gap-1">
-                <FiFilter className="text-slate-400 text-xs" aria-hidden="true" />
-                {STATUS_FILTERS.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => { setStatusFilter(f); setPage(1); }}
-                    className={[
-                      "rounded-full px-3 py-1 text-xs font-bold border transition",
-                      statusFilter === f
-                        ? "bg-[#111A62] text-white border-[#111A62]"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-[#E2E8F0]",
-                    ].join(" ")}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <div className="w-full sm:w-56">
-                <SearchBar
-                  value={q}
-                  onChange={(v) => setQ(v)}
-                  placeholder="Search title, category…"
-                />
-              </div>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Filter size={16} />
+              Filters:
+            </div>
+            <div className="flex flex-1 flex-wrap gap-2">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => { setStatusFilter(f.value); setPage(1); }}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                    statusFilter === f.value
+                      ? "border-[#111A62] bg-[#111A62] text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="w-full lg:w-64">
+              <SearchBar
+                value={q}
+                onChange={(v) => setQ(v)}
+                placeholder="Search title, category…"
+              />
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
+      </Card>
 
-        <CardContent>
+      {/* Job Entries Cards */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>
+            Job Entries ({filtered.length} {filtered.length === 1 ? "entry" : "entries"})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
           {loading ? (
-            <div className="space-y-3 py-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-10 animate-pulse rounded-lg bg-slate-100" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-64 rounded-xl" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <FiBookOpen className="mx-auto mb-3 text-3xl text-slate-300" />
+            <div className="py-12 text-center">
+              <BookOpen size={48} className="mx-auto mb-3 text-slate-300" />
               <p className="text-sm font-semibold text-slate-600">
-                {q ? "No matching entries found." : "No entries in this category."}
+                {q ? "No matching entries found" : "No entries in this category"}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                {q ? "Try a different search term." : "Change the filter to see other entries."}
+                {q ? "Try a different search term" : "Change the filter to see other entries"}
               </p>
             </div>
           ) : (
             <>
-              <Table>
-                <THead>
-                  <tr>
-                    <TH>ID</TH>
-                    <TH>Job Title</TH>
-                    <TH>Category</TH>
-                    <TH>Employment Type</TH>
-                    <TH>Salary Range</TH>
-                    <TH>Created By</TH>
-                    <TH>Submitted</TH>
-                    <TH>Status</TH>
-                    <TH className="text-right">Actions</TH>
-                  </tr>
-                </THead>
-                <tbody>
-                  {filtered.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <TD className="font-semibold text-slate-900">
-                        JL-{String(r.id).padStart(3, "0")}
-                      </TD>
-                      <TD>
-                        <p className="font-semibold text-slate-900">{r.job_title}</p>
-                      </TD>
-                      <TD className="text-slate-600">{r.job_category || "—"}</TD>
-                      <TD>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((r) => (
+                  <Card
+                    key={r.id}
+                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                  >
+                    <CardContent className="p-5">
+                      {/* Header */}
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge tone="default" className="text-xs font-semibold">
+                              JL-{String(r.id).padStart(3, "0")}
+                            </Badge>
+                            <span className="text-xs text-slate-400">{fmt(r.created_at)}</span>
+                          </div>
+                          <h3 className="text-lg font-extrabold text-[#111A62]">
+                            {r.job_title}
+                          </h3>
+                        </div>
+                        <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
+                          {r.approval_status}
+                        </Badge>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="mb-4 grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Briefcase size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Category</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {r.job_category || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <User size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Created By</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {r.creator?.name || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <DollarSign size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Salary Range</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {r.salary_min || r.salary_max
+                                ? `${fmtMoney(r.salary_min)} – ${fmtMoney(r.salary_max)}`
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Calendar size={16} className="text-slate-400" />
+                          <div>
+                            <p className="text-xs text-slate-500">Submitted</p>
+                            <p className="text-sm font-semibold text-slate-900">{fmt(r.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Employment Type */}
+                      <div className="mb-4">
                         <Badge tone="accent">
                           {r.employment_type?.replace(/_/g, " ") || "—"}
                         </Badge>
-                      </TD>
-                      <TD className="text-slate-600 text-sm">
-                        {r.salary_min || r.salary_max
-                          ? `${fmtMoney(r.salary_min)} – ${fmtMoney(r.salary_max)}`
-                          : "—"}
-                      </TD>
-                      <TD className="text-slate-600">{r.creator?.name || "—"}</TD>
-                      <TD className="text-slate-500 text-sm">{fmt(r.created_at)}</TD>
-                      <TD>
-                        <Badge
-                          tone={APPROVAL_TONE[r.approval_status] ?? "default"}
-                          className="capitalize"
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
+                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
                         >
-                          {r.approval_status}
-                        </Badge>
-                      </TD>
-                      <TD className="text-right">
-                        <div className="inline-flex items-center gap-1">
-                          {/* View */}
-                          <button
-                            title="View details"
-                            onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-[#E2E8F0]"
-                          >
-                            <FiEye size={14} aria-hidden="true" />
-                          </button>
+                          <Eye size={14} />
+                          View
+                        </Button>
+                        {r.approval_status === "pending" && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReview(r, "approved")}
+                              className="border-green-200 bg-green-50/50 text-green-600 hover:bg-green-100 hover:border-green-300"
+                            >
+                              <CheckCircle size={14} />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReview(r, "rejected")}
+                              className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
+                            >
+                              <XCircle size={14} />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                          {r.approval_status === "pending" && (
-                            <>
-                              <button
-                                title="Approve"
-                                onClick={() => openReview(r, "approved")}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-green-200 text-green-600 transition hover:bg-green-50"
-                              >
-                                <FiCheckCircle size={14} aria-hidden="true" />
-                              </button>
-                              <button
-                                title="Reject"
-                                onClick={() => openReview(r, "rejected")}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-500 transition hover:bg-red-50"
-                              >
-                                <FiXCircle size={14} aria-hidden="true" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-
-              <div className="mt-4">
+              {/* Pagination */}
+              <div className="mt-6">
                 <Pagination
                   page={page}
                   pageSize={PAGE_SIZE}
@@ -298,7 +389,7 @@ export default function JobLibraryApprovals() {
         </CardContent>
       </Card>
 
-      {/* ── Detail / Action Modal ──────────────────────────────────────────── */}
+      {/* Detail / Action Modal */}
       {viewOpen && selected && (
         <div
           className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/40 p-4"
@@ -412,7 +503,7 @@ export default function JobLibraryApprovals() {
                   disabled={saving}
                   className="flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
                 >
-                  <FiCheckCircle aria-hidden="true" />
+                  <CheckCircle aria-hidden="true" />
                   {saving ? "Approving…" : "Confirm Approval"}
                 </button>
               )}
@@ -423,7 +514,7 @@ export default function JobLibraryApprovals() {
                   disabled={saving}
                   className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
                 >
-                  <FiXCircle aria-hidden="true" />
+                  <XCircle aria-hidden="true" />
                   {saving ? "Rejecting…" : "Confirm Rejection"}
                 </button>
               )}
@@ -435,13 +526,13 @@ export default function JobLibraryApprovals() {
                     onClick={() => setAction("rejected")}
                     className="flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                   >
-                    <FiXCircle aria-hidden="true" /> Reject
+                    <XCircle aria-hidden="true" /> Reject
                   </button>
                   <button
                     onClick={() => setAction("approved")}
                     className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
                   >
-                    <FiCheckCircle aria-hidden="true" /> Approve
+                    <CheckCircle aria-hidden="true" /> Approve
                   </button>
                 </div>
               )}

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Building2, Plus, Users, RefreshCw, Edit, Trash2, UserCheck, Filter } from "lucide-react";
+import { Building2, Plus, Users, RefreshCw, Edit, Trash2, UserCheck, Filter, Hash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Skeleton from "../../components/ui/Skeleton";
@@ -114,7 +113,7 @@ export default function Departments() {
             Organization
           </p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
-            Department Management
+            Department Head Management
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Manage departments, track staff members, and monitor organizational structure.
@@ -223,20 +222,20 @@ export default function Departments() {
         </CardContent>
       </Card>
 
-      {/* Departments Table */}
+      {/* Departments Grid */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle>
               Departments ({filtered.length} {filtered.length === 1 ? "department" : "departments"})
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-xl" />
               ))}
             </div>
           ) : paginated.length === 0 ? (
@@ -251,86 +250,122 @@ export default function Departments() {
             </div>
           ) : (
             <>
-              <Table>
-                <THead>
-                  <tr>
-                    <TH>Department Name</TH>
-                    <TH>Code</TH>
-                    <TH>Staff Count</TH>
-                    <TH>Department Head</TH>
-                    <TH>Status</TH>
-                    <TH className="text-right">Actions</TH>
-                  </tr>
-                </THead>
-                <tbody>
-                  {paginated.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50">
-                      <TD className="font-semibold text-slate-900">
-                        {d.department_name}
-                      </TD>
-                      <TD>
-                        {d.department_code ? (
-                          <Badge tone="default">{d.department_code}</Badge>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </TD>
-                      <TD>
-                        <div className="flex items-center gap-1.5">
-                          <Users size={14} className="text-slate-400" />
-                          <span className="font-semibold text-slate-700">
-                            {d.employees_count || 0}
-                          </span>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {paginated.map((d) => (
+                  <Card
+                    key={d.id}
+                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                  >
+                    <CardContent className="p-5">
+                      {/* Header */}
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-extrabold text-[#111A62]">
+                            {d.department_name}
+                          </h3>
+                          {d.department_code && (
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <Hash size={12} className="text-slate-400" />
+                              <Badge tone="default" className="text-xs">
+                                {d.department_code}
+                              </Badge>
+                            </div>
+                          )}
                         </div>
-                      </TD>
-                      <TD>
-                        {d.department_head?.name ?? (
-                          <span className="text-slate-400">Not assigned</span>
-                        )}
-                      </TD>
-                      <TD>
-                        <Badge tone={d.is_active ? "success" : "default"}>
+                        <Badge tone={d.is_active ? "success" : "default"} className="text-xs">
                           {d.is_active ? "Active" : "Inactive"}
                         </Badge>
-                      </TD>
-                      <TD className="text-right">
-                        <div className="inline-flex gap-1.5">
-                          {/* Edit Button */}
-                          <button
-                            onClick={() => openEdit(d)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                            title="Edit Department"
-                          >
-                            <Edit size={16} />
-                          </button>
+                      </div>
 
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => {
-                              setDeleteId(d.id);
-                              setDeleteDept(d);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                            title="Delete Department"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                      {/* Stats */}
+                      <div className="mb-4 grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Users size={16} className="text-slate-400" />
+                          <div>
+                            <p className="text-xs text-slate-500">Employee</p>
+                            <p className="text-sm font-extrabold text-slate-900">
+                              {d.employees_count || 0}
+                            </p>
+                          </div>
                         </div>
-                      </TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Building2 size={16} className="text-slate-400" />
+                          <div>
+                            <p className="text-xs text-slate-500">Users</p>
+                            <p className="text-sm font-extrabold text-slate-900">
+                              {d.users_count || 0}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Department Head */}
+                      <div className="mb-4 rounded-lg bg-blue-50/30 border border-blue-100 px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <UserCheck size={16} className="text-blue-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-blue-600 font-semibold">Department Head</p>
+                            {d.department_heads && d.department_heads.length > 0 ? (
+                              <div className="mt-1 space-y-1">
+                                {d.department_heads.map((head) => (
+                                  <p key={head.id} className="text-sm font-medium text-slate-700">
+                                    {head.name}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-400 italic">Not assigned</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {d.description && (
+                        <p className="mb-4 line-clamp-2 text-xs text-slate-600">
+                          {d.description}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(d)}
+                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                        >
+                          <Edit size={14} />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteId(d.id);
+                            setDeleteDept(d);
+                          }}
+                          className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
               {/* Pagination */}
-              <div className="mt-4">
-                <Pagination
-                  page={page}
-                  pageSize={pageSize}
-                  total={total}
-                  onPageChange={setPage}
-                />
-              </div>
+              {total > pageSize && (
+                <div className="mt-6">
+                  <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={total}
+                    onPageChange={setPage}
+                  />
+                </div>
+              )}
             </>
           )}
         </CardContent>

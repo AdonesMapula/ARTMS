@@ -23,7 +23,9 @@ export default function UserModal({
   onCreateDepartment,
 }) {
   const [form, setForm] = useState({
-    name: "",
+    first_name: "",
+    middle_name: "",
+    last_name: "",
     email: "",
     password: "",
     password_confirmation: "",
@@ -36,8 +38,16 @@ export default function UserModal({
   useEffect(() => {
     if (open) {
       if (editUser) {
+        // Split name into parts if it exists
+        const nameParts = (editUser.name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+        const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
+
         setForm({
-          name: editUser.name || "",
+          first_name: editUser.first_name || firstName,
+          middle_name: editUser.middle_name || middleName,
+          last_name: editUser.last_name || lastName,
           email: editUser.email || "",
           password: "",
           password_confirmation: "",
@@ -46,7 +56,9 @@ export default function UserModal({
         });
       } else {
         setForm({
-          name: "",
+          first_name: "",
+          middle_name: "",
+          last_name: "",
           email: "",
           password: "",
           password_confirmation: "",
@@ -59,17 +71,43 @@ export default function UserModal({
   }, [open, editUser]);
 
   const handleSubmit = async () => {
+    // Client-side validation
+    const validationErrors = {};
+    if (!form.first_name.trim()) validationErrors.first_name = ["First name is required."];
+    if (!form.last_name.trim())  validationErrors.last_name  = ["Last name is required."];
+    if (!form.email.trim())      validationErrors.email       = ["Email address is required."];
+    if (!editUser) {
+      if (!form.password)        validationErrors.password    = ["Password is required."];
+      else if (form.password.length < 8)
+                                 validationErrors.password    = ["Password must be at least 8 characters."];
+    }
+    if (form.password && form.password !== form.password_confirmation) {
+      validationErrors.password_confirmation = ["Passwords do not match."];
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     setSaving(true);
     setErrors({});
     try {
       await onSave(form);
       onClose();
     } catch (err) {
-      setErrors(
-        err.response?.data?.errors ?? {
-          general: err.response?.data?.message ?? "Save failed.",
-        }
-      );
+      console.error('Save error:', err);
+      const backendErrors = err.response?.data?.errors;
+      const message = err.response?.data?.message;
+      
+      // Handle validation errors
+      if (backendErrors) {
+        setErrors(backendErrors);
+      } else if (message) {
+        setErrors({ general: message });
+      } else {
+        setErrors({ general: "Save failed. Please try again." });
+      }
     } finally {
       setSaving(false);
     }
@@ -88,43 +126,79 @@ export default function UserModal({
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-2xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <h2 className="text-xl font-extrabold text-slate-900">
-          {editUser ? "Edit User" : "Create New User"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {editUser
-            ? "Update user information and permissions"
-            : "Add a new user to the system"}
-        </p>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-6 py-5"
-        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-2xl"
+      title={editUser ? "Edit User" : "Create New User"}
+      description={
+        editUser
+          ? "Update user information and permissions"
+          : "Add a new user to the system"
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? "Saving..." : editUser ? "Update User" : "Create User"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         {errors.general && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {errors.general}
           </div>
         )}
 
+        {errors.name && (
+          <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-600">
+            <strong>Duplicate Name Warning:</strong> {errors.name}
+          </div>
+        )}
+
         <div className="space-y-4">
-          {/* Full Name */}
-          <div>
-            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <User size={14} className="text-slate-400" />
-              Full Name
-            </label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Enter full name"
-              error={errors.name?.[0]}
-            />
+          {/* Name Fields */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <User size={14} className="text-slate-400" />
+                First Name
+              </label>
+              <Input
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                placeholder="First name"
+                error={errors.first_name?.[0]}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <User size={14} className="text-slate-400" />
+                Middle Name
+              </label>
+              <Input
+                value={form.middle_name}
+                onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
+                placeholder="Middle name (optional)"
+                error={errors.middle_name?.[0]}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <User size={14} className="text-slate-400" />
+                Last Name
+              </label>
+              <Input
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                placeholder="Last name"
+                error={errors.last_name?.[0]}
+              />
+            </div>
           </div>
 
           {/* Email */}
@@ -169,6 +243,7 @@ export default function UserModal({
                   setForm({ ...form, password_confirmation: e.target.value })
                 }
                 placeholder="••••••••"
+                error={errors.password_confirmation?.[0]}
               />
             </div>
           </div>
@@ -224,18 +299,6 @@ export default function UserModal({
               Optional - Assign user to a specific department
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : editUser ? "Update User" : "Create User"}
-          </Button>
         </div>
       </div>
     </Modal>

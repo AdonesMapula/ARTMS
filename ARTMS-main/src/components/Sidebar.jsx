@@ -5,6 +5,17 @@ import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 
+const ROLE_LABELS = {
+  super_admin:     "Super Admin",
+  hr_admin:        "HR Admin",
+  coo:             "COO",
+  department_head: "Department Head",
+  employee:        "Employee",
+};
+
+const getRoleLabel = (role) =>
+  ROLE_LABELS[role] ?? (role ? role.replace(/_/g, " ") : "");
+
 /**
  * NavItem renders either:
  *   - a plain NavLink  (no `children` array)
@@ -182,8 +193,8 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-extrabold text-[#111A62]">{user?.name ?? "User"}</p>
-              <p className="truncate text-xs capitalize text-slate-500">
-                {user?.role?.replace(/_/g, " ") ?? ""}
+              <p className="truncate text-xs text-slate-500">
+                {getRoleLabel(user?.role)}
               </p>
             </div>
             <button

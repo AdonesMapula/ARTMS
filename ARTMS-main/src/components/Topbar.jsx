@@ -4,6 +4,17 @@ import { useNavigate } from "react-router-dom";
 import Button from "./ui/Button";
 import { useAuth } from "../context/AuthContext";
 
+const ROLE_LABELS = {
+  super_admin:     "Super Admin",
+  hr_admin:        "HR Admin",
+  coo:             "COO",
+  department_head: "Department Head",
+  employee:        "Employee",
+};
+
+const getRoleLabel = (role) =>
+  ROLE_LABELS[role] ?? (role ? role.replace(/_/g, " ") : "");
+
 export default function Topbar({ title, subtitle, right }) {
   const { user, logout } = useAuth();
   const navigate          = useNavigate();
@@ -65,8 +76,8 @@ export default function Topbar({ title, subtitle, right }) {
                   <div className="border-b border-[var(--artms-border)] px-4 py-3">
                     <p className="text-sm font-extrabold text-slate-900 truncate">{user?.name}</p>
                     <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                    <span className="mt-1.5 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold capitalize text-blue-700">
-                      {user?.role?.replace(/_/g, " ")}
+                    <span className="mt-1.5 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
+                      {getRoleLabel(user?.role)}
                     </span>
                   </div>
 

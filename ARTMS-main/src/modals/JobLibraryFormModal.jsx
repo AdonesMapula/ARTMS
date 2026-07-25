@@ -20,32 +20,32 @@ export default function JobLibraryFormModal({
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-4xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-            <FileText size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-extrabold text-slate-900">
-              {mode === "create" ? "Add Job Entry" : "Edit Job Entry"}
-            </h2>
-            <p className="text-xs text-slate-500">
-              {mode === "create"
-                ? "New entries require COO approval before appearing in PRF dropdowns"
-                : `Editing JL-${String(data?.id ?? 0).padStart(3, "0")}`}
-            </p>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-4xl"
+      title={mode === "create" ? "Add Job Entry" : "Edit Job Entry"}
+      description={
+        mode === "create"
+          ? "New entries require COO approval before appearing in PRF dropdowns"
+          : `Editing JL-${String(data?.id ?? 0).padStart(3, "0")}`
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={onSave} disabled={saving}>
+            {saving
+              ? "Saving..."
+              : mode === "create"
+              ? "Submit for Approval"
+              : "Save Changes"}
+          </Button>
         </div>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-6 py-5"
-        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
-      >
-        <div className="space-y-6">
+      }
+    >
+      <div className="space-y-6">
           {/* Basic Information */}
           <div>
             <div className="mb-3 flex items-center gap-2">
@@ -210,23 +210,6 @@ export default function JobLibraryFormModal({
               <li>• Qualifications and responsibilities auto-fill PRF forms</li>
             </ul>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={onSave} disabled={saving}>
-            {saving
-              ? "Saving..."
-              : mode === "create"
-              ? "Submit for Approval"
-              : "Save Changes"}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

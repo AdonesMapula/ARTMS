@@ -40,22 +40,25 @@ export default function QuickAddRoleModal({ open, onClose, onAdd }) {
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={handleClose} className="max-w-md">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-            <Shield size={20} className="text-purple-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-extrabold text-slate-900">Add New Role</h2>
-            <p className="text-xs text-slate-500">Create a custom user role</p>
-          </div>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      className="max-w-md"
+      title="Add New Role"
+      description="Create a custom user role"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving} className="gap-1.5">
+            <Plus size={14} />
+            {saving ? "Adding..." : "Add Role"}
+          </Button>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 py-5">
+      }
+    >
+      <div className="space-y-4">
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
@@ -76,19 +79,6 @@ export default function QuickAddRoleModal({ open, onClose, onAdd }) {
             placeholder="e.g., manager, supervisor"
             hint="Lowercase, use underscores for spaces"
           />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={saving} className="gap-1.5">
-            <Plus size={14} />
-            {saving ? "Adding..." : "Add Role"}
-          </Button>
         </div>
       </div>
     </Modal>
