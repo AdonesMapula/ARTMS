@@ -53,24 +53,28 @@ export default function DepartmentModal({ open, editDept, onClose, onSave }) {
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-2xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <h2 className="text-xl font-extrabold text-slate-900">
-          {editDept ? "Edit Department" : "Create New Department"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {editDept
-            ? "Update department information and settings"
-            : "Add a new department to the organization"}
-        </p>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-6 py-5"
-        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-2xl"
+      title={editDept ? "Edit Department" : "Create New Department"}
+      description={
+        editDept
+          ? "Update department information and settings"
+          : "Add a new department to the organization"
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? "Saving..." : editDept ? "Update Department" : "Create Department"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         {errors.general && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {errors.general}
@@ -146,18 +150,6 @@ export default function DepartmentModal({ open, editDept, onClose, onSave }) {
               <li>• Departments with staff cannot be deleted</li>
             </ul>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : editDept ? "Update Department" : "Create Department"}
-          </Button>
         </div>
       </div>
     </Modal>

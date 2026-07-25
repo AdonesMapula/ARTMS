@@ -10,25 +10,24 @@ export default function JobLibraryDeleteModal({ open, job, onClose, onConfirm })
   if (!open || !job) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-lg">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-            <Trash2 size={20} className="text-red-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-extrabold text-slate-900">
-              Delete Job Entry?
-            </h2>
-            <p className="text-xs text-slate-500">This action cannot be undone</p>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-lg"
+      title="Delete Job Entry?"
+      description="This action cannot be undone"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={onConfirm} className="bg-red-600 hover:bg-red-700 border-red-600">
+            Yes, Delete Entry
+          </Button>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 py-5">
-        <div className="space-y-4">
+      }
+    >
+      <div className="space-y-4">
           {/* Warning Box */}
           <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
             <AlertTriangle size={20} className="mt-0.5 shrink-0 text-red-500" />
@@ -117,20 +116,6 @@ export default function JobLibraryDeleteModal({ open, job, onClose, onConfirm })
               <li>• This action cannot be undone</li>
             </ul>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={onConfirm} className="gap-1.5">
-            <Trash2 size={14} />
-            Delete Permanently
-          </Button>
-        </div>
       </div>
     </Modal>
   );

@@ -20,28 +20,32 @@ export default function JobLibraryApproveModal({
   if (!open || !job) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-3xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-            <FileText size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-extrabold text-slate-900">Review Job Entry</h2>
-            <p className="text-xs text-slate-500">
-              Reviewing "{job.job_title}"
-            </p>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-3xl"
+      title="Review Job Entry"
+      description={`Reviewing "${job.job_title}"`}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            variant={status === "approved" ? "primary" : "danger"}
+            onClick={onConfirm}
+            disabled={saving}
+          >
+            {saving
+              ? "Saving..."
+              : status === "approved"
+              ? "Approve Entry"
+              : "Reject Entry"}
+          </Button>
         </div>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-6 py-5"
-        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
-      >
-        <div className="space-y-5">
+      }
+    >
+      <div className="space-y-5">
           {/* Job Details Card */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
             <div className="mb-4">
@@ -182,27 +186,6 @@ export default function JobLibraryApproveModal({
             </ul>
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            variant={status === "approved" ? "primary" : "danger"}
-            onClick={onConfirm}
-            disabled={saving}
-          >
-            {saving
-              ? "Saving..."
-              : status === "approved"
-              ? "Approve Entry"
-              : "Reject Entry"}
-          </Button>
-        </div>
-      </div>
     </Modal>
   );
 }

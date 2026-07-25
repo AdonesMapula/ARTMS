@@ -102,28 +102,21 @@ export default function ApplicantDetailModal({ open, applicantId, onClose, onSta
   const job = applicant?.job_posting?.job_library;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-5xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h2 className="text-xl font-extrabold text-slate-900">
-              {loading ? "Loading..." : applicant ? `${applicant.first_name} ${applicant.last_name}` : "Applicant Details"}
-            </h2>
-            {applicant && (
-              <div className="mt-1 flex items-center gap-3">
-                <p className="text-sm text-slate-500">{applicant.application_id}</p>
-                <Badge tone={STATUS_TONE[applicant.status] || "default"}>
-                  {applicant.status?.replace(/_/g, " ") || "Applied"}
-                </Badge>
-              </div>
-            )}
-          </div>
-          
-          {/* Action Buttons in Header */}
-          {applicant && !loading && (
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-5xl"
+      title={
+        loading
+          ? "Loading..."
+          : applicant
+          ? `${applicant.first_name} ${applicant.last_name}`
+          : "Applicant Details"
+      }
+      footer={
+        applicant && !loading ? (
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* Download Resume */}
               {applicant.resume_path && (
                 <button
                   className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -133,21 +126,6 @@ export default function ApplicantDetailModal({ open, applicantId, onClose, onSta
                   Download
                 </button>
               )}
-              
-              {/* Reject Button */}
-              {applicant.status !== "hired" && applicant.status !== "rejected" && (
-                <button
-                  onClick={handleReject}
-                  disabled={!!actionLoading}
-                  className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-                  title="Reject Applicant"
-                >
-                  <X size={14} />
-                  Reject
-                </button>
-              )}
-              
-              {/* Change Status Dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
@@ -157,11 +135,10 @@ export default function ApplicantDetailModal({ open, applicantId, onClose, onSta
                   Change Status
                   <ChevronDown size={14} />
                 </button>
-                
                 {showStatusMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowStatusMenu(false)} />
-                    <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl">
                       <div className="p-2">
                         {[
                           { value: "applied", label: "Applied" },
@@ -191,12 +168,38 @@ export default function ApplicantDetailModal({ open, applicantId, onClose, onSta
                 )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 py-5" style={{ maxHeight: "calc(80vh - 160px)", overflowY: "auto" }}>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+              {applicant.status !== "hired" && applicant.status !== "rejected" && (
+                <button
+                  onClick={handleReject}
+                  disabled={!!actionLoading}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                  title="Reject Applicant"
+                >
+                  <X size={14} />
+                  Reject
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null
+      }
+    >
+      <div className="space-y-4">
+        {applicant && (
+          <div className="flex items-center gap-3">
+            <p className="text-sm font-semibold text-slate-500">{applicant.application_id}</p>
+            <Badge tone={STATUS_TONE[applicant.status] || "default"}>
+              {applicant.status?.replace(/_/g, " ") || "Applied"}
+            </Badge>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-12 text-slate-400">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#111A62]"></div>

@@ -126,24 +126,28 @@ export default function UserModal({
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={onClose} className="max-w-2xl">
-      {/* Header */}
-      <div className="border-b border-slate-200 px-6 py-4">
-        <h2 className="text-xl font-extrabold text-slate-900">
-          {editUser ? "Edit User" : "Create New User"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {editUser
-            ? "Update user information and permissions"
-            : "Add a new user to the system"}
-        </p>
-      </div>
-
-      {/* Content */}
-      <div
-        className="px-6 py-5"
-        style={{ maxHeight: "calc(80vh - 180px)", overflowY: "auto" }}
-      >
+    <Modal
+      open={open}
+      onClose={onClose}
+      className="max-w-2xl"
+      title={editUser ? "Edit User" : "Create New User"}
+      description={
+        editUser
+          ? "Update user information and permissions"
+          : "Add a new user to the system"
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? "Saving..." : editUser ? "Update User" : "Create User"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         {errors.general && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {errors.general}
@@ -295,18 +299,6 @@ export default function UserModal({
               Optional - Assign user to a specific department
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-slate-200 px-6 py-4">
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : editUser ? "Update User" : "Create User"}
-          </Button>
         </div>
       </div>
     </Modal>
