@@ -7,6 +7,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // maplibre-gl ships its own web-worker; exclude it from Vite's
+  // pre-bundling so the worker URL resolves correctly at runtime.
+  optimizeDeps: {
+    exclude: ['maplibre-gl'],
+  },
   server: {
     port: 5173,
     // Proxy /api calls to Laravel during development — avoids CORS entirely

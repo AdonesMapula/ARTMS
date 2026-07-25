@@ -51,6 +51,18 @@ const OFFERINGS = [
   "Attendance, performance, and hiring analytics reports",
 ];
 
+const SERVICES = [
+  "Finance",
+  "Accounting and Bookkeeping",
+  "Management Accounting/Controlling",
+  "HR",
+  "Payroll",
+  "Customer Service Support",
+  "Administration",
+  "IT Service Desk",
+  "And more",
+];
+
 const OPERATIONS = [
   {
     icon: <FiUserCheck aria-hidden="true" />,
@@ -180,7 +192,7 @@ export default function About() {
 
       {/* ---------------- Three-column overview ---------------- */}
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1fr_0.9fr] lg:divide-x lg:divide-[var(--artms-border)]">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-[var(--artms-border)]">
           {/* Column 1 — what it offers */}
           <Reveal className="lg:pr-8">
             <h2 className="text-lg font-extrabold text-[#060F5A]">What ARTMS Offers</h2>
@@ -202,8 +214,28 @@ export default function About() {
             </ul>
           </Reveal>
 
-          {/* Column 2 — how it operates */}
-          <Reveal delay={100} className="lg:px-8">
+          {/* Column 2 — comprehensive services */}
+          <Reveal delay={80} className="lg:px-8">
+            <h2 className="text-lg font-extrabold text-[#060F5A]">Comprehensive Services</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              We offer and implement a robust suite of outsourcing solutions, including:
+            </p>
+            <ul className="mt-5 space-y-3">
+              {SERVICES.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <FiCheckCircle
+                    className="mt-0.5 shrink-0 text-[var(--artms-accent)]"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          {/* Column 3 — how it operates */}
+          <Reveal delay={160} className="lg:pl-8">
             <h2 className="text-lg font-extrabold text-[#060F5A]">Built for Real HR Operations</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Designed around how HR teams actually work day to day, not around a
@@ -222,55 +254,6 @@ export default function About() {
                 </li>
               ))}
             </ul>
-          </Reveal>
-
-          {/* Column 3 — highlight panel with background photo */}
-          <Reveal delay={200} className="lg:pl-8">
-            <div className="relative isolate overflow-hidden rounded-3xl p-7">
-              {/* Background photo */}
-              <div
-                className="absolute inset-0 -z-20 scale-105 bg-cover bg-center"
-                style={{ backgroundImage: `url(${GOVERNANCE_IMAGE_URL})` }}
-                aria-hidden="true"
-              />
-              {/* Navy wash over the photo */}
-              <div
-                className="absolute inset-0 -z-10 bg-gradient-to-br from-[#060F5A]/95 via-[#0B1B78]/90 to-[#060F5A]/85"
-                aria-hidden="true"
-              />
-              <svg
-                className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 opacity-10"
-                viewBox="0 0 200 200"
-                fill="none"
-                aria-hidden="true"
-              >
-                <circle cx="100" cy="100" r="99" stroke="var(--artms-accent)" strokeWidth="2" />
-                <circle cx="100" cy="100" r="70" stroke="var(--artms-accent)" strokeWidth="2" />
-              </svg>
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-[var(--artms-accent)]">
-                <FiLayers size={20} aria-hidden="true" />
-              </span>
-              <h3 className="mt-5 text-lg font-extrabold text-white">
-                Enterprise-Grade Governance
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-indigo-100/80">
-                Four dedicated roles, one accountable system: every status change,
-                approval, and hiring decision is logged and traceable.
-              </p>
-              <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-5">
-                {[
-                  { value: "4", label: "Access roles" },
-                  { value: "1", label: "Source of truth" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <dt className="text-2xl font-extrabold text-[var(--artms-accent)]">
-                      {s.value}
-                    </dt>
-                    <dd className="mt-1 text-[11px] text-indigo-100/70">{s.label}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
           </Reveal>
         </div>
       </section>

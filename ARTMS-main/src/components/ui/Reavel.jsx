@@ -5,21 +5,18 @@ export default function Reveal({ children, delay = 0, className = "" }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, []);
+useEffect(() => {
+  const node = ref.current;
+  if (!node) return;
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      setVisible(entry.isIntersecting);
+    },
+    { threshold: 0.15 }
+  );
+  io.observe(node);
+  return () => io.disconnect();
+}, []);
 
   return (
     <div
