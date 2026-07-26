@@ -128,13 +128,10 @@ export default function JobDetails() {
             </div>
             
             <div className="flex flex-col gap-3 lg:items-end">
-              <Badge 
-                tone="accent" 
-                className="bg-[#F97316] text-white ring-1 ring-[#F97316]/20"
-              >
-                <FiUsers className="mr-1" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F97316] px-3.5 py-1.5 text-xs font-extrabold text-white shadow-md border border-orange-400/40">
+                <FiUsers className="h-4 w-4 text-white" />
                 {job.vacancies_count} {job.vacancies_count > 1 ? "Openings" : "Opening"}
-              </Badge>
+              </span>
               <Button 
                 onClick={handleApplyClick}
                 variant="primary"

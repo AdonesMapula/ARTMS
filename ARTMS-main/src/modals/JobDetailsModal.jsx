@@ -73,39 +73,40 @@ export default function JobDetailsModal({ open, job, onClose, onApply }) {
     >
       <div className="max-h-[calc(90vh-200px)] overflow-y-auto px-1">
         {/* Header */}
-        <div className="mb-6 rounded-xl bg-gradient-to-br from-[#111A62] to-[#1a2575] p-6 text-white">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+        <div className="relative mb-6 rounded-2xl bg-gradient-to-br from-[#060F5A] via-[#111A62] to-[#1a2575] p-6 text-white shadow-xl overflow-hidden">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#F97316]/10 blur-2xl" aria-hidden="true" />
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 backdrop-blur-sm border border-white/15">
             <Briefcase className="h-3.5 w-3.5 text-[#F97316]" />
-            <span className="text-xs font-bold uppercase tracking-wider">
+            <span>
               {department.department_name ?? department.name ?? "N/A"}
             </span>
           </div>
-          <h2 className="text-2xl font-extrabold">{jobLibrary.job_title || "Untitled Position"}</h2>
+          <h2 className="text-2xl font-extrabold text-white leading-snug">{jobLibrary.job_title || "Untitled Position"}</h2>
           <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-200">
             {job.location && (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 font-medium">
                 <MapPin className="h-4 w-4 text-[#F97316]" />
                 {job.location}
               </span>
             )}
             {job.posting_date && (
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Calendar className="h-4 w-4 text-slate-300" />
                 Posted {new Date(job.posting_date).toLocaleDateString()}
               </span>
             )}
             {job.closing_date && (
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Clock className="h-4 w-4 text-slate-300" />
                 Closes {new Date(job.closing_date).toLocaleDateString()}
               </span>
             )}
           </div>
-          <div className="mt-4">
-            <Badge className="bg-[#F97316] text-white">
-              <Users className="mr-1 h-3.5 w-3.5" />
-              {job.vacancies_count} {job.vacancies_count > 1 ? "Openings" : "Opening"}
-            </Badge>
+          <div className="mt-4 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F97316] px-3.5 py-1.5 text-xs font-extrabold text-white shadow-md border border-orange-400/40">
+              <Users className="h-4 w-4 text-white" />
+              {job.vacancies_count ?? 1} {(job.vacancies_count ?? 1) > 1 ? "Openings" : "Opening"}
+            </span>
           </div>
         </div>
 
