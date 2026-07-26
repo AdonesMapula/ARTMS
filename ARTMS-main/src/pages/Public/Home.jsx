@@ -123,10 +123,14 @@ const PROCESS_STEPS = [
   },
 ];
 
-// Headline animation data
+// Headline animation data with multiple phrase variations
 const HERO_HEADLINES = [
   { prefix: "Connecting Top Talent with", highlight: "Exceptional Opportunities" },
-  { prefix: "AI Recruitment and Talent ", highlight: "Management System" },
+  { prefix: "Streamlining Hiring with", highlight: "AI-Powered Precision" },
+  { prefix: "Accelerate Growth through", highlight: "Intelligent Recruitment" },
+  { prefix: "Empowering HR Teams with", highlight: "Smart Decision Support" },
+  { prefix: "Transforming Careers through", highlight: "Next-Gen Technology" },
+  { prefix: "AI Recruitment & Talent", highlight: "Management System" },
 ];
 
 /** Fades + slides children up the first time they enter the viewport. */
@@ -290,34 +294,56 @@ function CountingBadge({ targetCount = 0 }) {
   );
 }
 
-function FlipHeadline({ headlines, interval = 4500 }) {
+const TEXT_REVEAL_TRANSITIONS = [
+  { in: "textRevealSlideIn 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards", out: "textRevealSlideOut 400ms cubic-bezier(0.7, 0, 0.84, 0) forwards" },
+  { in: "textRevealFlipIn 550ms cubic-bezier(0.16, 1, 0.3, 1) forwards", out: "textRevealFlipOut 400ms cubic-bezier(0.7, 0, 0.84, 0) forwards" },
+  { in: "textRevealZoomIn 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards", out: "textRevealZoomOut 400ms cubic-bezier(0.7, 0, 0.84, 0) forwards" },
+  { in: "textRevealSwipeIn 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards", out: "textRevealSwipeOut 400ms cubic-bezier(0.7, 0, 0.84, 0) forwards" },
+];
+
+function FlipHeadline({ headlines = HERO_HEADLINES, interval = 4200 }) {
   const [index, setIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [transIndex, setTransIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setIsFlipping(true); // start exit animation
       setTimeout(() => {
         setIndex((i) => (i + 1) % headlines.length);
+        // Randomly pick a new transition animation for each phrase reveal
+        setTransIndex((prev) => {
+          let next = Math.floor(Math.random() * TEXT_REVEAL_TRANSITIONS.length);
+          if (next === prev) next = (next + 1) % TEXT_REVEAL_TRANSITIONS.length;
+          return next;
+        });
         setIsFlipping(false); // start enter animation
-      }, 350); // matches the exit animation duration below
+      }, 400);
     }, interval);
     return () => clearInterval(timer);
   }, [headlines.length, interval]);
 
   const current = headlines[index];
+  const activeAnim = TEXT_REVEAL_TRANSITIONS[transIndex];
 
   return (
     <span
-      className="inline-block"
+      className="inline-block transition-all duration-300"
       style={{
-        animation: isFlipping
-          ? "flip-out 350ms ease forwards"
-          : "flip-in 350ms ease forwards",
+        animation: isFlipping ? activeAnim.out : activeAnim.in,
+        willChange: "transform, opacity, filter",
       }}
     >
       {current.prefix}{" "}
-      <span style={{ color: TOKENS.accent }}>{current.highlight}</span>
+      <span
+        className="relative inline-block"
+        style={{
+          color: TOKENS.accent,
+          textShadow: "0 0 30px rgba(249, 115, 22, 0.35)",
+        }}
+      >
+        {current.highlight}
+      </span>
     </span>
   );
 }
