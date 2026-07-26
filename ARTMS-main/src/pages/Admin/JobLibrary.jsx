@@ -11,11 +11,15 @@ import {
   RefreshCw,
   Eye,
   FileText,
+  Briefcase,
+  User,
+  DollarSign,
+  Calendar,
+  MousePointerClick,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
@@ -24,9 +28,24 @@ import {
   JobLibraryFormModal,
   JobLibraryApproveModal,
   JobLibraryDeleteModal,
+  JobLibraryViewModal,
 } from "../../modals";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
+
+const fmt = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-PH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+const fmtMoney = (v) =>
+  v != null
+    ? "₱" + parseFloat(v).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "—";
 
 const APPROVAL_TONE = {
   approved: "success",
@@ -44,8 +63,8 @@ const APPROVAL_FILTERS = [
 const EMPTY_FORM = {
   job_title: "",
   job_description: "",
-  qualifications: "",
-  responsibilities: "",
+  qualifications: [],
+  responsibilities: [],
   job_category: "",
   employment_type: "full_time",
   salary_min: "",
@@ -71,6 +90,7 @@ export default function JobLibrary() {
     data: null,
   });
   const [deleteModal, setDeleteModal] = useState({ open: false, job: null });
+  const [viewModal, setViewModal] = useState({ open: false, job: null });
   const [approveModal, setApproveModal] = useState({
     open: false,
     job: null,
@@ -149,8 +169,8 @@ export default function JobLibrary() {
     setForm({
       job_title: job.job_title ?? "",
       job_description: job.job_description ?? "",
-      qualifications: job.qualifications ?? "",
-      responsibilities: job.responsibilities ?? "",
+      qualifications: Array.isArray(job.qualifications) ? job.qualifications : [],
+      responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
       job_category: job.job_category ?? "",
       employment_type: job.employment_type ?? "full_time",
       salary_min: job.salary_min ?? "",
@@ -168,11 +188,11 @@ export default function JobLibrary() {
       showAlert("error", "Validation", "Job description is required.");
       return;
     }
-    if (!form.qualifications.trim()) {
+    if (!form.qualifications || form.qualifications.length === 0) {
       showAlert("error", "Validation", "Qualifications are required.");
       return;
     }
-    if (!form.responsibilities.trim()) {
+    if (!form.responsibilities || form.responsibilities.length === 0) {
       showAlert("error", "Validation", "Responsibilities are required.");
       return;
     }
@@ -386,7 +406,7 @@ export default function JobLibrary() {
 
       {/* Job Templates Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <CardTitle>
               Job Templates ({filtered.length}{" "}
@@ -415,97 +435,128 @@ export default function JobLibrary() {
             </div>
           ) : (
             <>
-              <Table>
-                <THead>
-                  <tr>
-                    <TH>Job Title</TH>
-                    <TH>Category</TH>
-                    <TH>Employment Type</TH>
-                    <TH>Approval Status</TH>
-                    <TH>Created By</TH>
-                    <TH className="text-right">Actions</TH>
-                  </tr>
-                </THead>
-                <tbody>
-                  {paginated.map((j) => (
-                    <tr key={j.id} className="hover:bg-slate-50">
-                      <TD>
-                        <div className="font-semibold text-slate-900">
-                          {j.job_title}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {paginated.map((j) => (
+                  <Card
+                    key={j.id}
+                    onClick={() => setViewModal({ open: true, job: j })}
+                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
+                  >
+                    <CardContent className="p-5">
+                      {/* Header */}
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge tone="default" className="text-xs font-semibold">
+                              JL-{String(j.id).padStart(3, "0")}
+                            </Badge>
+                            <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
+                          </div>
+                          <h3 className="text-lg font-extrabold text-[#111A62]">
+                            {j.job_title}
+                          </h3>
                         </div>
-                        <div className="text-xs text-slate-400">
-                          JL-{String(j.id).padStart(3, "0")}
-                        </div>
-                      </TD>
-                      <TD className="text-slate-600">
-                        {j.job_category || "—"}
-                      </TD>
-                      <TD>
-                        <Badge tone="accent">
-                          {j.employment_type?.replace(/_/g, " ") || "—"}
-                        </Badge>
-                      </TD>
-                      <TD>
-                        <Badge
-                          tone={APPROVAL_TONE[j.approval_status] ?? "default"}
-                          className="capitalize"
-                        >
+                        <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize">
                           {j.approval_status}
                         </Badge>
-                      </TD>
-                      <TD className="text-sm text-slate-600">
-                        {j.creator?.name || "—"}
-                      </TD>
-                      <TD className="text-right">
-                        <div className="inline-flex gap-1.5">
-                          {/* COO Review button */}
-                          {isCOO && j.approval_status === "pending" && (
-                            <button
-                              onClick={() =>
-                                setApproveModal({
-                                  open: true,
-                                  job: j,
-                                  status: "approved",
-                                  remarks: "",
-                                })
-                              }
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-transparent px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all hover:border-green-500 hover:bg-green-50 hover:text-green-600 cursor-pointer"
-                              title="Review & Approve"
-                            >
-                              <Eye size={14} />
-                              Review
-                            </button>
-                          )}
+                      </div>
 
-                          {canEdit && (
-                            <>
-                              {/* Edit Button */}
-                              <button
-                                onClick={() => openEdit(j)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                                title="Edit Job Template"
-                              >
-                                <Edit size={16} />
-                              </button>
-
-                              {/* Delete Button */}
-                              <button
-                                onClick={() =>
-                                  setDeleteModal({ open: true, job: j })
-                                }
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                                title="Delete Job Template"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
+                      {/* Details Grid */}
+                      <div className="mb-4 grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Briefcase size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Category</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {j.job_category || "—"}
+                            </p>
+                          </div>
                         </div>
-                      </TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <User size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Created By</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {j.creator?.name || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <DollarSign size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Salary</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">
+                              {j.salary_min || j.salary_max
+                                ? `${fmtMoney(j.salary_min)} – ${fmtMoney(j.salary_max)}`
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                          <Calendar size={16} className="text-slate-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-500">Type</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate capitalize">
+                              {j.employment_type?.replace(/_/g, " ") || "—"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-4 border-t border-slate-100 pt-3">
+                        <div className="mb-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 group-hover:text-blue-500 transition-colors">
+                          <MousePointerClick size={14} />
+                          <span>Click anywhere on card to view details</span>
+                        </div>
+                        <div className="flex gap-2">
+                        {isCOO && j.approval_status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setApproveModal({
+                                open: true,
+                                job: j,
+                                status: "approved",
+                                remarks: "",
+                              });
+                            }}
+                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
+                          >
+                            <Eye size={14} />
+                            Review
+                          </Button>
+                        )}
+                        {canEdit && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); openEdit(j); }}
+                              className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                            >
+                              <Edit size={14} />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, job: j }); }}
+                              className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
               {/* Pagination */}
               <div className="mt-4">
@@ -557,6 +608,13 @@ export default function JobLibrary() {
         }
         onConfirm={handleApprove}
         saving={saving}
+      />
+
+      {/* ── View Modal ── */}
+      <JobLibraryViewModal
+        open={viewModal.open}
+        job={viewModal.job}
+        onClose={() => setViewModal({ open: false, job: null })}
       />
 
       {/* ── Delete Confirm Modal ── */}

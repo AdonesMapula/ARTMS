@@ -3,6 +3,13 @@
 export { default as JobLibraryFormModal } from './JobLibraryFormModal';
 export { default as JobLibraryApproveModal } from './JobLibraryApproveModal';
 export { default as JobLibraryDeleteModal } from './JobLibraryDeleteModal';
+export { default as JobLibraryViewModal } from './JobLibraryViewModal';
+
+// Manpower Approvals
+export { default as ManpowerApproveModal } from './ManpowerApproveModal';
+
+// Job Posting Approvals
+export { default as JobPostingApproveModal } from './JobPostingApproveModal';
 
 // Public Modals
 export { default as JobDetailsModal } from './JobDetailsModal';

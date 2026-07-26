@@ -1,4 +1,4 @@
-import { FileText, Hash, DollarSign, Briefcase, List, FileCheck } from "lucide-react";
+import { FileText, Hash, DollarSign, Briefcase, List, FileCheck, Plus, Trash2, GraduationCap, X } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -17,6 +17,72 @@ export default function JobLibraryFormModal({
   onSave,
   saving = false,
 }) {
+  const qualBlocks = Array.isArray(form.qualifications) ? form.qualifications : [];
+  const respBlocks = Array.isArray(form.responsibilities) ? form.responsibilities : [];
+
+  const addBlock = (field, blocks) => {
+    setForm({
+      ...form,
+      [field]: [
+        ...blocks,
+        { id: Date.now(), title: "", details: [] }
+      ]
+    });
+  };
+
+  const updateBlock = (field, blocks, id, value) => {
+    setForm({
+      ...form,
+      [field]: blocks.map(b => b.id === id ? { ...b, title: value } : b)
+    });
+  };
+
+  const removeBlock = (field, blocks, id) => {
+    setForm({
+      ...form,
+      [field]: blocks.filter(b => b.id !== id)
+    });
+  };
+
+  const addDetail = (field, blocks, blockId) => {
+    setForm({
+      ...form,
+      [field]: blocks.map(b => 
+        b.id === blockId 
+          ? { ...b, details: [...b.details, { id: Date.now() + Math.random(), value: "" }] }
+          : b
+      )
+    });
+  };
+
+  const updateDetail = (field, blocks, blockId, detailId, value) => {
+    setForm({
+      ...form,
+      [field]: blocks.map(b => 
+        b.id === blockId 
+          ? {
+              ...b,
+              details: b.details.map(d => d.id === detailId ? { ...d, value } : d)
+            }
+          : b
+      )
+    });
+  };
+
+  const removeDetail = (field, blocks, blockId, detailId) => {
+    setForm({
+      ...form,
+      [field]: blocks.map(b => 
+        b.id === blockId 
+          ? {
+              ...b,
+              details: b.details.filter(d => d.id !== detailId)
+            }
+          : b
+      )
+    });
+  };
+
   if (!open) return null;
 
   return (
@@ -45,7 +111,7 @@ export default function JobLibraryFormModal({
         </div>
       }
     >
-      <div className="space-y-6">
+      <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-6">
           {/* Basic Information */}
           <div>
             <div className="mb-3 flex items-center gap-2">
@@ -163,37 +229,163 @@ export default function JobLibraryFormModal({
                 />
               </div>
 
-              {/* Qualifications */}
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <FileCheck size={14} className="text-slate-400" />
-                  Qualifications <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  placeholder="Educational background, experience, skills required..."
-                  value={form.qualifications}
-                  onChange={(e) => setForm({ ...form, qualifications: e.target.value })}
-                />
-                <p className="mt-1.5 text-xs text-slate-500">
-                  This will auto-populate Steps 3 & 4 in the PRF when this job is selected.
-                </p>
-              </div>
+              {/* Qualifications & Responsibilities Grid */}
+              <div className="grid gap-6 sm:grid-cols-2 pt-2">
+                {/* Qualifications */}
+                <div className="flex flex-col h-full">
+                  <div className="mb-3 flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <GraduationCap size={14} className="text-slate-400" />
+                      Qualifications <span className="text-red-500">*</span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addBlock("qualifications", qualBlocks)}
+                      className="h-8 gap-1 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Plus size={14} /> Add Block
+                    </Button>
+                  </div>
+                  
+                  {qualBlocks.length === 0 ? (
+                    <p className="text-sm text-slate-500 italic">No qualifications added.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {qualBlocks.map((block) => (
+                        <div key={block.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="e.g. Educational Background"
+                              value={block.title}
+                              onChange={(e) => updateBlock("qualifications", qualBlocks, block.id, e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => removeBlock("qualifications", qualBlocks, block.id)}
+                              className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-2"
+                            >
+                              <X size={16} />
+                            </Button>
+                          </div>
+                          
+                          <div className="mt-3 pl-6 border-l-2 border-slate-100 space-y-2">
+                            {block.details.map((detail) => (
+                              <div key={detail.id} className="flex gap-2">
+                                <Input
+                                  placeholder="Specific detail..."
+                                  value={detail.value}
+                                  onChange={(e) => updateDetail("qualifications", qualBlocks, block.id, detail.id, e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeDetail("qualifications", qualBlocks, block.id, detail.id)}
+                                  className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-1.5"
+                                >
+                                  <X size={14} />
+                                </Button>
+                              </div>
+                            ))}
+                            
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addDetail("qualifications", qualBlocks, block.id)}
+                              className="mt-2 h-7 gap-1 text-xs text-slate-600 hover:bg-slate-100"
+                            >
+                              <Plus size={12} /> Add Detail
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              {/* Responsibilities */}
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <List size={14} className="text-slate-400" />
-                  Responsibilities <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  placeholder="Key duties and tasks for this role..."
-                  value={form.responsibilities}
-                  onChange={(e) => setForm({ ...form, responsibilities: e.target.value })}
-                />
+                {/* Responsibilities */}
+                <div className="flex flex-col h-full sm:border-l sm:border-slate-200 sm:pl-6 max-sm:border-t max-sm:border-slate-200 max-sm:pt-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <List size={14} className="text-slate-400" />
+                      Responsibilities <span className="text-red-500">*</span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addBlock("responsibilities", respBlocks)}
+                      className="h-8 gap-1 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Plus size={14} /> Add Block
+                    </Button>
+                  </div>
+                  
+                  {respBlocks.length === 0 ? (
+                    <p className="text-sm text-slate-500 italic">No responsibilities added.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {respBlocks.map((block) => (
+                        <div key={block.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="e.g. Core Duties"
+                              value={block.title}
+                              onChange={(e) => updateBlock("responsibilities", respBlocks, block.id, e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => removeBlock("responsibilities", respBlocks, block.id)}
+                              className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-2"
+                            >
+                              <X size={16} />
+                            </Button>
+                          </div>
+                          
+                          <div className="mt-3 pl-6 border-l-2 border-slate-100 space-y-2">
+                            {block.details.map((detail) => (
+                              <div key={detail.id} className="flex gap-2">
+                                <Input
+                                  placeholder="Specific responsibility task..."
+                                  value={detail.value}
+                                  onChange={(e) => updateDetail("responsibilities", respBlocks, block.id, detail.id, e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeDetail("responsibilities", respBlocks, block.id, detail.id)}
+                                  className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-1.5"
+                                >
+                                  <X size={14} />
+                                </Button>
+                              </div>
+                            ))}
+                            
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addDetail("responsibilities", respBlocks, block.id)}
+                              className="mt-2 h-7 gap-1 text-xs text-slate-600 hover:bg-slate-100"
+                            >
+                              <Plus size={12} /> Add Detail
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -210,7 +402,7 @@ export default function JobLibraryFormModal({
               <li>• Qualifications and responsibilities auto-fill PRF forms</li>
             </ul>
           </div>
-      </div>
+      </form>
     </Modal>
   );
 }

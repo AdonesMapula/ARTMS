@@ -30,7 +30,9 @@ class ManpowerRequestController extends Controller
             'job_library_id'     => ['nullable', 'exists:job_library,id'],
             'position_needed'    => ['required', 'string'],
             'headcount'          => ['required', 'integer', 'min:1'],
-            'justification'      => ['required', 'string'],
+            'justification'      => ['nullable', 'string'],
+            'qualifications'     => ['nullable', 'array'],
+            'responsibilities'   => ['nullable', 'array'],
             'needed_by'          => ['nullable', 'date'],
             'urgency'            => ['required', 'in:low,medium,high,critical'],
             'fit_threshold_high' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -60,7 +62,9 @@ class ManpowerRequestController extends Controller
         $data = $request->validate([
             'position_needed' => ['sometimes', 'string'],
             'headcount'       => ['sometimes', 'integer'],
-            'justification'   => ['sometimes', 'string'],
+            'justification'   => ['sometimes', 'nullable', 'string'],
+            'qualifications'     => ['nullable', 'array'],
+            'responsibilities'   => ['nullable', 'array'],
             'needed_by'       => ['nullable', 'date'],
             'urgency'         => ['sometimes', 'in:low,medium,high,critical'],
         ]);
@@ -99,16 +103,27 @@ class ManpowerRequestController extends Controller
     public function approve(Request $request, ManpowerRequest $manpowerRequest): JsonResponse
     {
         $data = $request->validate([
-            'status'  => ['required', 'in:approved,rejected'],
-            'remarks' => ['nullable', 'string'],
+            'status'           => ['required', 'in:approved,rejected'],
+            'remarks'          => ['nullable', 'string'],
+            'qualifications'   => ['nullable', 'array'],
+            'responsibilities' => ['nullable', 'array'],
         ]);
 
-        $manpowerRequest->update([
+        $updateData = [
             'status'           => $data['status'],
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
             'approval_remarks' => $data['remarks'],
-        ]);
+        ];
+
+        if (array_key_exists('qualifications', $data)) {
+            $updateData['qualifications'] = $data['qualifications'];
+        }
+        if (array_key_exists('responsibilities', $data)) {
+            $updateData['responsibilities'] = $data['responsibilities'];
+        }
+
+        $manpowerRequest->update($updateData);
 
         AuditLog::record('approve', 'manpower_request', "Request {$data['status']} ID {$manpowerRequest->id}");
 

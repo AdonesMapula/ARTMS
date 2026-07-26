@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
-import { CheckCircle, XCircle, Eye, Filter, RefreshCw, Briefcase, MapPin, Calendar, User, Building2, Clock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Briefcase, Clock, CheckCircle, XCircle, Eye, Filter, RefreshCw, MapPin, Calendar, User, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import Skeleton from "../../components/ui/Skeleton";
+import { JobPostingApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import api from "../../services/api";
 
@@ -19,11 +20,12 @@ const fmt = (d) =>
     : "—";
 
 const STATUS_FILTERS = [
-  { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending" },
+  { value: "all",      label: "All Status" },
+  { value: "pending",  label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ];
+
 const PAGE_SIZE = 10;
 
 export default function JobPostingApprovals() {
@@ -34,17 +36,18 @@ export default function JobPostingApprovals() {
   const [q,            setQ]            = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
 
-  // Modal
+  // Detail / action modal
   const [selected, setSelected] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [action,   setAction]   = useState(null);   // "approved" | "rejected"
   const [remarks,  setRemarks]  = useState("");
   const [saving,   setSaving]   = useState(false);
 
-  // Alert
+  // Alert modal
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
-  const showAlert  = (v, t, m) => setAlert({ open: true, variant: v, title: t, message: m });
-  const closeAlert = ()        => setAlert((a) => ({ ...a, open: false }));
+  const showAlert  = (variant, title, message) =>
+    setAlert({ open: true, variant, title, message });
+  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   // ── Fetch ───────────────────────────────────────────────────────────────
   const fetchRows = useCallback(
@@ -68,18 +71,30 @@ export default function JobPostingApprovals() {
 
   useEffect(() => { fetchRows(1); }, [fetchRows]);
 
-  // ── Client search ───────────────────────────────────────────────────────
-  const visible = rows.filter((r) => {
+  const handlePageChange = (p) => fetchRows(p);
+
+  // ── Client-side search ──────────────────────────────────────────────────
+  const filtered = rows.filter((r) => {
     const query = q.trim().toLowerCase();
     if (!query) return true;
     return (
       String(r.id).includes(query) ||
-      (r.job_library?.job_title ?? "").toLowerCase().includes(query) ||
-      (r.department?.name       ?? "").toLowerCase().includes(query)
+      (r.job_library?.job_title          ?? "").toLowerCase().includes(query) ||
+      (r.department?.name                ?? "").toLowerCase().includes(query) ||
+      (r.department?.department_name     ?? "").toLowerCase().includes(query) ||
+      (r.location                        ?? "").toLowerCase().includes(query)
     );
   });
 
-  // ── Open review ─────────────────────────────────────────────────────────
+  // ── Statistics ──────────────────────────────────────────────────────────
+  const stats = useMemo(() => ({
+    total,
+    pending:  rows.filter((r) => r.approval_status === "pending").length,
+    approved: rows.filter((r) => r.approval_status === "approved").length,
+    rejected: rows.filter((r) => r.approval_status === "rejected").length,
+  }), [total, rows]);
+
+  // ── Open review panel ───────────────────────────────────────────────────
   const openReview = (row, act) => {
     setSelected(row);
     setAction(act);
@@ -87,26 +102,32 @@ export default function JobPostingApprovals() {
     setViewOpen(true);
   };
 
-  // ── Confirm decision ────────────────────────────────────────────────────
-  const handleDecision = async () => {
+  // ── Submit approve / reject ─────────────────────────────────────────────
+  const handleDecision = async (updatedData = null) => {
     if (!selected || !action) return;
     setSaving(true);
     try {
       await api.patch(`/job-postings/${selected.id}/approve`, {
-        status:  action,      // "approved" | "rejected"
-        remarks: remarks.trim() || null,
+        status:          action,
+        remarks:         remarks.trim() || null,
+        qualifications:  updatedData?.qualifications,
+        responsibilities: updatedData?.responsibilities,
       });
       setViewOpen(false);
       showAlert(
         action === "approved" ? "success" : "warning",
         action === "approved" ? "Job Posting Approved" : "Job Posting Rejected",
-        `JP-${String(selected.id).padStart(3, "0")} — "${selected.job_library?.job_title}" has been ${action}. ${
-          action === "approved" ? "It is now live on the public Jobs page." : ""
+        `JP-${String(selected.id).padStart(3, "0")} — "${selected.job_library?.job_title}" has been ${action}.${
+          action === "approved" ? " It is now live on the public Jobs page." : ""
         }`
       );
       fetchRows(page);
     } catch (err) {
-      showAlert("error", "Action Failed", err?.response?.data?.message ?? "Failed to process the request.");
+      showAlert(
+        "error",
+        "Action Failed",
+        err?.response?.data?.message ?? "Failed to process the request."
+      );
     } finally {
       setSaving(false);
     }
@@ -124,7 +145,7 @@ export default function JobPostingApprovals() {
             Job Postings
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Review and approve job postings created by HR. Approved postings go live immediately on the public Jobs page for applicants to see and apply.
+            Review and approve job postings created by HR. Approved postings go live immediately on the public Jobs page.
           </p>
         </div>
         <Button
@@ -147,7 +168,7 @@ export default function JobPostingApprovals() {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-500">Total Postings</p>
-              <p className="text-2xl font-extrabold text-slate-900">{total}</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
             </div>
           </CardContent>
         </Card>
@@ -159,9 +180,7 @@ export default function JobPostingApprovals() {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-500">Pending</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {rows.filter((r) => r.approval_status === "pending").length}
-              </p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.pending}</p>
             </div>
           </CardContent>
         </Card>
@@ -173,9 +192,7 @@ export default function JobPostingApprovals() {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-500">Approved</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {rows.filter((r) => r.approval_status === "approved").length}
-              </p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.approved}</p>
             </div>
           </CardContent>
         </Card>
@@ -187,9 +204,7 @@ export default function JobPostingApprovals() {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-500">Rejected</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {rows.filter((r) => r.approval_status === "rejected").length}
-              </p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.rejected}</p>
             </div>
           </CardContent>
         </Card>
@@ -219,7 +234,11 @@ export default function JobPostingApprovals() {
               ))}
             </div>
             <div className="w-full lg:w-64">
-              <SearchBar value={q} onChange={(v) => setQ(v)} placeholder="Search title, dept…" />
+              <SearchBar
+                value={q}
+                onChange={(v) => setQ(v)}
+                placeholder="Search title, dept, location…"
+              />
             </div>
           </div>
         </CardContent>
@@ -229,7 +248,7 @@ export default function JobPostingApprovals() {
       <Card>
         <CardHeader className="pb-4">
           <CardTitle>
-            Job Postings ({visible.length} {visible.length === 1 ? "posting" : "postings"})
+            Job Postings ({filtered.length} {filtered.length === 1 ? "posting" : "postings"})
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2">
@@ -239,7 +258,7 @@ export default function JobPostingApprovals() {
                 <Skeleton key={i} className="h-64 rounded-xl" />
               ))}
             </div>
-          ) : visible.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="py-12 text-center">
               <Briefcase size={48} className="mx-auto mb-3 text-slate-300" />
               <p className="text-sm font-semibold text-slate-600">
@@ -252,12 +271,21 @@ export default function JobPostingApprovals() {
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {visible.map((r) => (
+                {filtered.map((r) => (
                   <Card
                     key={r.id}
-                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                    onClick={() => openReview(r, null)}
+                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
                   >
                     <CardContent className="p-5">
+                      {/* Hover hint */}
+                      <div className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="flex items-center gap-1.5">
+                          <Eye size={12} />
+                          Click to review details
+                        </span>
+                      </div>
+
                       {/* Header */}
                       <div className="mb-4 flex items-start justify-between">
                         <div className="flex-1">
@@ -265,11 +293,22 @@ export default function JobPostingApprovals() {
                             <Badge tone="default" className="text-xs font-semibold">
                               JP-{String(r.id).padStart(3, "0")}
                             </Badge>
-                            <span className="text-xs text-slate-400">{fmt(r.created_at)}</span>
+                            {r.created_at && (
+                              <span className="text-xs text-slate-400">
+                                {fmt(r.created_at)}
+                              </span>
+                            )}
                           </div>
-                          <h3 className="text-lg font-extrabold text-[#111A62]">
-                            {r.job_library?.job_title || "Untitled Position"}
-                          </h3>
+                          <div className="flex flex-col gap-1 items-start">
+                            <h3 className="text-lg font-extrabold text-[#111A62]">
+                              {r.job_library?.job_title || "Untitled Position"}
+                            </h3>
+                            {r.is_modified_from_prf && (
+                              <Badge tone="warning" className="text-[10px] uppercase tracking-wider">
+                                Modified by HR
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
                           {r.approval_status}
@@ -283,7 +322,7 @@ export default function JobPostingApprovals() {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-500">Department</p>
                             <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.department?.name || "—"}
+                              {r.department?.name || r.department?.department_name || "—"}
                             </p>
                           </div>
                         </div>
@@ -320,37 +359,28 @@ export default function JobPostingApprovals() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
-                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                        >
-                          <Eye size={14} />
-                          View
-                        </Button>
-                        {r.approval_status === "pending" && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openReview(r, "approved")}
-                              className="border-green-200 bg-green-50/50 text-green-600 hover:bg-green-100 hover:border-green-300"
-                            >
-                              <CheckCircle size={14} />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openReview(r, "rejected")}
-                              className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
-                            >
-                              <XCircle size={14} />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      {r.approval_status === "pending" && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, "approved"); }}
+                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
+                          >
+                            <CheckCircle size={14} />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, "rejected"); }}
+                            className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                          >
+                            <XCircle size={14} />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -362,7 +392,7 @@ export default function JobPostingApprovals() {
                   page={page}
                   pageSize={PAGE_SIZE}
                   total={total}
-                  onPageChange={(p) => fetchRows(p)}
+                  onPageChange={handlePageChange}
                 />
               </div>
             </>
@@ -371,160 +401,19 @@ export default function JobPostingApprovals() {
       </Card>
 
       {/* Detail / Action Modal */}
-      {viewOpen && selected && (
-        <div
-          className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setViewOpen(false); }}
-        >
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-[#111A62] px-6 py-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-blue-200">
-                  JP-{String(selected.id).padStart(3, "0")}
-                </p>
-                <h3 className="mt-0.5 text-base font-extrabold text-white">
-                  {selected.job_library?.job_title || "Untitled Position"}
-                </h3>
-              </div>
-              <button
-                onClick={() => setViewOpen(false)}
-                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-blue-200 hover:bg-white/10 transition"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
+      <JobPostingApproveModal
+        open={viewOpen}
+        posting={selected}
+        status={action}
+        remarks={remarks}
+        onStatusChange={setAction}
+        onRemarksChange={setRemarks}
+        onClose={() => setViewOpen(false)}
+        onConfirm={handleDecision}
+        saving={saving}
+      />
 
-            {/* Body */}
-            <div className="max-h-[55vh] overflow-y-auto px-6 py-5 space-y-4">
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <Detail label="Department"  value={selected.department?.name || "—"} />
-                <Detail label="Vacancies"   value={selected.vacancies_count} />
-                <Detail label="Location"    value={selected.location || "—"} />
-                <Detail label="Deadline"    value={fmt(selected.closing_date)} />
-                <Detail label="Submitted"   value={fmt(selected.created_at)} />
-                <Detail
-                  label="Approval"
-                  value={
-                    <Badge tone={APPROVAL_TONE[selected.approval_status] ?? "default"} className="capitalize">
-                      {selected.approval_status}
-                    </Badge>
-                  }
-                />
-              </div>
-
-              {/* Job Library details */}
-              {selected.job_library && (
-                <>
-                  {selected.job_library.job_description && (
-                    <Section label="Job Description" text={selected.job_library.job_description} />
-                  )}
-                  {selected.job_library.qualifications && (
-                    <Section label="Qualifications" text={selected.job_library.qualifications} />
-                  )}
-                  {selected.job_library.responsibilities && (
-                    <Section label="Responsibilities" text={selected.job_library.responsibilities} />
-                  )}
-                </>
-              )}
-
-              {/* Custom description / requirements from the posting */}
-              {selected.description && (
-                <Section label="Additional Requirements" text={
-                  selected.description.includes("|")
-                    ? selected.description.split(" | ").join("\n")
-                    : selected.description
-                } />
-              )}
-
-              {/* Existing remarks */}
-              {selected.approval_remarks && (
-                <Section label="Previous Remarks" text={selected.approval_remarks} />
-              )}
-
-              {/* Action textarea */}
-              {action && selected.approval_status === "pending" && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                    Remarks <span className="text-xs font-normal text-slate-400">(optional)</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder={
-                      action === "approved"
-                        ? "Add approval notes for HR… (posting will go live immediately)"
-                        : "State the reason for rejection…"
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#111A62] focus:ring-4 focus:ring-[#111A62]/10 resize-none"
-                  />
-                  {action === "approved" && (
-                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-                      <CheckCircle size={12} />
-                      This posting will go live on the public Jobs page immediately after approval.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-              <button
-                onClick={() => setViewOpen(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-[#E2E8F0]"
-              >
-                {action ? "Cancel" : "Close"}
-              </button>
-
-              {action === "approved" && selected.approval_status === "pending" && (
-                <button
-                  onClick={handleDecision}
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
-                >
-                  <CheckCircle aria-hidden="true" />
-                  {saving ? "Publishing…" : "Approve & Publish"}
-                </button>
-              )}
-
-              {action === "rejected" && selected.approval_status === "pending" && (
-                <button
-                  onClick={handleDecision}
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                >
-                  <XCircle aria-hidden="true" />
-                  {saving ? "Rejecting…" : "Confirm Rejection"}
-                </button>
-              )}
-
-              {!action && selected.approval_status === "pending" && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setAction("rejected")}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                  >
-                    <XCircle aria-hidden="true" /> Reject
-                  </button>
-                  <button
-                    onClick={() => setAction("approved")}
-                    className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-                  >
-                    <CheckCircle aria-hidden="true" /> Approve &amp; Publish
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Alert Modal */}
       <AlertModal
         open={alert.open}
         variant={alert.variant}
@@ -532,26 +421,6 @@ export default function JobPostingApprovals() {
         message={alert.message}
         onClose={closeAlert}
       />
-    </div>
-  );
-}
-
-function Detail({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm font-semibold text-slate-800">{value}</div>
-    </div>
-  );
-}
-
-function Section({ label, text }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-        {text}
-      </p>
     </div>
   );
 }

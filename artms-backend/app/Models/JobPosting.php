@@ -23,9 +23,13 @@ class JobPosting extends Model
         'approved_by',
         'approved_at',
         'approval_remarks',
+        'approved_remarks',
         'is_published',
         'location',
         'description',
+        'qualifications',
+        'responsibilities',
+        'is_modified_from_prf',
     ];
 
     protected $casts = [
@@ -33,6 +37,9 @@ class JobPosting extends Model
         'closing_date' => 'date',
         'approved_at'  => 'datetime',
         'is_published' => 'boolean',
+        'qualifications' => 'array',
+        'responsibilities' => 'array',
+        'is_modified_from_prf' => 'boolean',
     ];
 
     public function jobLibrary()

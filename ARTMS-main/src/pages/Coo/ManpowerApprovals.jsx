@@ -6,7 +6,7 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import Skeleton from "../../components/ui/Skeleton";
-import Modal from "../../components/ui/Modal";
+import { ManpowerApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import manpowerService from "../../services/manpowerService";
 
@@ -106,13 +106,15 @@ export default function ManpowerApprovals() {
   };
 
   // ── Submit approve / reject ──────────────────────────────────────────────
-  const handleDecision = async () => {
+  const handleDecision = async (updatedData = null) => {
     if (!selected || !action) return;
     setSaving(true);
     try {
       await manpowerService.approve(selected.id, {
         status:  action,
         remarks: remarks.trim() || null,
+        qualifications: updatedData?.qualifications,
+        responsibilities: updatedData?.responsibilities,
       });
       setViewOpen(false);
       showAlert(
@@ -273,9 +275,16 @@ export default function ManpowerApprovals() {
                 {filtered.map((r) => (
                   <Card
                     key={r.id}
-                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                    onClick={() => openReview(r, null)}
+                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
                   >
                     <CardContent className="p-5">
+                      <div className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="flex items-center gap-1.5">
+                          <Eye size={12} />
+                          Click to review details
+                        </span>
+                      </div>
                       {/* Header */}
                       <div className="mb-4 flex items-start justify-between">
                         <div className="flex-1">
@@ -347,37 +356,28 @@ export default function ManpowerApprovals() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
-                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                        >
-                          <Eye size={14} />
-                          View
-                        </Button>
-                        {r.status === "pending" && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openReview(r, "approved")}
-                              className="border-green-200 bg-green-50/50 text-green-600 hover:bg-green-100 hover:border-green-300"
-                            >
-                              <CheckCircle size={14} />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openReview(r, "rejected")}
-                              className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
-                            >
-                              <XCircle size={14} />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      {r.status === "pending" && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, "approved"); }}
+                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
+                          >
+                            <CheckCircle size={14} />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, "rejected"); }}
+                            className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                          >
+                            <XCircle size={14} />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -398,152 +398,17 @@ export default function ManpowerApprovals() {
       </Card>
 
       {/* Detail / Action Modal */}
-      <Modal
+      <ManpowerApproveModal
         open={viewOpen}
+        request={selected}
+        status={action}
+        remarks={remarks}
+        onStatusChange={setAction}
+        onRemarksChange={setRemarks}
         onClose={() => setViewOpen(false)}
-        title={selected ? `PRF-${String(selected.id).padStart(3, "0")}` : ""}
-        description={selected?.position_needed || ""}
-        className="max-w-2xl"
-        footer={
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={() => setViewOpen(false)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-400"
-            >
-              <X size={16} />
-              {action ? "Cancel" : "Close"}
-            </button>
-
-            {action === "approved" && selected?.status === "pending" && (
-              <button
-                onClick={handleDecision}
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-600 bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-green-700 disabled:opacity-60"
-              >
-                <CheckCircle size={16} />
-                {saving ? "Approving…" : "Confirm Approval"}
-              </button>
-            )}
-
-            {action === "rejected" && selected?.status === "pending" && (
-              <button
-                onClick={handleDecision}
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:opacity-60"
-              >
-                <XCircle size={16} />
-                {saving ? "Rejecting…" : "Confirm Rejection"}
-              </button>
-            )}
-
-            {!action && selected?.status === "pending" && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setAction("rejected")}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-transparent px-4 py-2.5 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 hover:border-red-300"
-                >
-                  <XCircle size={16} /> Reject
-                </button>
-                <button
-                  onClick={() => setAction("approved")}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-600 bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-green-700"
-                >
-                  <CheckCircle size={16} /> Approve
-                </button>
-              </div>
-            )}
-          </div>
-        }
-      >
-        {selected && (
-          <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-5">
-            {/* Details Section */}
-            <div className="space-y-1">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Request Details
-              </p>
-              <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <Detail label="Department" value={selected.department?.name || selected.department?.department_name || "—"} />
-                  <Detail label="Requested By" value={selected.requester?.name ?? "—"} />
-                  <Detail label="Headcount" value={selected.headcount} />
-                  <Detail
-                    label="Urgency"
-                    value={
-                      <Badge tone={URGENCY_TONE[selected.urgency] ?? "default"} className="capitalize">
-                        {selected.urgency}
-                      </Badge>
-                    }
-                  />
-                  <Detail label="Date Needed" value={fmt(selected.needed_by)} />
-                  <Detail label="Submitted" value={fmt(selected.created_at)} />
-                  <Detail
-                    label="Status"
-                    value={
-                      <Badge tone={STATUS_TONE[selected.status] ?? "default"} className="capitalize">
-                        {selected.status}
-                      </Badge>
-                    }
-                  />
-                  {selected.jobLibrary && (
-                    <Detail label="Job Library" value={selected.jobLibrary.job_title} />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Justification */}
-            {selected.justification && (
-              <div className="space-y-1">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Requirements &amp; Justification
-                </p>
-                <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {selected.justification.split(" | ").map((line, i) => (
-                      <span key={i} className="block mb-2 last:mb-0">{line}</span>
-                    ))}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Existing Approval Remarks */}
-            {selected.approval_remarks && (
-              <div className="space-y-1">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Previous Remarks
-                </p>
-                <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4">
-                  <p className="text-sm text-slate-700">
-                    {selected.approval_remarks}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Remarks textarea — only when taking action */}
-            {action && selected.status === "pending" && (
-              <div className="space-y-1">
-                <label className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Your Remarks <span className="text-xs font-normal normal-case text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder={
-                    action === "approved"
-                      ? "Add approval notes for HR…"
-                      : "State the reason for rejection…"
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#111A62] focus:ring-4 focus:ring-[#111A62]/10 resize-none"
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+        onConfirm={handleDecision}
+        saving={saving}
+      />
 
       {/* Alert Modal */}
       <AlertModal
@@ -553,15 +418,6 @@ export default function ManpowerApprovals() {
         message={alert.message}
         onClose={closeAlert}
       />
-    </div>
-  );
-}
-
-function Detail({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm font-semibold text-slate-800">{value}</div>
     </div>
   );
 }

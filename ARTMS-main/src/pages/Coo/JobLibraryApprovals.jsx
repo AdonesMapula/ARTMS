@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle, XCircle, Eye, Filter, RefreshCw, BookOpen, Briefcase, DollarSign, User, Calendar, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Filter, RefreshCw, BookOpen, Briefcase, DollarSign, User, Calendar, Clock, MousePointerClick } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
+import { JobLibraryApproveModal, JobLibraryViewModal } from "../../modals";
 import api from "../../services/api";
 
 const APPROVAL_TONE = { approved: "success", pending: "warning", rejected: "danger" };
@@ -39,10 +40,13 @@ export default function JobLibraryApprovals() {
   const [statusFilter, setStatusFilter] = useState("pending");
 
   // Modal state
-  const [selected, setSelected] = useState(null);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [action,   setAction]   = useState(null);   // "approved" | "rejected"
-  const [remarks,  setRemarks]  = useState("");
+  const [approveModal, setApproveModal] = useState({
+    open: false,
+    job: null,
+    status: "approved",
+    remarks: "",
+  });
+  const [viewModal, setViewModal] = useState({ open: false, job: null });
   const [saving,   setSaving]   = useState(false);
 
   // Alert modal
@@ -90,26 +94,28 @@ export default function JobLibraryApprovals() {
 
   // ── Open review modal ───────────────────────────────────────────────────
   const openReview = (row, act) => {
-    setSelected(row);
-    setAction(act);
-    setRemarks("");
-    setViewOpen(true);
+    setApproveModal({
+      open: true,
+      job: row,
+      status: act,
+      remarks: "",
+    });
   };
 
   // ── Submit approve / reject ─────────────────────────────────────────────
   const handleDecision = async () => {
-    if (!selected || !action) return;
+    if (!approveModal.job || !approveModal.status) return;
     setSaving(true);
     try {
-      await api.patch(`/job-library/${selected.id}/approve`, {
-        status:  action,
-        remarks: remarks.trim() || null,
+      await api.patch(`/job-library/${approveModal.job.id}/approve`, {
+        status:  approveModal.status,
+        remarks: approveModal.remarks.trim() || null,
       });
-      setViewOpen(false);
+      setApproveModal({ open: false, job: null, status: "approved", remarks: "" });
       showAlert(
-        action === "approved" ? "success" : "warning",
-        action === "approved" ? "Entry Approved" : "Entry Rejected",
-        `Job Library entry "${selected.job_title}" has been ${action}.`
+        approveModal.status === "approved" ? "success" : "warning",
+        approveModal.status === "approved" ? "Entry Approved" : "Entry Rejected",
+        `Job Library entry "${approveModal.job.job_title}" has been ${approveModal.status}.`
       );
       fetchRows(page);
     } catch (err) {
@@ -242,7 +248,7 @@ export default function JobLibraryApprovals() {
 
       {/* Job Entries Cards */}
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-6">
           <CardTitle>
             Job Entries ({filtered.length} {filtered.length === 1 ? "entry" : "entries"})
           </CardTitle>
@@ -270,7 +276,14 @@ export default function JobLibraryApprovals() {
                 {filtered.map((r) => (
                   <Card
                     key={r.id}
-                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                    onClick={() => {
+                      if (r.approval_status === "pending") {
+                        setApproveModal({ open: true, job: r, status: "approved", remarks: "" });
+                      } else {
+                        setViewModal({ open: true, job: r });
+                      }
+                    }}
+                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
                   >
                     <CardContent className="p-5">
                       {/* Header */}
@@ -339,37 +352,47 @@ export default function JobLibraryApprovals() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => { setSelected(r); setAction(null); setViewOpen(true); }}
-                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                        >
-                          <Eye size={14} />
-                          View
-                        </Button>
-                        {r.approval_status === "pending" && (
-                          <>
+                      {r.approval_status === "pending" ? (
+                        <div className="mt-4 border-t border-slate-100 pt-3">
+                          <div className="mb-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors group-hover:text-blue-500">
+                            <MousePointerClick size={14} />
+                            <span>Click anywhere on card to review details</span>
+                          </div>
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openReview(r, "approved")}
-                              className="border-green-200 bg-green-50/50 text-green-600 hover:bg-green-100 hover:border-green-300"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openReview(r, "approved");
+                              }}
+                              className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-600 hover:border-green-300 hover:bg-green-100"
                             >
                               <CheckCircle size={14} />
+                              Approve
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openReview(r, "rejected")}
-                              className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openReview(r, "rejected");
+                              }}
+                              className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-600 hover:border-red-300 hover:bg-red-100"
                             >
                               <XCircle size={14} />
+                              Reject
                             </Button>
-                          </>
-                        )}
-                      </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 border-t border-slate-100 pt-3">
+                          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors group-hover:text-blue-500">
+                            <MousePointerClick size={14} />
+                            <span>Click anywhere on card to view details</span>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -389,157 +412,24 @@ export default function JobLibraryApprovals() {
         </CardContent>
       </Card>
 
-      {/* Detail / Action Modal */}
-      {viewOpen && selected && (
-        <div
-          className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setViewOpen(false); }}
-        >
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-[#111A62] px-6 py-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-blue-200">
-                  JL-{String(selected.id).padStart(3, "0")}
-                </p>
-                <h3 className="mt-0.5 text-base font-extrabold text-white">
-                  {selected.job_title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setViewOpen(false)}
-                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-blue-200 hover:bg-white/10 transition"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ── Modals ── */}
+      <JobLibraryViewModal
+        open={viewModal.open}
+        job={viewModal.job}
+        onClose={() => setViewModal({ open: false, job: null })}
+      />
 
-            {/* Body */}
-            <div className="max-h-[55vh] overflow-y-auto px-6 py-5 space-y-4">
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <Detail label="Category"       value={selected.job_category || "—"} />
-                <Detail
-                  label="Employment Type"
-                  value={selected.employment_type?.replace(/_/g, " ") || "—"}
-                />
-                <Detail label="Salary Min"     value={fmtMoney(selected.salary_min)} />
-                <Detail label="Salary Max"     value={fmtMoney(selected.salary_max)} />
-                <Detail label="Created By"     value={selected.creator?.name || "—"} />
-                <Detail label="Submitted"      value={fmt(selected.created_at)} />
-                <Detail
-                  label="Status"
-                  value={
-                    <Badge
-                      tone={APPROVAL_TONE[selected.approval_status] ?? "default"}
-                      className="capitalize"
-                    >
-                      {selected.approval_status}
-                    </Badge>
-                  }
-                />
-                {selected.approver && (
-                  <Detail label="Reviewed By" value={selected.approver.name} />
-                )}
-              </div>
-
-              {/* Description */}
-              {selected.job_description && (
-                <Section label="Job Description" text={selected.job_description} />
-              )}
-
-              {/* Qualifications */}
-              {selected.qualifications && (
-                <Section label="Qualifications" text={selected.qualifications} />
-              )}
-
-              {/* Responsibilities */}
-              {selected.responsibilities && (
-                <Section label="Responsibilities" text={selected.responsibilities} />
-              )}
-
-              {/* Existing remarks */}
-              {selected.approval_remarks && (
-                <Section label="Approval Remarks" text={selected.approval_remarks} />
-              )}
-
-              {/* Remarks textarea — only when taking action on a pending entry */}
-              {action && selected.approval_status === "pending" && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                    Remarks{" "}
-                    <span className="text-xs font-normal text-slate-400">(optional)</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder={
-                      action === "approved"
-                        ? "Add approval notes for HR…"
-                        : "State the reason for rejection…"
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#111A62] focus:ring-4 focus:ring-[#111A62]/10 resize-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-              <button
-                onClick={() => setViewOpen(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-[#E2E8F0]"
-              >
-                {action ? "Cancel" : "Close"}
-              </button>
-
-              {action === "approved" && selected.approval_status === "pending" && (
-                <button
-                  onClick={handleDecision}
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
-                >
-                  <CheckCircle aria-hidden="true" />
-                  {saving ? "Approving…" : "Confirm Approval"}
-                </button>
-              )}
-
-              {action === "rejected" && selected.approval_status === "pending" && (
-                <button
-                  onClick={handleDecision}
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                >
-                  <XCircle aria-hidden="true" />
-                  {saving ? "Rejecting…" : "Confirm Rejection"}
-                </button>
-              )}
-
-              {/* Quick action buttons when just viewing a pending entry */}
-              {!action && selected.approval_status === "pending" && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setAction("rejected")}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                  >
-                    <XCircle aria-hidden="true" /> Reject
-                  </button>
-                  <button
-                    onClick={() => setAction("approved")}
-                    className="flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-                  >
-                    <CheckCircle aria-hidden="true" /> Approve
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <JobLibraryApproveModal
+        open={approveModal.open}
+        job={approveModal.job}
+        status={approveModal.status}
+        remarks={approveModal.remarks}
+        onStatusChange={(status) => setApproveModal({ ...approveModal, status })}
+        onRemarksChange={(remarks) => setApproveModal({ ...approveModal, remarks })}
+        onClose={() => setApproveModal({ open: false, job: null, status: "approved", remarks: "" })}
+        onConfirm={handleDecision}
+        saving={saving}
+      />
 
       <AlertModal
         open={alert.open}
@@ -548,26 +438,6 @@ export default function JobLibraryApprovals() {
         message={alert.message}
         onClose={closeAlert}
       />
-    </div>
-  );
-}
-
-function Detail({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm font-semibold text-slate-800">{value}</div>
-    </div>
-  );
-}
-
-function Section({ label, text }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-        {text}
-      </p>
     </div>
   );
 }

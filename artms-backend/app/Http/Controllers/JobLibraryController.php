@@ -45,8 +45,8 @@ class JobLibraryController extends Controller
         $data = $request->validate([
             'job_title'        => ['required', 'string', 'max:255'],
             'job_description'  => ['required', 'string'],
-            'qualifications'   => ['required', 'string'],
-            'responsibilities' => ['required', 'string'],
+            'qualifications'   => ['required', 'array'],
+            'responsibilities' => ['required', 'array'],
             'job_category'     => ['nullable', 'string'],
             'employment_type'  => ['nullable', 'string'],
             'salary_min'       => ['nullable', 'numeric', 'min:0'],
@@ -72,8 +72,8 @@ class JobLibraryController extends Controller
         $data = $request->validate([
             'job_title'        => ['sometimes', 'string', 'max:255'],
             'job_description'  => ['sometimes', 'string'],
-            'qualifications'   => ['sometimes', 'string'],
-            'responsibilities' => ['sometimes', 'string'],
+            'qualifications'   => ['sometimes', 'array'],
+            'responsibilities' => ['sometimes', 'array'],
             'salary_min'       => ['nullable', 'numeric'],
             'salary_max'       => ['nullable', 'numeric'],
         ]);

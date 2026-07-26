@@ -82,31 +82,6 @@ export default function Jobs() {
     }
   };
 
-  // Parse additional description field
-  const parseAdditionalInfo = (job) => {
-    const desc = job.additional_description || job.description || "";
-    const parts = desc.split("|").map(p => p.trim());
-    const info = {};
-    
-    parts.forEach(part => {
-      if (part.includes("Educational Background:")) {
-        info.education = part.replace("Educational Background:", "").trim();
-      } else if (part.includes("Work Experience:")) {
-        info.workExp = part.replace("Work Experience:", "").trim();
-      } else if (part.includes("Skills:")) {
-        info.skills = part.replace("Skills:", "").trim();
-      } else if (part.includes("Other:")) {
-        info.other = part.replace("Other:", "").trim();
-      } else if (part.includes("Employment Status:")) {
-        info.employmentStatus = part.replace("Employment Status:", "").trim();
-      } else if (part.includes("Plantilla Type:")) {
-        info.plantillaType = part.replace("Plantilla Type:", "").trim();
-      }
-    });
-    
-    return info;
-  };
-
   const departments = useMemo(() => {
     const set = new Set(jobs.map((j) => j.department?.department_name ?? j.department?.name).filter(Boolean));
     return ["all", ...Array.from(set)];
@@ -375,7 +350,6 @@ export default function Jobs() {
           job={selectedJob}
           onClose={() => setShowDetailsModal(false)}
           onApply={() => handleApplyNow(selectedJob.id)}
-          parseAdditionalInfo={parseAdditionalInfo}
         />
       )}
 

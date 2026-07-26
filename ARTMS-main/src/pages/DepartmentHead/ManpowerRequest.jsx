@@ -13,7 +13,9 @@ import {
   FiAward,
   FiTarget,
   FiClock,
-  FiStar
+  FiStar,
+  FiPlus,
+  FiTrash2,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
@@ -107,35 +109,7 @@ function SectionCard({ eyebrow, title, description, children, badge, icon }) {
   );
 }
 
-/**
- * Parse a flat qualifications string (from Job Library) into structured fields.
- * The library stores qualifications as plain text; we do a best-effort extraction.
- * If the text contains the pipe-delimited format (from a previous PRF submission),
- * we parse that too.
- */
-function parseQualifications(raw = "") {
-  if (!raw) return {};
-  const result = {};
-
-  // Try pipe-delimited key: value format first
-  if (raw.includes("|")) {
-    raw.split("|").forEach((part) => {
-      const idx = part.indexOf(":");
-      if (idx === -1) return;
-      const key = part.slice(0, idx).trim().toLowerCase().replace(/\s+/g, "_");
-      const val = part.slice(idx + 1).trim();
-      if (key.includes("educational") || key.includes("education")) result.educational_background = val;
-      else if (key.includes("experience")) result.work_experience = val;
-      else if (key.includes("skill")) result.skills = val;
-      else if (key.includes("other")) result.other_characteristics = val;
-    });
-    return result;
-  }
-
-  // Otherwise treat the whole qualifications block as a description to pre-fill
-  result.educational_background = raw;
-  return result;
-}
+// Function parseQualifications removed as Job Library now provides structured arrays
 
 export default function ManpowerRequest() {
   const { user } = useAuth();
@@ -167,10 +141,8 @@ export default function ManpowerRequest() {
     needed_by: "",
     plantilla_type: "",
     replacement_for: "",
-    educational_background: "",
-    work_experience: "",
-    skills: "",
-    other_characteristics: "",
+    qualifications: [],
+    responsibilities: [],
     headcount: 1,
     urgency: "medium",
     high_fit_min: 75,
@@ -192,28 +164,54 @@ export default function ManpowerRequest() {
         ...prev,
         job_library_id: "",
         position_needed: "",
-        educational_background: "",
-        work_experience: "",
-        skills: "",
-        other_characteristics: "",
+        qualifications: [],
+        responsibilities: [],
       }));
       setAutoFilled(false);
       return;
     }
 
-    const parsed = parseQualifications(selected.qualifications);
-
     setForm((prev) => ({
       ...prev,
       job_library_id: selected.id,
       position_needed: selected.job_title,
-      // Step 3 auto-populate from qualifications
-      educational_background: parsed.educational_background || prev.educational_background,
-      work_experience: parsed.work_experience || prev.work_experience,
-      skills: parsed.skills || prev.skills,
-      other_characteristics: parsed.other_characteristics || prev.other_characteristics,
+      // Step 3 auto-populate from nested arrays
+      qualifications: selected.qualifications || [],
+      responsibilities: selected.responsibilities || [],
     }));
     setAutoFilled(true);
+  };
+
+  // ── Array operations for nested items ──
+  const handleAddBlock = (field) => {
+    const newBlock = { id: Date.now(), title: "", details: [] };
+    setForm({ ...form, [field]: [...(form[field] || []), newBlock] });
+  };
+  const handleRemoveBlock = (field, idx) => {
+    const arr = [...(form[field] || [])];
+    arr.splice(idx, 1);
+    setForm({ ...form, [field]: arr });
+  };
+  const handleUpdateBlockTitle = (field, idx, val) => {
+    const arr = [...(form[field] || [])];
+    arr[idx].title = val;
+    setForm({ ...form, [field]: arr });
+  };
+  const handleAddDetail = (field, blockIdx) => {
+    const arr = [...(form[field] || [])];
+    if (!arr[blockIdx].details) arr[blockIdx].details = [];
+    arr[blockIdx].details.push({ id: Date.now() + Math.random(), value: "" });
+    setForm({ ...form, [field]: arr });
+  };
+  const handleRemoveDetail = (field, blockIdx, detailIdx) => {
+    const arr = [...(form[field] || [])];
+    arr[blockIdx].details.splice(detailIdx, 1);
+    setForm({ ...form, [field]: arr });
+  };
+  const handleUpdateDetailValue = (field, blockIdx, detailIdx, val) => {
+    const arr = [...(form[field] || [])];
+    arr[blockIdx].details[detailIdx].value = val;
+    setForm({ ...form, [field]: arr });
   };
 
   const handleSubmit = async (e) => {
@@ -233,10 +231,6 @@ export default function ManpowerRequest() {
     }
 
     const justification = [
-      form.educational_background && `Educational Background: ${form.educational_background}`,
-      form.work_experience && `Work Experience: ${form.work_experience}`,
-      form.skills && `Skills: ${form.skills}`,
-      form.other_characteristics && `Other: ${form.other_characteristics}`,
       `Employment Status: ${form.employment_status.replace(/_/g, " ")}`,
       `Plantilla Type: ${form.plantilla_type.replace(/_/g, " ")}`,
       form.replacement_for && `Replacement For: ${form.replacement_for}`,
@@ -249,6 +243,8 @@ export default function ManpowerRequest() {
       position_needed: form.position_needed,
       headcount: Number(form.headcount) || 1,
       justification,
+      qualifications: form.qualifications,
+      responsibilities: form.responsibilities,
       needed_by: form.needed_by || null,
       urgency: form.urgency,
       fit_threshold_high: Number(form.high_fit_min) || 75,
@@ -524,69 +520,149 @@ export default function ManpowerRequest() {
               : "Fill in the specific requirements for this position."
           }
         >
-          <div className="grid gap-6">
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiAward size={14} className="text-[#F97316]" />
-                  <span>Educational Background</span>
-                </div>
-              </label>
-              <input
-                type="text"
-                value={form.educational_background}
-                onChange={(e) => set("educational_background", e.target.value)}
-                className={inputClass}
-                placeholder="e.g. Bachelor's Degree in any field"
-              />
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Qualifications */}
+            <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-slate-50/50 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                  <FiAward size={16} className="text-[#F97316]" />
+                  Qualifications
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleAddBlock("qualifications")}
+                  className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300"
+                >
+                  <FiPlus size={14} /> Add Background
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {(form.qualifications || []).map((block, idx) => (
+                  <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-200">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <input
+                        type="text"
+                        value={block.title}
+                        onChange={(e) => handleUpdateBlockTitle("qualifications", idx, e.target.value)}
+                        placeholder="e.g., Educational Background"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBlock("qualifications", idx)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(block.details || []).map((detail, dIdx) => (
+                        <div key={detail.id || dIdx} className="flex items-start gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"></span>
+                          <textarea
+                            rows={1}
+                            value={detail.value}
+                            onChange={(e) => handleUpdateDetailValue("qualifications", idx, dIdx, e.target.value)}
+                            placeholder="Add a detail..."
+                            className="w-full resize-none rounded-lg border border-transparent bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDetail("qualifications", idx, dIdx)}
+                            className="mt-1 shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                          >
+                            <FiTrash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => handleAddDetail("qualifications", idx)}
+                        className="ml-4 mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        <FiPlus size={14} /> Add Detail
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!form.qualifications || form.qualifications.length === 0) && (
+                  <p className="text-center text-sm text-slate-500 italic">No qualifications added yet.</p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiBriefcase size={14} className="text-[#F97316]" />
-                  <span>Work Experience</span>
-                </div>
-              </label>
-              <textarea
-                rows={3}
-                value={form.work_experience}
-                onChange={(e) => set("work_experience", e.target.value)}
-                className={textareaClass}
-                placeholder="e.g. At least 1 year of BPO or customer service experience"
-              />
-            </div>
+            {/* Responsibilities */}
+            <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-slate-50/50 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                  <FiBriefcase size={16} className="text-[#F97316]" />
+                  Responsibilities
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleAddBlock("responsibilities")}
+                  className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300"
+                >
+                  <FiPlus size={14} /> Add Category
+                </button>
+              </div>
 
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiStar size={14} className="text-[#F97316]" />
-                  <span>Skills</span>
-                </div>
-              </label>
-              <textarea
-                rows={2}
-                value={form.skills}
-                onChange={(e) => set("skills", e.target.value)}
-                className={textareaClass}
-                placeholder="e.g. Strong communication, MS Office, CRM tools"
-              />
-            </div>
+              <div className="space-y-4">
+                {(form.responsibilities || []).map((block, idx) => (
+                  <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-200">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <input
+                        type="text"
+                        value={block.title}
+                        onChange={(e) => handleUpdateBlockTitle("responsibilities", idx, e.target.value)}
+                        placeholder="e.g., Core Duties"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBlock("responsibilities", idx)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </div>
 
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiCheckCircle size={14} className="text-[#F97316]" />
-                  <span>Other Preferred Characteristics / Licenses</span>
-                </div>
-              </label>
-              <input
-                type="text"
-                value={form.other_characteristics}
-                onChange={(e) => set("other_characteristics", e.target.value)}
-                className={inputClass}
-                placeholder="e.g. Amenable to shifting schedules, has NC II"
-              />
+                    <div className="space-y-2">
+                      {(block.details || []).map((detail, dIdx) => (
+                        <div key={detail.id || dIdx} className="flex items-start gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"></span>
+                          <textarea
+                            rows={1}
+                            value={detail.value}
+                            onChange={(e) => handleUpdateDetailValue("responsibilities", idx, dIdx, e.target.value)}
+                            placeholder="Add a detail..."
+                            className="w-full resize-none rounded-lg border border-transparent bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDetail("responsibilities", idx, dIdx)}
+                            className="mt-1 shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                          >
+                            <FiTrash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => handleAddDetail("responsibilities", idx)}
+                        className="ml-4 mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        <FiPlus size={14} /> Add Detail
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!form.responsibilities || form.responsibilities.length === 0) && (
+                  <p className="text-center text-sm text-slate-500 italic">No responsibilities added yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </SectionCard>
@@ -710,74 +786,6 @@ export default function ManpowerRequest() {
                 Scores below the Medium threshold will be classified as{" "}
                 <span className="font-bold text-red-600">Low Fit</span>. The AI will automatically evaluate applicants based on these thresholds.
               </p>
-            </div>
-          </div>
-        </SectionCard>
-
-        {/* ── For Human Resources Department ──────────────────────────────── */}
-        <SectionCard
-          eyebrow="HR Use Only"
-          title="For Human Resources Department"
-          icon={<FiAlertCircle size={18} />}
-          description="These fields will be completed by HR once your request is received and processed."
-        >
-          <div className="grid gap-5 sm:grid-cols-3">
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiClock size={14} className="text-slate-400" />
-                  <span>Date of Receipt</span>
-                </div>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Pending HR review"
-                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiUsers size={14} className="text-slate-400" />
-                  <span>Position Filled Up By</span>
-                </div>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Pending HR review"
-                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>
-                <div className="flex items-center gap-2">
-                  <FiCalendar size={14} className="text-slate-400" />
-                  <span>Date Start</span>
-                </div>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Pending HR review"
-                  className={`${inputClass} cursor-not-allowed bg-slate-100 text-slate-400`}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                </div>
-              </div>
             </div>
           </div>
         </SectionCard>
