@@ -30,10 +30,12 @@ class JobLibrary extends Model
     ];
 
     protected $casts = [
-        'approved_at' => 'datetime',
-        'is_active'   => 'boolean',
-        'salary_min'  => 'decimal:2',
-        'salary_max'  => 'decimal:2',
+        'approved_at'      => 'datetime',
+        'is_active'        => 'boolean',
+        'salary_min'       => 'decimal:2',
+        'salary_max'       => 'decimal:2',
+        'qualifications'   => 'array',
+        'responsibilities' => 'array',
     ];
 
     public function creator()

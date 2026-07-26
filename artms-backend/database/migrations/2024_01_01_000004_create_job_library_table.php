@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('job_title');
             $table->text('job_description');
-            $table->text('qualifications');
-            $table->text('responsibilities');
+            $table->json('qualifications');
+            $table->json('responsibilities');
             $table->string('job_category')->nullable();
             $table->string('employment_type')->default('full_time');
             $table->decimal('salary_min', 12, 2)->nullable();

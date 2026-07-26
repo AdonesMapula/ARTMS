@@ -16,12 +16,53 @@ import Badge from "../components/ui/Badge";
  * @param {function} onApply - Apply callback
  * @param {function} parseAdditionalInfo - Function to parse additional job info
  */
-export default function JobDetailsModal({ open, job, onClose, onApply, parseAdditionalInfo }) {
+export default function JobDetailsModal({ open, job, onClose, onApply }) {
   if (!job) return null;
   
   const jobLibrary = job.job_library || {};
   const department = job.department || {};
-  const additionalInfo = parseAdditionalInfo(job);
+
+  const qualifications = job.qualifications || jobLibrary.qualifications || [];
+  const responsibilities = job.responsibilities || jobLibrary.responsibilities || [];
+
+  const NestedListRenderer = ({ items, label }) => {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return (
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-[#F97316]" />
+            <h3 className="font-bold text-[#111A62]">{label}</h3>
+          </div>
+          <p className="text-sm text-slate-500 italic">No specific {label.toLowerCase()} provided.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-[#F97316]" />
+          <h3 className="font-bold text-[#111A62]">{label}</h3>
+        </div>
+        <div className="space-y-4">
+          {items.map((block, idx) => (
+            <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 p-3 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-800">{block.title}</h4>
+              {block.details && block.details.length > 0 && (
+                <ul className="mt-2 space-y-1 pl-4 list-disc marker:text-slate-300">
+                  {block.details.map((detail, dIdx) => (
+                    <li key={dIdx} className="text-sm text-slate-600 pl-1 leading-relaxed">
+                      {detail.value}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Modal
@@ -85,107 +126,9 @@ export default function JobDetailsModal({ open, job, onClose, onApply, parseAddi
 
           {/* Responsibilities & Qualifications */}
           <div className="grid gap-4 md:grid-cols-2">
-            {jobLibrary.responsibilities && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-[#F97316]" />
-                  <h3 className="font-bold text-[#111A62]">Responsibilities</h3>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {jobLibrary.responsibilities}
-                </p>
-              </div>
-            )}
-            {jobLibrary.qualifications && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-[#F97316]" />
-                  <h3 className="font-bold text-[#111A62]">Qualifications</h3>
-                </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {jobLibrary.qualifications}
-                </p>
-              </div>
-            )}
+            <NestedListRenderer items={responsibilities} label="Responsibilities" />
+            <NestedListRenderer items={qualifications} label="Qualifications" />
           </div>
-
-          {/* Additional Requirements */}
-          {(additionalInfo.education || additionalInfo.workExp || additionalInfo.skills || additionalInfo.other) && (
-            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Award className="h-5 w-5 text-[#111A62]" />
-                <h3 className="font-bold text-[#111A62]">Additional Requirements</h3>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {additionalInfo.education && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <GraduationCap className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Educational Background</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.education}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.workExp && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10">
-                      <Briefcase className="h-5 w-5 text-[#F97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Work Experience</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.workExp}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.skills && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <Award className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Skills Required</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.skills}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.employmentStatus && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F97316]/10">
-                      <Building2 className="h-5 w-5 text-[#F97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Employment Status</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.employmentStatus}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.plantillaType && (
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10">
-                      <FileText className="h-5 w-5 text-[#111A62]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Plantilla Type</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.plantillaType}</p>
-                    </div>
-                  </div>
-                )}
-                {additionalInfo.other && (
-                  <div className="flex gap-3 sm:col-span-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                      <AlertCircle className="h-5 w-5 text-slate-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Other Requirements</p>
-                      <p className="mt-1 text-sm font-medium text-slate-900">{additionalInfo.other}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* CTA */}
           <div className="rounded-xl border-2 border-[#F97316]/20 bg-gradient-to-br from-orange-50 to-white p-6 text-center">

@@ -44,14 +44,17 @@ class JobPostingController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'job_library_id'      => ['nullable', 'exists:job_library,id'],
-            'department_id'       => ['required', 'exists:departments,id'],
-            'manpower_request_id' => ['nullable', 'exists:manpower_requests,id'],
-            'vacancies_count'     => ['required', 'integer', 'min:1'],
-            'location'            => ['nullable', 'string'],
-            'description'         => ['nullable', 'string'],
-            'posting_date'        => ['nullable', 'date'],
-            'closing_date'        => ['nullable', 'date', 'after:posting_date'],
+            'job_library_id'       => ['nullable', 'exists:job_library,id'],
+            'department_id'        => ['required', 'exists:departments,id'],
+            'manpower_request_id'  => ['nullable', 'exists:manpower_requests,id'],
+            'vacancies_count'      => ['required', 'integer', 'min:1'],
+            'location'             => ['nullable', 'string'],
+            'description'          => ['nullable', 'string'],
+            'posting_date'         => ['nullable', 'date'],
+            'closing_date'         => ['nullable', 'date', 'after:posting_date'],
+            'qualifications'       => ['nullable', 'array'],
+            'responsibilities'     => ['nullable', 'array'],
+            'is_modified_from_prf' => ['boolean'],
         ]);
 
         // If job_library_id is null but manpower_request_id is provided, 
@@ -71,14 +74,31 @@ class JobPostingController extends Controller
             ], 422);
         }
 
-        $data['requested_by']    = auth()->id();
-        $data['approval_status'] = 'pending';
-        $data['status']          = 'pending_approval';
+        $data['requested_by'] = auth()->id();
+        $isModified = $request->input('is_modified_from_prf', false);
+        $data['is_modified_from_prf'] = $isModified;
+
+        if (!$isModified) {
+            // Unmodified data from approved PRF -> Auto-publish bypass
+            $data['approval_status'] = 'approved';
+            $data['status']          = 'published';
+            $data['is_published']    = true;
+            $data['approved_by']     = auth()->id(); // Auto-approved by the poster, or leave null to mean system-approved
+            $data['approved_at']     = now();
+            $data['posting_date']    = now();
+            $message = 'Job posting was instantly published (no modifications to requirements).';
+        } else {
+            // Modified -> Needs COO Approval
+            $data['approval_status'] = 'pending';
+            $data['status']          = 'pending_approval';
+            $data['is_published']    = false;
+            $message = 'Job posting submitted for COO approval (requirements were modified).';
+        }
 
         $posting = JobPosting::create($data);
         AuditLog::record('create', 'job_posting', "Created job posting ID {$posting->id}");
 
-        return response()->json(['message' => 'Job posting submitted for COO approval.', 'posting' => $posting], 201);
+        return response()->json(['message' => $message, 'posting' => $posting], 201);
     }
 
     public function show(JobPosting $jobPosting): JsonResponse
@@ -93,11 +113,26 @@ class JobPostingController extends Controller
         $data = $request->validate([
             'vacancies_count' => ['sometimes', 'integer', 'min:1'],
             'closing_date'    => ['nullable', 'date'],
+            'qualifications'       => ['nullable', 'array'],
+            'responsibilities'     => ['nullable', 'array'],
+            'is_modified_from_prf' => ['boolean'],
         ]);
+
+        $isModified = $request->input('is_modified_from_prf', false);
+
+        if ($isModified) {
+            $data['approval_status'] = 'pending';
+            $data['status']          = 'pending_approval';
+            $data['is_published']    = false;
+        }
 
         $jobPosting->update($data);
 
-        return response()->json(['message' => 'Job posting updated.', 'posting' => $jobPosting->fresh()]);
+        $message = $isModified 
+            ? 'Job posting updated and submitted for COO approval.' 
+            : 'Job posting updated.';
+
+        return response()->json(['message' => $message, 'posting' => $jobPosting->fresh()]);
     }
 
     public function destroy(JobPosting $jobPosting): JsonResponse
@@ -120,9 +155,11 @@ class JobPostingController extends Controller
         $data = $request->validate([
             'status'  => ['required', 'in:approved,rejected'],
             'remarks' => ['nullable', 'string'],
+            'qualifications' => ['nullable', 'array'],
+            'responsibilities' => ['nullable', 'array'],
         ]);
 
-        $jobPosting->update([
+        $updateData = [
             'approval_status'  => $data['status'],
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
@@ -130,7 +167,16 @@ class JobPostingController extends Controller
             'status'           => $data['status'] === 'approved' ? 'published' : 'cancelled',
             'is_published'     => $data['status'] === 'approved',
             'posting_date'     => $data['status'] === 'approved' ? today() : null,
-        ]);
+        ];
+
+        if ($request->has('qualifications')) {
+            $updateData['qualifications'] = $data['qualifications'];
+        }
+        if ($request->has('responsibilities')) {
+            $updateData['responsibilities'] = $data['responsibilities'];
+        }
+
+        $jobPosting->update($updateData);
 
         AuditLog::record('approve', 'job_posting', "Job posting {$data['status']} ID {$jobPosting->id}");
 

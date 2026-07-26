@@ -162,8 +162,24 @@ class JobPostingSeeder extends Seeder
             $lib = JobLibrary::create([
                 'job_title'        => $job['job_title'],
                 'job_description'  => $job['job_description'],
-                'qualifications'   => $job['qualifications'],
-                'responsibilities' => $job['responsibilities'],
+                'qualifications'   => [
+                    [
+                        'id' => uniqid(),
+                        'title' => 'Core Qualifications',
+                        'details' => [
+                            ['id' => uniqid(), 'value' => $job['qualifications']]
+                        ]
+                    ]
+                ],
+                'responsibilities' => [
+                    [
+                        'id' => uniqid(),
+                        'title' => 'Key Responsibilities',
+                        'details' => [
+                            ['id' => uniqid(), 'value' => $job['responsibilities']]
+                        ]
+                    ]
+                ],
                 'job_category'     => $job['job_category'],
                 'employment_type'  => $job['employment_type'],
                 'salary_min'       => $job['salary_min'],
@@ -177,19 +193,22 @@ class JobPostingSeeder extends Seeder
 
             // Create published job posting
             JobPosting::create([
-                'job_library_id'   => $lib->id,
-                'department_id'    => $dept?->id,
-                'requested_by'     => $hrAdmin->id,
-                'vacancies_count'  => $job['vacancies'],
-                'posting_date'     => now()->subDays(rand(1, 10))->toDateString(),
-                'closing_date'     => now()->addDays(rand(14, 45))->toDateString(),
-                'status'           => 'published',
-                'approval_status'  => 'approved',
-                'approved_by'      => $coo?->id,
-                'approved_at'      => now()->subDays(rand(1, 5)),
-                'is_published'     => true,
-                'location'         => $job['location'],
-                'description'      => $job['job_description'],
+                'job_library_id'       => $lib->id,
+                'department_id'        => $dept?->id,
+                'requested_by'         => $hrAdmin->id,
+                'vacancies_count'      => $job['vacancies'],
+                'posting_date'         => now()->subDays(rand(1, 10))->toDateString(),
+                'closing_date'         => now()->addDays(rand(14, 45))->toDateString(),
+                'status'               => 'published',
+                'approval_status'      => 'approved',
+                'approved_by'          => $coo?->id,
+                'approved_at'          => now()->subDays(rand(1, 5)),
+                'is_published'         => true,
+                'location'             => $job['location'],
+                'description'          => $job['job_description'],
+                'qualifications'       => $lib->qualifications,
+                'responsibilities'     => $lib->responsibilities,
+                'is_modified_from_prf' => false,
             ]);
 
             $summary[] = [

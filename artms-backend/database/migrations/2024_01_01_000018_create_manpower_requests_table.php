@@ -15,7 +15,9 @@ return new class extends Migration
             $table->foreignId('job_library_id')->nullable()->constrained('job_library')->nullOnDelete();
             $table->string('position_needed');
             $table->integer('headcount')->default(1);
-            $table->text('justification');
+            $table->text('justification')->nullable();
+            $table->json('qualifications')->nullable();
+            $table->json('responsibilities')->nullable();
             $table->date('needed_by')->nullable();
             $table->enum('urgency', ['low', 'medium', 'high', 'critical'])->default('medium');
             $table->enum('status', ['pending', 'approved', 'rejected', 'fulfilled'])->default('pending');

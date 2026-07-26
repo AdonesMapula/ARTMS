@@ -4,6 +4,7 @@ import {
   Plus, X, AlertCircle, FileText, Edit, Trash2, Filter, RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import { FiAward, FiBriefcase } from "react-icons/fi";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
@@ -37,37 +38,9 @@ const taClass =
 const selectClass =
   "w-full rounded-lg border border-[var(--artms-border)] bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]";
 
-/**
- * Parse the pipe-delimited justification string stored on the PRF back into
- * structured fields so we can pre-fill the posting's requirement fields.
- * e.g. "Educational Background: X | Work Experience: Y | Skills: Z | ..."
- */
-function parseJustification(raw = "") {
-  const result = {
-    educational_background: "",
-    work_experience: "",
-    skills: "",
-    other: "",
-    employment_status: "",
-    plantilla_type: "",
-  };
-  if (!raw) return result;
-
-  raw.split("|").forEach((part) => {
-    const idx = part.indexOf(":");
-    if (idx === -1) return;
-    const key = part.slice(0, idx).trim().toLowerCase();
-    const val = part.slice(idx + 1).trim();
-
-    if (key.includes("educational")) result.educational_background = val;
-    else if (key.includes("experience")) result.work_experience = val;
-    else if (key.includes("skill")) result.skills = val;
-    else if (key.includes("other")) result.other = val;
-    else if (key.includes("employment")) result.employment_status = val;
-    else if (key.includes("plantilla")) result.plantilla_type = val;
-  });
-
-  return result;
+// Helpers for comparing nested arrays
+function deepEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 export default function JobPosting() {
@@ -88,12 +61,8 @@ export default function JobPosting() {
   const [prfToDelete, setPrfToDelete] = useState(null);
   const [formData, setFormData] = useState({
     location: "",
-    educational_background: "",
-    work_experience: "",
-    skills: "",
-    other: "",
-    employment_status: "",
-    plantilla_type: "",
+    qualifications: [],
+    responsibilities: [],
     closing_date: "",
   });
   const [alertModal, setAlertModal] = useState({
@@ -129,20 +98,44 @@ export default function JobPosting() {
     }
   };
 
+  // ── Array operations for nested items ──
+  const handleAddBlock = (field) => {
+    const newBlock = { id: Date.now(), title: "", details: [] };
+    setFormData({ ...formData, [field]: [...(formData[field] || []), newBlock] });
+  };
+  const handleRemoveBlock = (field, idx) => {
+    const arr = [...(formData[field] || [])];
+    arr.splice(idx, 1);
+    setFormData({ ...formData, [field]: arr });
+  };
+  const handleUpdateBlockTitle = (field, idx, val) => {
+    const arr = [...(formData[field] || [])];
+    arr[idx].title = val;
+    setFormData({ ...formData, [field]: arr });
+  };
+  const handleAddDetail = (field, blockIdx) => {
+    const arr = [...(formData[field] || [])];
+    if (!arr[blockIdx].details) arr[blockIdx].details = [];
+    arr[blockIdx].details.push({ id: Date.now() + Math.random(), value: "" });
+    setFormData({ ...formData, [field]: arr });
+  };
+  const handleRemoveDetail = (field, blockIdx, detailIdx) => {
+    const arr = [...(formData[field] || [])];
+    arr[blockIdx].details.splice(detailIdx, 1);
+    setFormData({ ...formData, [field]: arr });
+  };
+  const handleUpdateDetailValue = (field, blockIdx, detailIdx, val) => {
+    const arr = [...(formData[field] || [])];
+    arr[blockIdx].details[detailIdx].value = val;
+    setFormData({ ...formData, [field]: arr });
+  };
+
   const openCreateModal = (prf) => {
     setSelectedPRF(prf);
-
-    // Pre-fill requirement fields from the PRF's justification string
-    const parsed = parseJustification(prf.justification);
-
     setFormData({
       location: "",
-      educational_background: parsed.educational_background,
-      work_experience: parsed.work_experience,
-      skills: parsed.skills,
-      other: parsed.other,
-      employment_status: parsed.employment_status,
-      plantilla_type: parsed.plantilla_type,
+      qualifications: prf.qualifications || [],
+      responsibilities: prf.responsibilities || [],
       closing_date: "",
     });
     setCreateModalOpen(true);
@@ -151,8 +144,6 @@ export default function JobPosting() {
   const handleCreatePosting = async () => {
     if (!selectedPRF) return;
 
-    // The job_library_id MUST come from the PRF — if it's missing the PRF was
-    // created before the Job Library flow was implemented.
     if (!selectedPRF.job_library_id) {
       setAlertModal({
         open: true,
@@ -165,16 +156,9 @@ export default function JobPosting() {
       return;
     }
 
-    const descriptionParts = [
-      formData.educational_background && `Educational Background: ${formData.educational_background}`,
-      formData.work_experience        && `Work Experience: ${formData.work_experience}`,
-      formData.skills                 && `Skills: ${formData.skills}`,
-      formData.other                  && `Other: ${formData.other}`,
-      formData.employment_status      && `Employment Status: ${formData.employment_status}`,
-      formData.plantilla_type         && `Plantilla Type: ${formData.plantilla_type}`,
-    ]
-      .filter(Boolean)
-      .join(" | ");
+    const isModified = 
+      !deepEqual(formData.qualifications, selectedPRF.qualifications || []) ||
+      !deepEqual(formData.responsibilities, selectedPRF.responsibilities || []);
 
     try {
       await api.post("/job-postings", {
@@ -183,15 +167,19 @@ export default function JobPosting() {
         manpower_request_id: selectedPRF.id,
         vacancies_count:     selectedPRF.headcount,
         location:            formData.location,
-        description:         descriptionParts,
         closing_date:        formData.closing_date || null,
+        qualifications:      formData.qualifications,
+        responsibilities:    formData.responsibilities,
+        is_modified_from_prf: isModified,
       });
 
       setAlertModal({
         open: true,
         variant: "success",
         title: "Success",
-        message: "Job posting created and submitted for COO approval.",
+        message: isModified
+          ? "Job posting submitted for COO approval (requirements were modified)."
+          : "Job posting was instantly published (no modifications made).",
       });
       setCreateModalOpen(false);
       fetchData();
@@ -209,29 +197,24 @@ export default function JobPosting() {
   const handleEditPosting = async () => {
     if (!selectedPosting) return;
 
-    const descriptionParts = [
-      formData.educational_background && `Educational Background: ${formData.educational_background}`,
-      formData.work_experience        && `Work Experience: ${formData.work_experience}`,
-      formData.skills                 && `Skills: ${formData.skills}`,
-      formData.other                  && `Other: ${formData.other}`,
-      formData.employment_status      && `Employment Status: ${formData.employment_status}`,
-      formData.plantilla_type         && `Plantilla Type: ${formData.plantilla_type}`,
-    ]
-      .filter(Boolean)
-      .join(" | ");
+    const isModified = 
+      !deepEqual(formData.qualifications, selectedPosting.qualifications || selectedPosting.job_library?.qualifications || []) ||
+      !deepEqual(formData.responsibilities, selectedPosting.responsibilities || selectedPosting.job_library?.responsibilities || []);
 
     try {
-      await api.put(`/job-postings/${selectedPosting.id}`, {
+      const response = await api.put(`/job-postings/${selectedPosting.id}`, {
         location: formData.location,
-        description: descriptionParts,
         closing_date: formData.closing_date || null,
+        qualifications: formData.qualifications,
+        responsibilities: formData.responsibilities,
+        is_modified_from_prf: isModified,
       });
 
       setAlertModal({
         open: true,
         variant: "success",
         title: "Success",
-        message: "Job posting updated successfully.",
+        message: response.data.message || "Job posting updated successfully.",
       });
       setEditModalOpen(false);
       fetchData();
@@ -274,40 +257,13 @@ export default function JobPosting() {
   const openEditModal = (posting) => {
     setSelectedPosting(posting);
 
-    // Parse description back into form fields
-    const desc = posting.description || "";
-    const parsed = {
-      educational_background: "",
-      work_experience: "",
-      skills: "",
-      other: "",
-      employment_status: "",
-      plantilla_type: "",
-    };
-
-    desc.split("|").forEach((part) => {
-      const idx = part.indexOf(":");
-      if (idx === -1) return;
-      const key = part.slice(0, idx).trim().toLowerCase();
-      const val = part.slice(idx + 1).trim();
-
-      if (key.includes("educational")) parsed.educational_background = val;
-      else if (key.includes("experience")) parsed.work_experience = val;
-      else if (key.includes("skill")) parsed.skills = val;
-      else if (key.includes("other")) parsed.other = val;
-      else if (key.includes("employment")) parsed.employment_status = val;
-      else if (key.includes("plantilla")) parsed.plantilla_type = val;
-    });
-
     setFormData({
       location: posting.location || "",
-      educational_background: parsed.educational_background,
-      work_experience: parsed.work_experience,
-      skills: parsed.skills,
-      other: parsed.other,
-      employment_status: parsed.employment_status,
-      plantilla_type: parsed.plantilla_type,
-      closing_date: posting.closing_date || "",
+      qualifications: posting.qualifications || [],
+      responsibilities: posting.responsibilities || [],
+      closing_date: posting.closing_date
+        ? new Date(posting.closing_date).toISOString().split("T")[0]
+        : "",
     });
     setEditModalOpen(true);
   };
@@ -371,6 +327,84 @@ export default function JobPosting() {
     closed: postings.filter((p) => p.status === "closed").length,
     totalApps: postings.reduce((s, p) => s + (p.applicants_count || 0), 0),
   };
+
+  const isCreateModified = selectedPRF ? (
+    !deepEqual(formData.qualifications, selectedPRF.qualifications || []) ||
+    !deepEqual(formData.responsibilities, selectedPRF.responsibilities || [])
+  ) : false;
+
+  const renderArrayEditor = (field, label, icon) => (
+    <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-slate-50/50 p-5 mt-4">
+      <div className="mb-4 flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+          <span className="text-[#F97316]">{icon}</span>
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={() => handleAddBlock(field)}
+          className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300 cursor-pointer"
+        >
+          <Plus size={14} /> Add Block
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {(formData[field] || []).map((block, idx) => (
+          <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-200">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <input
+                type="text"
+                value={block.title}
+                onChange={(e) => handleUpdateBlockTitle(field, idx, e.target.value)}
+                placeholder="Title..."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveBlock(field, idx)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {(block.details || []).map((detail, dIdx) => (
+                <div key={detail.id || dIdx} className="flex items-start gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"></span>
+                  <textarea
+                    rows={1}
+                    value={detail.value}
+                    onChange={(e) => handleUpdateDetailValue(field, idx, dIdx, e.target.value)}
+                    placeholder="Add a detail..."
+                    className="w-full resize-none rounded-lg border border-transparent bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDetail(field, idx, dIdx)}
+                    className="mt-1 shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleAddDetail(field, idx)}
+                className="ml-4 mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                <Plus size={14} /> Add Detail
+              </button>
+            </div>
+          </div>
+        ))}
+        {(!formData[field] || formData[field].length === 0) && (
+          <p className="text-center text-sm text-slate-500 italic">No {label.toLowerCase()} added yet.</p>
+        )}
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -727,10 +761,10 @@ export default function JobPosting() {
             </button>
             <button
               onClick={handleCreatePosting}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#111A62] bg-[#111A62] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#0d1449] hover:border-[#0d1449]"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-[#111A62] bg-[#111A62] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#0d1449] hover:border-[#0d1449] cursor-pointer"
             >
               <CheckCircle size={16} />
-              Submit for COO Approval
+              {isCreateModified ? "Submit for COO Approval" : "Ready for Posting"}
             </button>
           </div>
         }
@@ -822,126 +856,15 @@ export default function JobPosting() {
                   </div>
                 </div>
 
-                {/* Section: Requirements */}
+                {/* Section: Requirements & Qualifications */}
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-4">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                      Requirements &amp; Qualifications
+                      Requirements &amp; Responsibilities
                     </p>
-                    {(formData.educational_background ||
-                      formData.work_experience ||
-                      formData.skills) && (
-                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
-                        Pre-filled from PRF
-                      </span>
-                    )}
                   </div>
-                  <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4 space-y-4">
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-700">
-                        Educational Background
-                      </label>
-                      <textarea
-                        rows={2}
-                        className={taClass}
-                        placeholder="e.g., Bachelor's degree in Computer Science…"
-                        value={formData.educational_background}
-                        onChange={(e) =>
-                          setFormData({ ...formData, educational_background: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-700">
-                        Work Experience
-                      </label>
-                      <textarea
-                        rows={2}
-                        className={taClass}
-                        placeholder="e.g., At least 2 years of relevant experience…"
-                        value={formData.work_experience}
-                        onChange={(e) =>
-                          setFormData({ ...formData, work_experience: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-700">
-                        Skills
-                      </label>
-                      <textarea
-                        rows={2}
-                        className={taClass}
-                        placeholder="e.g., Proficient in React, Node.js, SQL…"
-                        value={formData.skills}
-                        onChange={(e) =>
-                          setFormData({ ...formData, skills: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-700">
-                        Other Requirements
-                      </label>
-                      <textarea
-                        rows={2}
-                        className={taClass}
-                        placeholder="e.g., Must be willing to work on-site, valid driver's license…"
-                        value={formData.other}
-                        onChange={(e) =>
-                          setFormData({ ...formData, other: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Employment Details */}
-                <div className="space-y-1">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                    Employment Details
-                  </p>
-                  <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                          Employment Status
-                        </label>
-                        <select
-                          className={selectClass}
-                          value={formData.employment_status}
-                          onChange={(e) =>
-                            setFormData({ ...formData, employment_status: e.target.value })
-                          }
-                        >
-                          <option value="">Select status…</option>
-                          <option value="Regular">Regular</option>
-                          <option value="Contractual">Contractual</option>
-                          <option value="Project Based">Project Based</option>
-                          <option value="Part-time">Part-time</option>
-                          <option value="Probationary">Probationary</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                          Plantilla Type
-                        </label>
-                        <select
-                          className={selectClass}
-                          value={formData.plantilla_type}
-                          onChange={(e) =>
-                            setFormData({ ...formData, plantilla_type: e.target.value })
-                          }
-                        >
-                          <option value="">Select type…</option>
-                          <option value="Regular">Regular</option>
-                          <option value="Additional">Additional</option>
-                          <option value="Replacement">Replacement</option>
-                          <option value="New Position">New Position</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                  {renderArrayEditor("qualifications", "Qualifications", <FiAward />)}
+                  {renderArrayEditor("responsibilities", "Responsibilities", <FiBriefcase />)}
                 </div>
               </>
             )}
@@ -1031,117 +954,15 @@ export default function JobPosting() {
               </div>
             </div>
 
-            {/* Section: Requirements */}
+            {/* Section: Requirements & Qualifications */}
             <div className="space-y-1">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Requirements &amp; Qualifications
-              </p>
-              <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4 space-y-4">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
-                    Educational Background
-                  </label>
-                  <textarea
-                    rows={2}
-                    className={taClass}
-                    placeholder="e.g., Bachelor's degree in Computer Science…"
-                    value={formData.educational_background}
-                    onChange={(e) =>
-                      setFormData({ ...formData, educational_background: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
-                    Work Experience
-                  </label>
-                  <textarea
-                    rows={2}
-                    className={taClass}
-                    placeholder="e.g., At least 2 years of relevant experience…"
-                    value={formData.work_experience}
-                    onChange={(e) =>
-                      setFormData({ ...formData, work_experience: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
-                    Skills
-                  </label>
-                  <textarea
-                    rows={2}
-                    className={taClass}
-                    placeholder="e.g., Proficient in React, Node.js, SQL…"
-                    value={formData.skills}
-                    onChange={(e) =>
-                      setFormData({ ...formData, skills: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700">
-                    Other Requirements
-                  </label>
-                  <textarea
-                    rows={2}
-                    className={taClass}
-                    placeholder="e.g., Must be willing to work on-site, valid driver's license…"
-                    value={formData.other}
-                    onChange={(e) =>
-                      setFormData({ ...formData, other: e.target.value })
-                    }
-                  />
-                </div>
+              <div className="flex items-center gap-2 mt-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  Requirements &amp; Responsibilities
+                </p>
               </div>
-            </div>
-
-            {/* Section: Employment Details */}
-            <div className="space-y-1">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Employment Details
-              </p>
-              <div className="rounded-xl border border-[var(--artms-border)] bg-slate-50/60 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                      Employment Status
-                    </label>
-                    <select
-                      className={selectClass}
-                      value={formData.employment_status}
-                      onChange={(e) =>
-                        setFormData({ ...formData, employment_status: e.target.value })
-                      }
-                    >
-                      <option value="">Select status…</option>
-                      <option value="Regular">Regular</option>
-                      <option value="Contractual">Contractual</option>
-                      <option value="Project Based">Project Based</option>
-                      <option value="Part-time">Part-time</option>
-                      <option value="Probationary">Probationary</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-800">
-                      Plantilla Type
-                    </label>
-                    <select
-                      className={selectClass}
-                      value={formData.plantilla_type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, plantilla_type: e.target.value })
-                      }
-                    >
-                      <option value="">Select type…</option>
-                      <option value="Regular">Regular</option>
-                      <option value="Additional">Additional</option>
-                      <option value="Replacement">Replacement</option>
-                      <option value="New Position">New Position</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              {renderArrayEditor("qualifications", "Qualifications", <FiAward />)}
+              {renderArrayEditor("responsibilities", "Responsibilities", <FiBriefcase />)}
             </div>
           </div>
         )}

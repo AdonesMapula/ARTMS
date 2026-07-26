@@ -17,6 +17,8 @@ class ManpowerRequest extends Model
         'position_needed',
         'headcount',
         'justification',
+        'qualifications',
+        'responsibilities',
         'needed_by',
         'urgency',
         'status',
@@ -28,8 +30,10 @@ class ManpowerRequest extends Model
     ];
 
     protected $casts = [
-        'needed_by'   => 'date',
-        'approved_at' => 'datetime',
+        'needed_by'        => 'date',
+        'approved_at'      => 'datetime',
+        'qualifications'   => 'array',
+        'responsibilities' => 'array',
     ];
 
     public function department()
