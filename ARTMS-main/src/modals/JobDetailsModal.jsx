@@ -67,11 +67,10 @@ export default function JobDetailsModal({ open, job, onClose, onApply }) {
   return (
     <Modal
       open={open}
-      title=""
       onClose={onClose}
-      className="max-w-4xl"
+      className="max-w-4xl p-0 overflow-hidden"
     >
-      <div className="max-h-[calc(90vh-200px)] overflow-y-auto px-1">
+      <div className="max-h-[85vh] overflow-y-auto p-6">
         {/* Header */}
         <div className="relative mb-6 rounded-2xl bg-gradient-to-br from-[#060F5A] via-[#111A62] to-[#1a2575] p-6 text-white shadow-xl overflow-hidden">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#F97316]/10 blur-2xl" aria-hidden="true" />
