@@ -129,7 +129,7 @@ const HERO_HEADLINES = [
   { prefix: "Streamlining Hiring with", highlight: "AI-Powered Precision" },
   { prefix: "Accelerate Growth through", highlight: "Intelligent Recruitment" },
   { prefix: "Empowering HR Teams with", highlight: "Smart Decision Support" },
-  { prefix: "Transforming Careers through", highlight: "Next-Gen Technology" },
+  { prefix: "Helping Careers through", highlight: "Next-Gen Technology" },
   { prefix: "AI Recruitment & Talent", highlight: "Management System" },
 ];
 
