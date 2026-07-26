@@ -1,431 +1,367 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FileText,
-  Upload,
-  CheckCircle2,
-  Clock,
-  Mail,
-  Phone,
-  Calendar,
-  UserCheck,
-  AlertCircle,
-  ChevronRight,
-  Search,
-  Edit3,
-  Send,
-  Eye,
-  Download,
-  Shield,
-  HelpCircle,
-  ArrowRight,
-  Briefcase,
+  FileText, Upload, CheckCircle2, Clock, Mail, Phone,
+  AlertCircle, ChevronRight, Search, Edit3, Eye,
+  Shield, HelpCircle, ArrowRight, Briefcase, ChevronDown,
+  Sparkles,
 } from "lucide-react";
+import Reveal from "../../components/ui/Reavel";
 
-const TOKENS = {
-  navy: "#060F5A",
-  navyInk: "#0B1B78",
-  paper: "#F8FAFC",
-  accent: "#F97316",
-  accentDark: "#EA580C",
-  slate: "#1E293B",
-  slateSoft: "#64748B",
-  line: "#E2E8F0",
+/* ─── Design tokens — identical to Home.jsx ────────────────────────────── */
+const T = {
+  navy:      "#060F5A",
+  navyInk:   "#0B1B78",
+  paper:     "#F8FAFC",
+  accent:    "#F97316",
+  accentDk:  "#EA580C",
+  slate:     "#1E293B",
+  soft:      "#64748B",
+  line:      "#E2E8F0",
 };
 
-/** Reusable Reveal animation component */
-function Reveal({ children, delay = 0, className = "" }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(22px)",
-        transition: `opacity 640ms ease ${delay}ms, transform 640ms ease ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-const APPLICATION_STEPS = [
+/* ─── Data ──────────────────────────────────────────────────────────────── */
+const STEPS = [
   {
-    id: 1,
-    icon: Search,
-    title: "Find Your Perfect Role",
-    description: "Browse our job postings and filter by department, location, or job type to discover opportunities that match your skills and career goals.",
-    tips: [
-      "Use the search bar to find specific positions",
-      "Read the full job description carefully",
-      "Check the required qualifications and responsibilities",
-      "Note the application deadline if specified",
-    ],
+    id: 1, icon: Search,
+    title: "Find Your Role",
+    body: "Browse open positions and filter by department, location, or keyword. Read the full description and check the application deadline before proceeding.",
+    tips: ["Use the search bar to find specific positions", "Read required qualifications carefully", "Note the application deadline"],
   },
   {
-    id: 2,
-    icon: FileText,
+    id: 2, icon: FileText,
     title: "Prepare Your Documents",
-    description: "Gather all required documents before starting your application. Having everything ready ensures a smooth submission process.",
-    tips: [
-      "Update your resume/CV with your latest experience",
-      "Save your resume as PDF (recommended) or DOC/DOCX",
-      "Keep file size under 5MB for faster upload",
-      "Use a professional filename (e.g., JohnDoe_Resume.pdf)",
-      "Prepare a cover letter tailored to the position (optional but recommended)",
-    ],
+    body: "Have your updated resume ready in PDF, DOCX, DOC, or TXT — under 10 MB. A tailored cover note (optional) strengthens your application.",
+    tips: ["Save resume as PDF for best compatibility", "Use a professional filename — e.g. JohnDoe_Resume.pdf", "Keep file size under 10 MB"],
   },
   {
-    id: 3,
-    icon: Edit3,
-    title: "Complete the Application Form",
-    description: "Fill out all required fields accurately. Our system uses this information to match you with the right opportunities.",
-    tips: [
-      "Provide accurate contact information (email and phone)",
-      "Double-check your email address for typos",
-      "Fill in all mandatory fields marked with an asterisk (*)",
-      "Be honest about your experience and qualifications",
-      "Review your entries before submitting",
-    ],
+    id: 3, icon: Upload,
+    title: "Upload Resume & Auto-Fill",
+    body: "Our AI reads your resume and pre-fills personal info, skills, and experience automatically. Review and correct any fields before proceeding.",
+    tips: ["Use clear section headers: Experience, Education, Skills", "List specific skills and tools you've used", "Verify auto-filled data is accurate"],
   },
   {
-    id: 4,
-    icon: Upload,
-    title: "Upload Your Resume",
-    description: "Our AI-powered system will automatically extract your skills and experience from your resume to match you with suitable positions.",
-    tips: [
-      "Ensure your resume is in a readable format (PDF, DOC, DOCX)",
-      "Use standard resume formatting for better AI parsing",
-      "Include clear section headers (Experience, Education, Skills)",
-      "List specific skills and technologies you've used",
-      "Verify the upload completes successfully before proceeding",
-    ],
+    id: 4, icon: Edit3,
+    title: "Complete the Form",
+    body: "Fill in all required fields marked with (*). Double-check your email and phone — this is how HR will contact you.",
+    tips: ["Verify your email address for typos", "Be honest about experience and qualifications", "Review all entries before submitting"],
   },
   {
-    id: 5,
-    icon: Eye,
-    title: "Review and Submit",
-    description: "Take a moment to review all the information you've provided. Once you're confident everything is correct, submit your application.",
-    tips: [
-      "Review all personal information for accuracy",
-      "Ensure your resume uploaded correctly",
-      "Read any additional instructions or requirements",
-      "Check the job title matches the position you want",
-      "Click 'Submit Application' when ready",
-    ],
+    id: 5, icon: Eye,
+    title: "Review & Submit",
+    body: "Check that the job title matches the position you want, your resume uploaded correctly, and your details are accurate. Then submit.",
+    tips: ["Confirm the job title is correct", "Ensure resume file uploaded successfully", "Accept the data privacy consent"],
   },
   {
-    id: 6,
-    icon: Mail,
+    id: 6, icon: Mail,
     title: "Confirmation & Next Steps",
-    description: "You'll receive an instant confirmation email. Our HR team will review your application and contact you about next steps.",
-    tips: [
-      "Check your email (including spam folder) for confirmation",
-      "Save the confirmation email for your records",
-      "Note the application reference number if provided",
-      "Keep your phone and email accessible",
-      "Be patient - review process may take 1-2 weeks",
-    ],
+    body: "You'll receive an email with your Application ID immediately. Save it — you'll need it to track your status. Our HR team reviews within 1–2 weeks.",
+    tips: ["Check spam folder if email doesn't arrive", "Keep your Application ID saved", "Respond promptly if HR reaches out"],
   },
 ];
 
-const DOCUMENT_REQUIREMENTS = [
+const DOCS = [
   {
-    icon: FileText,
-    title: "Resume/CV",
-    required: true,
-    description: "Your most up-to-date resume highlighting your experience, education, and skills.",
-    formats: "PDF, DOC, DOCX (Max 5MB)",
+    icon: FileText, title: "Resume / CV", required: true,
+    desc: "Your most up-to-date resume highlighting experience, education, and skills.",
+    sub: "PDF, DOC, DOCX · Max 10 MB",
   },
   {
-    icon: Edit3,
-    title: "Cover Letter",
-    required: false,
-    description: "A personalized letter explaining your interest in the position and company.",
-    formats: "Optional - Include in resume or upload separately",
+    icon: Edit3, title: "Cover Note", required: false,
+    desc: "A brief note explaining your interest and what you bring — not required, but recommended.",
+    sub: "Optional — add in the cover note field during application",
   },
   {
-    icon: Shield,
-    title: "Valid ID",
-    required: false,
-    description: "Government-issued ID may be required for certain positions during later stages.",
-    formats: "Required only if shortlisted",
+    icon: Shield, title: "Government ID", required: false,
+    desc: "May be required for certain positions, but only at the shortlisting or onboarding stage.",
+    sub: "Required only if shortlisted",
   },
 ];
 
-const FAQ_ITEMS = [
-  {
-    question: "Do I need to create an account to apply?",
-    answer: "No, you don't need an account to submit your application. Simply browse job postings and apply directly through our application form.",
-  },
-  {
-    question: "How long does the application process take?",
-    answer: "The initial application takes just 5-10 minutes to complete. After submission, our HR team typically reviews applications within 1-2 weeks and will contact shortlisted candidates.",
-  },
-  {
-    question: "What file formats are accepted for resumes?",
-    answer: "We accept PDF, DOC, and DOCX formats. PDF is recommended for best compatibility. Please keep your file size under 5MB.",
-  },
-  {
-    question: "Can I apply for multiple positions?",
-    answer: "Yes! You can submit separate applications for different positions that match your qualifications and interests.",
-  },
-  {
-    question: "What happens after I submit my application?",
-    answer: "You'll receive an immediate confirmation email. Our AI system will screen your resume, and our HR team will review qualified candidates. Shortlisted applicants will be contacted via email or phone for interviews.",
-  },
-  {
-    question: "How will I know if my application was successful?",
-    answer: "All applicants receive a confirmation email upon submission. Shortlisted candidates will be contacted directly for the next steps. If you don't hear from us within 3-4 weeks, the position may have been filled.",
-  },
-  {
-    question: "Can I edit my application after submission?",
-    answer: "Once submitted, applications cannot be edited. Please review all information carefully before submitting. If you need to update your application, you can contact our HR team directly.",
-  },
-  {
-    question: "What is AI screening and how does it work?",
-    answer: "Our AI system analyzes your resume to extract skills, experience, and qualifications, then matches them against job requirements. This helps ensure your application gets noticed for relevant positions. The final hiring decision is always made by our HR team.",
-  },
+const FAQS = [
+  { q: "Do I need an account to apply?",              a: "No account required. Apply directly from any job listing — no login or registration needed." },
+  { q: "How long does the application take?",         a: "5–10 minutes to complete. Our HR team reviews within 1–2 weeks and contacts shortlisted candidates." },
+  { q: "What file formats are accepted?",             a: "PDF, DOC, and DOCX. PDF is recommended for best AI parsing accuracy. Keep file size under 10 MB." },
+  { q: "Can I apply for multiple positions?",         a: "Yes — submit separate applications for each position that matches your qualifications." },
+  { q: "What happens after I submit?",                a: "You'll receive an immediate confirmation email with your Application ID. Our AI screens the resume; HR reviews and contacts shortlisted candidates." },
+  { q: "How will I know if I'm shortlisted?",         a: "Shortlisted candidates are contacted directly via email or phone. If you don't hear within 3–4 weeks, the position may have been filled." },
+  { q: "Can I edit my application after submitting?", a: "Applications cannot be edited after submission. Review everything carefully before clicking Submit. For urgent changes, contact HR directly." },
+  { q: "What is AI screening?",                       a: "Our AI extracts skills, experience, and qualifications from your resume and matches them to the job requirements. HR always makes the final hiring decision." },
 ];
 
-const TIPS_FOR_SUCCESS = [
-  {
-    icon: FileText,
-    title: "Tailor Your Resume",
-    description: "Customize your resume for each position, highlighting relevant skills and experience that match the job requirements.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Be Specific",
-    description: "Include specific achievements, metrics, and technologies you've worked with rather than generic statements.",
-  },
-  {
-    icon: Clock,
-    title: "Apply Early",
-    description: "Submit your application early in the posting period. Early applicants often receive priority review.",
-  },
-  {
-    icon: Phone,
-    title: "Stay Responsive",
-    description: "Keep your contact information current and respond promptly to any communications from our HR team.",
-  },
+const NOTICES = [
+  "ARTMS never charges any fee for job applications or the recruitment process.",
+  "Only apply through our official website. Be cautious of fraudulent postings.",
+  "Personal data is protected under the Data Privacy Act (RA 10173) and used only for recruitment.",
+  "Encounter an issue? Contact our HR support team immediately.",
 ];
 
+/* ─── Component ─────────────────────────────────────────────────────────── */
 export default function ApplicationGuide() {
-  const [heroLoaded, setHeroLoaded] = useState(false);
-  const [expandedFaq, setExpandedFaq] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
+  const [openStep, setOpenStep] = useState(null);
 
   useEffect(() => {
-    const t = requestAnimationFrame(() => setHeroLoaded(true));
-    return () => cancelAnimationFrame(t);
+    const raf = requestAnimationFrame(() => setLoaded(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
-    <div style={{ backgroundColor: TOKENS.paper, fontFamily: "Inter, sans-serif" }}>
-      
-      {/* ============ Hero Section ============ */}
-      <section className="relative overflow-hidden" style={{ backgroundColor: TOKENS.navy }}>
-        {/* Subtle grid background */}
+    <div style={{ backgroundColor: T.paper, fontFamily: "Inter, sans-serif" }}>
+
+      {/* ── HERO ── navy + photo wash, same structure as Home hero ─────── */}
+      <section className="relative isolate overflow-hidden">
+        {/* Background photo with navy wash */}
         <div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 -z-20 scale-105 bg-cover bg-center"
+          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2000&auto=format&fit=crop)" }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 -z-10"
+          style={{ background: `linear-gradient(135deg, rgba(6,15,90,0.96) 0%, rgba(11,27,120,0.90) 50%, rgba(6,15,90,0.82) 100%)` }}
+          aria-hidden="true"
+        />
+        {/* Subtle grid overlay — same as Home */}
+        <div
+          className="absolute inset-0 -z-10"
           style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-            `,
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)`,
             backgroundSize: "24px 24px",
+            maskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
           }}
           aria-hidden="true"
         />
 
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto flex min-h-[520px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-20 text-center lg:px-10">
+          {/* Badge */}
           <div
-            className="text-center transition-all duration-700"
+            className="mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-700"
             style={{
-              opacity: heroLoaded ? 1 : 0,
-              transform: heroLoaded ? "translateY(0)" : "translateY(20px)",
+              borderColor: "rgba(249,115,22,0.4)",
+              color: T.accent,
+              backgroundColor: "rgba(249,115,22,0.08)",
+              opacity: loaded ? 1 : 0,
+              transform: loaded ? "translateY(0)" : "translateY(10px)",
             }}
           >
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider"
-              style={{ borderColor: "rgba(249,115,22,0.4)", backgroundColor: "rgba(249,115,22,0.1)", color: TOKENS.accent }}
-            >
-              <Briefcase size={14} />
-              Application Guidelines
-            </div>
+            <Briefcase size={13} />
+            Application Guide
+          </div>
 
-            <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-              How to Apply for a Position at{" "}
-              <span style={{ color: TOKENS.accent }}>ARTMS</span>
-            </h1>
+          <h1
+            className="max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl"
+            style={{ opacity: loaded ? 1 : 0, transform: loaded ? "translateY(0)" : "translateY(24px)", transition: "all 700ms ease 100ms" }}
+          >
+            How to Apply at{" "}
+            <span style={{ color: T.accent }}>ARTMS</span>
+          </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-indigo-100/80 sm:text-lg">
-              Follow our simple step-by-step guide to submit a successful application. 
-              We've made the process quick, straightforward, and transparent.
-            </p>
+          <p
+            className="mt-5 max-w-xl text-base leading-relaxed text-indigo-100/75 sm:text-lg"
+            style={{ opacity: loaded ? 1 : 0, transform: loaded ? "translateY(0)" : "translateY(24px)", transition: "all 700ms ease 220ms" }}
+          >
+            Six quick steps — completely online, no account required. Our AI handles the heavy lifting so you can focus on the application.
+          </p>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link to="/jobs">
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
-                  style={{ backgroundColor: TOKENS.accent }}
-                >
-                  Browse Open Positions <ArrowRight size={16} />
-                </button>
-              </Link>
-            </div>
+          <div
+            className="mt-8 flex flex-col items-center gap-3 sm:flex-row"
+            style={{ opacity: loaded ? 1 : 0, transition: "all 700ms ease 340ms" }}
+          >
+            <Link to="/jobs">
+              <button className="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
+                style={{ backgroundColor: T.accent, boxShadow: "0 10px 30px -10px rgba(249,115,22,0.5)" }}>
+                Browse Open Positions <ArrowRight size={15} />
+              </button>
+            </Link>
+            <a href="#steps">
+              <button className="inline-flex items-center gap-2 rounded-xl border-2 px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
+                style={{ borderColor: "rgba(255,255,255,0.3)" }}>
+                View the Steps <ChevronDown size={15} />
+              </button>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ============ Application Steps ============ */}
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-24">
-        <Reveal>
-          <div className="text-center">
-            <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
-              Step-by-Step Process
-            </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ color: TOKENS.navy }}>
-              Your Application Journey
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base" style={{ color: TOKENS.slateSoft }}>
-              From finding the right job to receiving your confirmation email - here's what to expect.
-            </p>
+      {/* ── QUICK STATS BAR — same marquee-strip feel as Home ──────────── */}
+      <div style={{ backgroundColor: T.navy }} className="border-y border-white/10">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="grid grid-cols-3 divide-x" style={{ divideColor: "rgba(255,255,255,0.1)" }}>
+            {[
+              { val: "5–10 min", label: "To complete" },
+              { val: "6 steps",  label: "Simple process" },
+              { val: "100%",     label: "Online — no account" },
+            ].map((s, i) => (
+              <div key={i} className="px-6 py-5 text-center">
+                <p className="text-lg font-extrabold text-white">{s.val}</p>
+                <p className="mt-0.5 text-xs text-indigo-100/60">{s.label}</p>
+              </div>
+            ))}
           </div>
-        </Reveal>
+        </div>
+      </div>
 
-        <div className="mt-16 space-y-8">
-          {APPLICATION_STEPS.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <Reveal key={step.id} delay={index * 80}>
-                <div className="grid gap-6 rounded-2xl border bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md lg:grid-cols-[auto_1fr] lg:gap-8 lg:p-8"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  {/* Step number and icon */}
-                  <div className="flex items-start gap-4 lg:flex-col lg:items-center">
-                    <div
-                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
+      {/* ── APPLICATION STEPS — white bg + floating orbs (same as "What is ARTMS") */}
+      <section id="steps" className="relative isolate overflow-hidden py-20 lg:py-24">
+        {/* Animated floating blobs */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div className="absolute -left-24 top-10 h-72 w-72 animate-[float-slow_20s_ease-in-out_infinite] rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: T.navy }} />
+          <div className="absolute -right-24 bottom-10 h-80 w-80 animate-[float-slower_25s_ease-in-out_infinite] rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: T.accent }} />
+        </div>
+        {/* Faint dot pattern */}
+        <div className="pointer-events-none absolute inset-0 -z-10" style={{
+          backgroundImage: `radial-gradient(circle, ${T.accent} 1px, transparent 1px)`,
+          backgroundSize: "48px 48px",
+          opacity: 0.025,
+        }} aria-hidden="true" />
+
+        <div className="mx-auto max-w-5xl px-6 lg:px-10">
+          <Reveal>
+            <div className="text-center">
+              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: T.accent }}>
+                Step-by-Step Process
+              </p>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: T.navy }}>
+                Your Application Journey
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed" style={{ color: T.soft }}>
+                Click any step to see pro tips. From finding the right role to receiving your confirmation — here's exactly what to expect.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="mt-12 space-y-3">
+            {STEPS.map((step, i) => {
+              const Icon = step.icon;
+              const isOpen = openStep === step.id;
+              return (
+                <Reveal key={step.id} delay={i * 60}>
+                  <div
+                    className="overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm transition-all duration-300"
+                    style={{
+                      borderColor: isOpen ? T.accent : T.line,
+                      boxShadow: isOpen
+                        ? "0 8px 32px -12px rgba(249,115,22,0.18)"
+                        : "0 2px 8px -4px rgba(6,15,90,0.08)",
+                    }}
+                  >
+                    <button
+                      className="flex w-full items-center gap-4 px-5 py-4 text-left"
+                      onClick={() => setOpenStep(isOpen ? null : step.id)}
                     >
-                      <Icon size={28} />
-                    </div>
-                    <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white lg:mt-2"
-                      style={{ backgroundColor: TOKENS.accent }}
-                    >
-                      {step.id}
-                    </div>
-                  </div>
+                      {/* Step badge */}
+                      <div className="relative shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: "#EEF1FB", color: T.navy }}>
+                          <Icon size={18} />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white"
+                          style={{ backgroundColor: T.accent }}>
+                          {step.id}
+                        </div>
+                      </div>
 
-                  {/* Step content */}
-                  <div>
-                    <h3 className="text-xl font-extrabold" style={{ color: TOKENS.navy }}>
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-base leading-relaxed" style={{ color: TOKENS.slate }}>
-                      {step.description}
-                    </p>
-
-                    {/* Tips */}
-                    {step.tips && step.tips.length > 0 && (
-                      <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: TOKENS.paper }}>
-                        <p className="text-sm font-bold" style={{ color: TOKENS.navy }}>
-                          💡 Pro Tips:
+                      {/* Title */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-extrabold" style={{ color: isOpen ? T.accent : T.navy }}>
+                          {step.title}
                         </p>
-                        <ul className="mt-2 space-y-1.5">
-                          {step.tips.map((tip, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm" style={{ color: TOKENS.slateSoft }}>
-                              <ChevronRight size={16} className="mt-0.5 shrink-0" style={{ color: TOKENS.accent }} />
-                              <span>{tip}</span>
+                        <p className="mt-0.5 text-xs leading-relaxed line-clamp-1" style={{ color: T.soft }}>
+                          {step.body}
+                        </p>
+                      </div>
+
+                      <ChevronDown
+                        size={16}
+                        style={{ color: T.soft, flexShrink: 0, transition: "transform 300ms", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      />
+                    </button>
+
+                    {/* Expanded tips */}
+                    <div style={{ maxHeight: isOpen ? "320px" : "0", overflow: "hidden", transition: "max-height 400ms ease" }}>
+                      <div className="border-t px-5 pb-5 pt-4" style={{ borderColor: T.line, backgroundColor: T.paper }}>
+                        <p className="text-xs leading-relaxed mb-3" style={{ color: T.slate }}>{step.body}</p>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Sparkles size={12} style={{ color: T.accent }} />
+                          <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: T.navy }}>Pro tips</p>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {step.tips.map((tip, j) => (
+                            <li key={j} className="flex items-start gap-2 text-xs" style={{ color: T.soft }}>
+                              <ChevronRight size={12} className="mt-0.5 shrink-0" style={{ color: T.accent }} />
+                              {tip}
                             </li>
                           ))}
                         </ul>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </Reveal>
-            );
-          })}
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
+
+        <style>{`
+          @keyframes float-slow   { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
+          @keyframes float-slower { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,20px)} }
+        `}</style>
       </section>
 
-      {/* ============ Document Requirements ============ */}
-      <section className="bg-gradient-to-b from-white to-gray-50 py-20 lg:py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      {/* ── DOCUMENTS — light slate bg + wave decoration ─────────────── */}
+      <section className="relative isolate overflow-hidden py-20 lg:py-24" style={{ backgroundColor: "#F1F5F9" }}>
+        {/* Subtle wave SVG */}
+        <div className="pointer-events-none absolute bottom-0 left-0 w-full overflow-hidden" aria-hidden="true" style={{ height: "120px" }}>
+          <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="absolute bottom-0 w-full" style={{ height: "120px" }}>
+            <path fill="rgba(6,15,90,0.04)"
+              d="M0,64L60,58.7C120,53,240,43,360,48C480,53,600,75,720,80C840,85,960,75,1080,64C1200,53,1320,43,1380,37.3L1440,32L1440,120L0,120Z"/>
+          </svg>
+        </div>
+
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-10">
           <Reveal>
             <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
-                Document Checklist
-              </p>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ color: TOKENS.navy }}>
-                What You'll Need to Apply
+              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: T.accent }}>Document Checklist</p>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: T.navy }}>
+                What You'll Need
               </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: T.soft }}>
+                Have these ready before you start — the whole process is faster when you're prepared.
+              </p>
             </div>
           </Reveal>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {DOCUMENT_REQUIREMENTS.map((doc, index) => {
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {DOCS.map((doc, i) => {
               const Icon = doc.icon;
               return (
-                <Reveal key={doc.title} delay={index * 100}>
-                  <div className="relative rounded-2xl border bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md"
-                    style={{ borderColor: TOKENS.line }}
+                <Reveal key={doc.title} delay={i * 80}>
+                  <div
+                    className="group relative h-full overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1"
+                    style={{ borderColor: T.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.10)" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)"; e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(6,15,90,0.18)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.boxShadow = "0 4px 16px -10px rgba(6,15,90,0.10)"; }}
                   >
-                    {/* Required badge */}
-                    {doc.required && (
-                      <div
-                        className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold"
-                        style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#DC2626" }}
-                      >
-                        Required
-                      </div>
-                    )}
-                    {!doc.required && (
-                      <div
-                        className="absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold"
-                        style={{ backgroundColor: "rgba(34,197,94,0.1)", color: "#16A34A" }}
-                      >
-                        Optional
-                      </div>
-                    )}
+                    {/* Accent top bar on hover */}
+                    <div className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+                      style={{ background: `linear-gradient(90deg, ${T.accent}, ${T.accentDk})` }} aria-hidden="true" />
 
-                    <div
-                      className="flex h-12 w-12 items-center justify-center rounded-xl"
-                      style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-                    >
-                      <Icon size={24} />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+                      style={{ backgroundColor: "#EEF1FB", color: T.navy }}>
+                      <Icon size={18} />
                     </div>
 
-                    <h3 className="mt-4 text-lg font-extrabold" style={{ color: TOKENS.navy }}>
-                      {doc.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed" style={{ color: TOKENS.slate }}>
-                      {doc.description}
-                    </p>
-                    <p className="mt-3 text-xs font-semibold" style={{ color: TOKENS.slateSoft }}>
-                      {doc.formats}
-                    </p>
+                    <div className="mt-4 flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-extrabold" style={{ color: T.navy }}>{doc.title}</h3>
+                      <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{ backgroundColor: doc.required ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", color: doc.required ? "#DC2626" : "#16A34A" }}>
+                        {doc.required ? "Required" : "Optional"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed" style={{ color: T.soft }}>{doc.desc}</p>
+                    <p className="mt-3 text-[11px] font-semibold" style={{ color: "#94A3B8" }}>{doc.sub}</p>
                   </div>
                 </Reveal>
               );
@@ -434,179 +370,127 @@ export default function ApplicationGuide() {
         </div>
       </section>
 
-      {/* ============ Tips for Success ============ */}
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-24">
-        <Reveal>
-          <div className="text-center">
-            <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
-              Expert Advice
-            </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ color: TOKENS.navy }}>
-              Tips to Stand Out
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base" style={{ color: TOKENS.slateSoft }}>
-              Increase your chances of landing an interview with these proven strategies.
-            </p>
-          </div>
-        </Reveal>
+      {/* ── FAQ — white bg + radial gradient, same as Home contact section ─ */}
+      <section className="relative isolate overflow-hidden py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 -z-10" style={{
+          background: `radial-gradient(circle at 50% 50%, rgba(249,115,22,0.03) 0%, rgba(6,15,90,0.02) 50%, transparent 100%)`,
+        }} aria-hidden="true" />
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {TIPS_FOR_SUCCESS.map((tip, index) => {
-            const Icon = tip.icon;
-            return (
-              <Reveal key={tip.title} delay={index * 80}>
-                <div className="rounded-2xl border bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                  style={{ borderColor: TOKENS.line }}
-                >
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: "rgba(249,115,22,0.1)", color: TOKENS.accent }}
-                  >
-                    <Icon size={24} />
-                  </div>
-                  <h3 className="mt-4 text-base font-extrabold" style={{ color: TOKENS.navy }}>
-                    {tip.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: TOKENS.slateSoft }}>
-                    {tip.description}
-                  </p>
-                </div>
-              </Reveal>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ============ FAQ Section ============ */}
-      <section className="bg-gradient-to-b from-gray-50 to-white py-20 lg:py-24">
-        <div className="mx-auto max-w-4xl px-6 lg:px-10">
+        <div className="mx-auto max-w-3xl px-6 lg:px-10">
           <Reveal>
             <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
-                Common Questions
-              </p>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ color: TOKENS.navy }}>
+              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: T.accent }}>Common Questions</p>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: T.navy }}>
                 Frequently Asked Questions
               </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: T.soft }}>
+                Can't find your answer? Reach out to our HR team directly.
+              </p>
             </div>
           </Reveal>
 
-          <div className="mt-12 space-y-4">
-            {FAQ_ITEMS.map((faq, index) => (
-              <Reveal key={index} delay={index * 50}>
-                <div
-                  className="overflow-hidden rounded-xl border bg-white transition-all duration-300"
-                  style={{ borderColor: expandedFaq === index ? TOKENS.accent : TOKENS.line }}
-                >
-                  <button
-                    onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}
-                    className="flex w-full items-start justify-between gap-4 p-6 text-left transition-colors hover:bg-gray-50"
+          <div className="mt-10 space-y-2">
+            {FAQS.map((faq, i) => {
+              const isOpen = openFaq === i;
+              return (
+                <Reveal key={i} delay={i * 35}>
+                  <div
+                    className="overflow-hidden rounded-xl border bg-white transition-all duration-200"
+                    style={{ borderColor: isOpen ? T.accent : T.line }}
                   >
-                    <div className="flex items-start gap-3">
-                      <HelpCircle
-                        size={20}
-                        className="mt-0.5 shrink-0"
-                        style={{ color: expandedFaq === index ? TOKENS.accent : TOKENS.slateSoft }}
-                      />
-                      <span className="font-bold" style={{ color: TOKENS.navy }}>
-                        {faq.question}
-                      </span>
-                    </div>
-                    <ChevronRight
-                      size={20}
-                      className="shrink-0 transition-transform duration-300"
-                      style={{
-                        color: TOKENS.slateSoft,
-                        transform: expandedFaq === index ? "rotate(90deg)" : "rotate(0deg)",
-                      }}
-                    />
-                  </button>
-
-                  {expandedFaq === index && (
-                    <div
-                      className="border-t px-6 pb-6 pt-4"
-                      style={{ borderColor: TOKENS.line, backgroundColor: TOKENS.paper }}
+                    <button
+                      className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
                     >
-                      <p className="text-sm leading-relaxed" style={{ color: TOKENS.slate }}>
-                        {faq.answer}
-                      </p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-black transition-colors"
+                          style={{ backgroundColor: isOpen ? T.accent : "#EEF1FB", color: isOpen ? "#fff" : T.navy }}>
+                          {i + 1}
+                        </div>
+                        <span className="text-sm font-bold truncate" style={{ color: isOpen ? T.accent : T.navy }}>
+                          {faq.q}
+                        </span>
+                      </div>
+                      <ChevronDown size={15} style={{ flexShrink: 0, color: T.soft, transition: "transform 300ms", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                    </button>
+                    <div style={{ maxHeight: isOpen ? "200px" : "0", overflow: "hidden", transition: "max-height 350ms ease" }}>
+                      <div className="border-t px-5 pb-4 pt-3" style={{ borderColor: T.line, backgroundColor: T.paper }}>
+                        <p className="text-sm leading-relaxed" style={{ color: T.soft }}>{faq.a}</p>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </Reveal>
-            ))}
+                  </div>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* ============ Important Notice ============ */}
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:px-10">
-        <Reveal>
-          <div
-            className="rounded-2xl border-2 p-8 lg:p-10"
-            style={{ borderColor: TOKENS.accent, backgroundColor: "rgba(249,115,22,0.05)" }}
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-                style={{ backgroundColor: TOKENS.accent }}
-              >
-                <AlertCircle size={24} className="text-white" />
+      {/* ── NOTICE — navy bg, same as Home's about strip ─────────────── */}
+      <section style={{ backgroundColor: T.navy }} className="relative overflow-hidden">
+        {/* faint grid */}
+        <div className="pointer-events-none absolute inset-0 opacity-10" style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px",
+        }} aria-hidden="true" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-14 lg:px-10">
+          <Reveal>
+            <div className="flex items-start gap-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: T.accent }}>
+                <AlertCircle size={20} className="text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-extrabold" style={{ color: TOKENS.navy }}>
-                  Important Notice
-                </h3>
-                <div className="mt-3 space-y-2 text-sm leading-relaxed" style={{ color: TOKENS.slate }}>
-                  <p>
-                    • <strong>ARTMS never charges any fee</strong> for job applications or the recruitment process.
-                  </p>
-                  <p>
-                    • Be cautious of fraudulent job postings. Only apply through our official website.
-                  </p>
-                  <p>
-                    • Your personal information is protected and will only be used for recruitment purposes.
-                  </p>
-                  <p>
-                    • If you encounter any issues during the application process, contact our support team immediately.
-                  </p>
-                </div>
+                <h3 className="text-base font-extrabold text-white">Important Notice</h3>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {NOTICES.map((n, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm" style={{ color: "rgba(199,210,254,0.7)" }}>
+                      <CheckCircle2 size={14} className="mt-0.5 shrink-0" style={{ color: T.accent }} />
+                      {n}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── CTA — paper bg + radial gradient, restrained ────────────── */}
+      <section className="relative isolate overflow-hidden py-20 lg:py-24">
+        <div className="pointer-events-none absolute inset-0 -z-10" style={{
+          background: `radial-gradient(ellipse at 50% 100%, rgba(249,115,22,0.06) 0%, transparent 70%)`,
+        }} aria-hidden="true" />
+
+        <Reveal>
+          <div className="mx-auto max-w-2xl px-6 text-center lg:px-10">
+            <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: T.accent }}>Start Today</p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: T.navy }}>
+              Ready to Start Your Application?
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed" style={{ color: T.soft }}>
+              Browse current openings and take the first step toward your next career opportunity.
+            </p>
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to="/jobs">
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ backgroundColor: T.accent, boxShadow: "0 10px 30px -10px rgba(249,115,22,0.45)" }}
+                >
+                  View Open Positions <ArrowRight size={15} />
+                </button>
+              </Link>
+              <Link to="/track">
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl border-2 px-6 py-3 text-sm font-bold transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ borderColor: T.line, color: T.navy }}
+                >
+                  Track My Application
+                </button>
+              </Link>
             </div>
           </div>
         </Reveal>
-      </section>
-
-      {/* ============ CTA Section ============ */}
-      <section className="py-20 lg:py-24" style={{ backgroundColor: TOKENS.navy }}>
-        <div className="mx-auto max-w-4xl px-6 text-center lg:px-10">
-          <Reveal>
-            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-              Ready to Start Your Application?
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-indigo-100/80 sm:text-lg">
-              Browse our current openings and take the first step toward your next career opportunity.
-            </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link to="/jobs">
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
-                  style={{ backgroundColor: TOKENS.accent }}
-                >
-                  View Open Positions <ArrowRight size={18} />
-                </button>
-              </Link>
-              <Link to="/contact">
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl border-2 px-8 py-4 text-base font-bold text-white transition-all duration-200 hover:-translate-y-0.5"
-                  style={{ borderColor: "rgba(255,255,255,0.3)" }}
-                >
-                  Contact Support
-                </button>
-              </Link>
-            </div>
-          </Reveal>
-        </div>
       </section>
 
     </div>

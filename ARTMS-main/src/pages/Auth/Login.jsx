@@ -44,20 +44,13 @@ export default function Login() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-900">
-      {/* Background photo — fixed + z-0 so it reliably paints as the base
-          layer regardless of any stacking context created higher up the
-          component tree (negative z-index can get trapped behind an
-          ancestor's own background in that situation, which is what was
-          happening before). */}
+      {/* Background photo */}
       <div
         className="fixed inset-0 z-0 scale-105 bg-cover bg-center"
         style={{ backgroundImage: `url(${loginBg})` }}
         aria-hidden="true"
       />
-      {/* Layered navy vignette — darker toward the edges (where text sits),
-          lighter through the middle (where the photo and card breathe).
-          This replaces a flat transparent tint with an actual designed
-          scrim instead of a plain wash. */}
+      {/* Layered navy vignette */}
       <div
         className="fixed inset-0 z-0"
         style={{
@@ -70,7 +63,7 @@ export default function Login() {
         className="fixed inset-0 z-0 bg-gradient-to-b from-[#060F5A]/45 via-transparent to-[#060F5A]/55"
         aria-hidden="true"
       />
-      {/* Soft accent glow, bottom-right — a bit of brand warmth without a hard shape */}
+      {/* Soft accent glow, bottom-right */}
       <div
         className="pointer-events-none fixed -bottom-32 -right-24 z-0 h-96 w-96 rounded-full bg-[#F97316]/20 blur-[100px]"
         aria-hidden="true"
@@ -95,7 +88,7 @@ export default function Login() {
             loaded ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
           }`}
         >
-          {/* Soft glow behind the logo instead of a hard-edged box */}
+          {/* Soft glow behind the logo */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-40 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40 blur-3xl"
             aria-hidden="true"

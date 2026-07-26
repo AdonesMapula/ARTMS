@@ -151,6 +151,46 @@ This document provides a comprehensive record of all technical updates, module s
 
 ---
 
+## 5. Recent System Update & Database Schema Integration (Branch: `latestUI+Interview`)
+
+### 🎨 Public Side UI & UX Enhancements
+- **Dynamic Animated Search Bar (`Jobs.jsx` & `SearchBar.jsx`)**:
+  - Implemented stationary 4-sided rounded border highlight (`.search-pulse-border` in `index.css`) with brand orange glowing aura (`#F97316` + `box-shadow: 0 0 26px rgba(249, 115, 22, 0.5)`).
+  - Triggers smoothly on hover and stays active while typing (`focus-within`).
+  - Removed native browser inner focus rectangle boxes (`outline-none focus-visible:outline-none`).
+- **Mobile Card Responsiveness (`Jobs.jsx`)**:
+  - Updated job cards for small screens so "View Details" and "Apply Now" buttons stack at the bottom of the card with equal width (`w-full flex-1`), allowing job detail text to expand freely.
+- **Home Page Hero Statistics (`Home.jsx`)**:
+  - Replaced hardcoded "1,240+ roles hiring right now" with live count fetched directly from `/api/public/job-postings`, smoothly animated via `<CountingBadge targetCount={totalJobsCount} />`.
+  - Replaced static featured job preview cards with dynamic fetch of latest active job postings from the database.
+- **Header & Navigation Order (`Navbar.jsx`)**:
+  - Rearranged top bar links to: **Home** -> **Application Guide** -> **Job Postings** -> **About** -> **Contact** -> **Sign In**.
+  - Extended transparent-to-solid navbar transition effect across `/`, `/application-guide`, and `/jobs`.
+- **Cross-Page Smooth Transitions (`PublicLayout.jsx`)**:
+  - Implemented key-based route transition wrapper (`PublicLayout`) preventing white paint flashes between page navigations.
+
+---
+
+### 🗄️ Database Schema & Job Posting Structure Sync (`c8fa836 DATABASE_Schema_Latest`)
+- **Schema Documentation (`DATABASE_SCHEMA.md`)**:
+  - Integrated complete database schema reference documenting 32 application tables, enum mappings, key relationships, and migration history.
+- **Migration & Model Upgrades**:
+  - Migration `2026_07_25_213318_add_json_fields_and_modified_flag_to_job_postings_table.php`: Added `qualifications`, `responsibilities`, and `is_modified_from_prf` fields to `job_postings`.
+  - Updated controllers: `JobPostingController.php`, `JobLibraryController.php`, `ManpowerRequestController.php`.
+  - Updated models: `JobPosting.php`, `JobLibrary.php`, `ManpowerRequest.php`.
+- **Approval Modals & Administration Pages**:
+  - Added new approval and view modals: `JobPostingApproveModal.jsx`, `ManpowerApproveModal.jsx`, `JobLibraryViewModal.jsx`, `JobLibraryFormModal.jsx`, `JobDetailsModal.jsx`.
+  - Updated administration and COO approval dashboards (`JobPosting.jsx`, `JobLibrary.jsx`, `JobPostingApprovals.jsx`, `ManpowerApprovals.jsx`).
+
+---
+
+### 🔀 Branch Merge & Conflict Resolution
+- **Remote Fetch & Merge**: Merged `origin/latestUI+Interview` into local branch `latestUI+Interview`.
+- **Conflict Resolution (`Jobs.jsx`)**: Resolved merge conflict in `Jobs.jsx` per user confirmation — kept the new database schema structure while preserving all custom public UI enhancements.
+
+
+---
+
 ## 5. Verification & Build Status
 
 - **Frontend Build (`npm run build`)**: Compiled in **1.41s** with 0 build or linting errors.

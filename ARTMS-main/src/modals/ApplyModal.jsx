@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { X, ArrowLeft, CheckCircle, File, Loader2, UploadCloud, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
+import {
+  X, CheckCircle, File, Loader2, UploadCloud, AlertTriangle,
+  MapPin, Briefcase, Clock, ChevronUp, User, Mail, Phone,
+  Calendar, ChevronsUpDown, Globe, Home, FileText,
+} from "lucide-react";
 import axios from "axios";
 import applicantService from "../services/applicantService";
 
@@ -19,11 +20,8 @@ const GENDERS = ["", "Male", "Female", "Non-binary", "Prefer not to say"];
 const CIVIL_STATUSES = ["", "Single", "Married", "Divorced", "Widowed", "Separated", "Annulled"];
 
 /**
- * ApplyModal - Slide-in application form panel
- * 
- * @param {boolean} open - Controls modal visibility
- * @param {object} job - Job posting data
- * @param {function} onClose - Close callback
+ * ApplyModal — Inline expandable application form rendered within the job listing page.
+ * No overlay. Expands below the job card header so the applicant always sees the job they're applying for.
  */
 export default function ApplyModal({ open, job, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -36,9 +34,10 @@ export default function ApplyModal({ open, job, onClose }) {
   const [submitError, setSubmitError] = useState(null);
   const [submitted, setSubmitted] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [step, setStep] = useState(1); // 1: resume, 2: personal info, 3: review & submit
   const fileInputRef = useRef();
+  const formRef = useRef();
 
-  // Reset form when modal opens
   useEffect(() => {
     if (open) {
       setForm(EMPTY_FORM);
@@ -51,6 +50,11 @@ export default function ApplyModal({ open, job, onClose }) {
       setSubmitError(null);
       setSubmitted(null);
       setFieldErrors({});
+      setStep(1);
+      // Scroll the form into view smoothly
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     }
   }, [open]);
 
@@ -58,36 +62,22 @@ export default function ApplyModal({ open, job, onClose }) {
 
   const handleResumeChange = async (file) => {
     if (!file) return;
-    
-    // Check file size (max 10MB = 10485760 bytes)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setParseMsg({ 
-        type: "error", 
-        text: `File is too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum size is 10 MB.` 
-      });
+      setParseMsg({ type: "error", text: `File too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Max is 10 MB.` });
       return;
     }
-    
-    // Check file extension
-    const allowedExt = ['pdf', 'doc', 'docx', 'txt'];
-    const fileName = file.name.toLowerCase();
-    const fileExt = fileName.substring(fileName.lastIndexOf('.') + 1);
-    
-    if (!allowedExt.includes(fileExt)) {
-      setParseMsg({ 
-        type: "error", 
-        text: "Please upload a PDF, DOCX, DOC, or TXT file." 
-      });
+    const allowedExt = ["pdf", "doc", "docx", "txt"];
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (!allowedExt.includes(ext)) {
+      setParseMsg({ type: "error", text: "Please upload a PDF, DOCX, DOC, or TXT file." });
       return;
     }
-    
     setResumeFile(file);
     setParseMsg(null);
     setFieldErrors({});
     setParsedCount(0);
     setParsing(true);
-    
     try {
       const fd = new FormData();
       fd.append("resume", file);
@@ -109,22 +99,16 @@ export default function ApplyModal({ open, job, onClose }) {
           ...prev,
           ...Object.fromEntries(Object.entries(next).filter(([, v]) => v !== "")),
         }));
-        setParseMsg({ type: "success",
-          text: `Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct anything that looks off.` });
+        setParseMsg({
+          type: "success",
+          text: `✓ Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct if needed.`,
+        });
       } else {
-        setParsedCount(0);
-        setParseMsg({ type: "warn",
-          text: res.data.message || "Couldn't fully parse the resume. Fill in the remaining fields manually." });
+        setParseMsg({ type: "warn", text: res.data.message || "Couldn't fully parse the resume. Fill in the remaining fields manually." });
       }
     } catch (err) {
-      console.error("Resume parse error:", err);
-      console.error("Response data:", err.response?.data);
-      const errorMsg = err.response?.data?.message || err.response?.data?.errors?.resume?.[0];
-      if (errorMsg) {
-        setParseMsg({ type: "error", text: errorMsg });
-      } else {
-        setParseMsg({ type: "warn", text: "Resume uploaded but couldn't be auto-parsed. Fill in the fields manually." });
-      }
+      const msg = err.response?.data?.message || err.response?.data?.errors?.resume?.[0];
+      setParseMsg({ type: msg ? "error" : "warn", text: msg || "Resume uploaded but couldn't be auto-parsed. Fill in the fields manually." });
     } finally {
       setParsing(false);
     }
@@ -140,28 +124,26 @@ export default function ApplyModal({ open, job, onClose }) {
     setSubmitError(null);
     setFieldErrors({});
     if (!resumeFile) { setSubmitError("Please upload your resume before submitting."); return; }
-    if (!consent)    { setSubmitError("You must accept the informed consent to proceed."); return; }
+    if (!consent) { setSubmitError("You must accept the informed consent to proceed."); return; }
     setSubmitting(true);
     try {
       const fd = new FormData();
-      fd.append("job_posting_id",   job.id);
-      fd.append("first_name",       form.firstName);
-      fd.append("last_name",        form.lastName);
-      fd.append("middle_name",      form.middleName);
-      fd.append("email",            form.email);
-      fd.append("phone",            form.phone);
-      fd.append("date_of_birth",    form.dateOfBirth);
-      fd.append("gender",           form.gender);
-      fd.append("civil_status",     form.civilStatus);
-      fd.append("nationality",      form.nationality);
-      fd.append("address",          form.address);
-      fd.append("resume",           resumeFile);
+      fd.append("job_posting_id", job.id);
+      fd.append("first_name", form.firstName);
+      fd.append("last_name", form.lastName);
+      fd.append("middle_name", form.middleName);
+      fd.append("email", form.email);
+      fd.append("phone", form.phone);
+      fd.append("date_of_birth", form.dateOfBirth);
+      fd.append("gender", form.gender);
+      fd.append("civil_status", form.civilStatus);
+      fd.append("nationality", form.nationality);
+      fd.append("address", form.address);
+      fd.append("resume", resumeFile);
       fd.append("informed_consent", "1");
       const res = await applicantService.submit(fd);
       setSubmitted({ application_id: res.data.application_id });
     } catch (err) {
-      console.error("Form submission error:", err); // ADD THIS LINE
-      console.log("Response data:", err.response?.data); // ADD THIS LINE
       const errors = err.response?.data?.errors;
       if (errors) {
         const mapped = {};
@@ -178,243 +160,331 @@ export default function ApplyModal({ open, job, onClose }) {
     }
   };
 
-  if (!job) return null;
+  if (!job || !open) return null;
 
-  const jobTitle  = job.job_library?.job_title ?? "this position";
-  const dept      = job.department?.department_name ?? job.department?.name ?? "N/A";
+  const jobTitle = job.job_library?.job_title ?? "this position";
+  const deptName = job.department?.department_name ?? job.department?.name ?? "N/A";
   const vacancies = job.vacancies_count ?? 1;
+  const location = job.location || "Remote";
+  const deadline = job.closing_date
+    ? new Date(job.closing_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={onClose}
-      />
-
-      {/* Slide-in Panel */}
-      <div
-        className={`fixed right-0 top-0 z-50 h-screen w-full bg-white shadow-2xl transition-transform duration-500 ease-out sm:w-[600px] lg:w-[700px] ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="border-b border-slate-200 bg-gradient-to-br from-[#F97316] to-[#ea6a0a] px-6 py-6 text-white">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1">
-                  <span className="text-xs font-bold uppercase tracking-wider">Online Application</span>
-                </div>
-                <h2 className="text-2xl font-extrabold">Apply for {jobTitle}</h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge className="bg-white/20 text-white">{dept}</Badge>
-                  <Badge className="bg-white/20 text-white">
-                    {vacancies} {vacancies > 1 ? "openings" : "opening"}
-                  </Badge>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="rounded-lg p-2 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
+    <div ref={formRef} className="mt-0 overflow-hidden rounded-b-2xl border-t-0">
+      {/* ── Job Confirmation Banner ─────────────────────────────── */}
+      <div className="bg-gradient-to-r from-[#111A62] to-[#1e2d8a] px-6 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            {/* "Applying for" label */}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
+              You are applying for
+            </p>
+            <h3 className="text-xl font-extrabold text-white leading-tight">{jobTitle}</h3>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-white/70">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-[#F97316]" />
+                {location}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Briefcase className="h-3.5 w-3.5 text-[#F97316]" />
+                {deptName}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ChevronsUpDown className="h-3.5 w-3.5 text-[#F97316]" />
+                {vacancies} {vacancies > 1 ? "Vacancies" : "Vacancy"}
+              </span>
+              {deadline && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-[#F97316]" />
+                  Apply by {deadline}
+                </span>
+              )}
             </div>
           </div>
+          {/* Collapse / Close Button */}
+          <button
+            onClick={onClose}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 transition"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+            Close Form
+          </button>
+        </div>
+      </div>
 
-          {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            {submitted ? (
-              // Success Screen
-              <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-50/50">
-                  <CheckCircle className="h-10 w-10 text-emerald-500" />
-                </div>
-                <h3 className="mt-6 text-2xl font-extrabold text-[#111A62]">Application Submitted!</h3>
-                <p className="mt-3 text-slate-600">Your application has been received. Use the reference number below to track your status.</p>
-                <div className="mt-6 inline-block rounded-2xl border border-emerald-200 bg-emerald-50 px-8 py-5">
-                  <p className="text-xs font-bold uppercase tracking-widest text-emerald-500">Application ID</p>
-                  <p className="mt-1 text-2xl font-extrabold tracking-wider text-emerald-700">{submitted.application_id}</p>
-                  <p className="mt-1 text-xs text-slate-500">Save this — you'll need it to track your application.</p>
-                </div>
-                <Button onClick={onClose} className="mt-8 bg-[#111A62] hover:bg-[#0d1550]">
-                  Close & Browse More Jobs
-                </Button>
-              </div>
-            ) : (
-              // Application Form
-              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                {/* Resume Upload */}
-                <Card className="border-2 border-dashed border-[#111A62]/20">
-                  <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-base font-bold text-[#111A62]">Upload Your Resume</CardTitle>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Upload first — we'll auto-fill the fields below. PDF, DOCX, DOC, TXT · Max 10 MB
-                    </p>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    {!resumeFile ? (
-                      <label htmlFor="resume-upload"
-                        className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-8 text-center transition hover:border-[#111A62]/40 hover:bg-[#111A62]/5">
-                        <UploadCloud size={28} className="text-[#4D569E]" />
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700">Click to choose a file</p>
-                          <p className="mt-0.5 text-xs text-slate-400">PDF, DOCX, DOC, or TXT</p>
-                        </div>
-                        <input id="resume-upload" ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt"
-                          className="sr-only" onChange={(e) => handleResumeChange(e.target.files?.[0] ?? null)} />
-                      </label>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <File size={18} className="shrink-0 text-[#4D569E]" />
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-800">{resumeFile.name}</p>
-                            <p className="text-xs text-slate-400">{(resumeFile.size / 1024).toFixed(0)} KB</p>
-                          </div>
-                        </div>
-                        <button type="button" onClick={removeResume}
-                          className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    )}
+      {/* ── Application Form Body ───────────────────────────────── */}
+      <div className="bg-[#FAFBFF] px-6 py-6">
+        {submitted ? (
+          /* ── Success Screen ─────────────────────────────────── */
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-100">
+              <CheckCircle className="h-10 w-10 text-emerald-500" />
+            </div>
+            <h3 className="mt-5 text-2xl font-extrabold text-[#111A62]">Application Submitted!</h3>
+            <p className="mt-2 max-w-sm text-sm text-slate-500">
+              Your application for <span className="font-bold text-[#111A62]">{jobTitle}</span> has been received.
+              Use the reference number below to track your status.
+            </p>
+            <div className="mt-6 inline-block rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-10 py-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Application ID</p>
+              <p className="mt-1 text-2xl font-extrabold tracking-wider text-emerald-700">{submitted.application_id}</p>
+              <p className="mt-1 text-xs text-slate-400">Save this — you'll need it to track your application.</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#111A62] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0d1550] transition"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Collapse & Browse More Jobs
+            </button>
+          </div>
+        ) : (
+          /* ── Application Form ───────────────────────────────── */
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
 
-                    {parsing && (
-                      <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#111A62]/10 bg-[#111A62]/5 px-3 py-2 text-sm text-[#111A62]">
-                        <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Analyzing your resume with AI…
-                      </div>
-                    )}
-                    {!parsing && parseMsg && (
-                      <div className={`mt-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
-                        parseMsg.type === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                        : parseMsg.type === "warn"  ? "border-amber-100 bg-amber-50 text-amber-700"
-                        : "border-red-100 bg-red-50 text-red-600"}`}>
-                        {parseMsg.type === "success"
-                          ? <CheckCircle size={14} className="mt-0.5 shrink-0" />
-                          : <AlertTriangle size={14} className="mt-0.5 shrink-0" />}
-                        {parseMsg.text}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Personal Information */}
-                <Card>
-                  <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-base font-bold text-[#111A62]">Personal Information</CardTitle>
-                    <p className="mt-0.5 text-xs text-slate-500">Fields marked <span className="text-red-500">*</span> are required.</p>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="First Name" required error={fieldErrors.firstName}>
-                        <input value={form.firstName} onChange={set("firstName")} className={inputCls(fieldErrors.firstName)} required />
-                      </Field>
-                      <Field label="Last Name" required error={fieldErrors.lastName}>
-                        <input value={form.lastName} onChange={set("lastName")} className={inputCls(fieldErrors.lastName)} required />
-                      </Field>
-                      <Field label="Middle Name" error={fieldErrors.middleName} className="sm:col-span-2">
-                        <input value={form.middleName} onChange={set("middleName")} className={inputCls(fieldErrors.middleName)} />
-                      </Field>
-                      <Field label="Email Address" required error={fieldErrors.email}>
-                        <input type="email" value={form.email} onChange={set("email")} className={inputCls(fieldErrors.email)} required />
-                      </Field>
-                      <Field label="Mobile Number" error={fieldErrors.phone}>
-                        <input value={form.phone} onChange={set("phone")} placeholder="09xxxxxxxxx" className={inputCls(fieldErrors.phone)} />
-                      </Field>
-                      <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
-                        <input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} className={inputCls(fieldErrors.dateOfBirth)} />
-                      </Field>
-                      <Field label="Gender" error={fieldErrors.gender}>
-                        <select value={form.gender} onChange={set("gender")} className={inputCls(fieldErrors.gender)}>
-                          {GENDERS.map((g) => <option key={g} value={g}>{g || "Select gender"}</option>)}
-                        </select>
-                      </Field>
-                      <Field label="Civil Status" error={fieldErrors.civilStatus}>
-                        <select value={form.civilStatus} onChange={set("civilStatus")} className={inputCls(fieldErrors.civilStatus)}>
-                          {CIVIL_STATUSES.map((s) => <option key={s} value={s}>{s || "Select civil status"}</option>)}
-                        </select>
-                      </Field>
-                      <Field label="Nationality" error={fieldErrors.nationality}>
-                        <input value={form.nationality} onChange={set("nationality")} placeholder="e.g. Filipino" className={inputCls(fieldErrors.nationality)} />
-                      </Field>
-                      <Field label="Address" error={fieldErrors.address} className="sm:col-span-2">
-                        <input value={form.address} onChange={set("address")} placeholder="City, Province, Philippines" className={inputCls(fieldErrors.address)} />
-                      </Field>
+            {/* ── Step 1: Resume Upload ──────────────────────────── */}
+            <div>
+              <SectionHeader icon={<UploadCloud className="h-4 w-4" />} title="Upload Resume" subtitle="Upload first — we'll auto-fill your details. PDF, DOCX, DOC, TXT · Max 10 MB" />
+              <div className="mt-3">
+                {!resumeFile ? (
+                  <label
+                    htmlFor="resume-upload-inline"
+                    className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#111A62]/20 bg-white px-6 py-8 text-center transition hover:border-[#111A62]/40 hover:bg-[#111A62]/5"
+                  >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#111A62]/10">
+                      <UploadCloud className="h-7 w-7 text-[#111A62]" />
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Cover Letter */}
-                <Card>
-                  <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-base font-bold text-[#111A62]">
-                      Cover Note <span className="text-xs font-normal text-slate-400">(optional)</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <textarea rows={4} value={form.coverLetter} onChange={set("coverLetter")}
-                      placeholder="Tell us briefly why you're a great fit for this role…"
-                      className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#111A62] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111A62]/20" />
-                  </CardContent>
-                </Card>
-
-                {/* Consent */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-[#111A62]" />
-                    <span className="text-sm text-slate-700 leading-relaxed">
-                      I confirm that all information provided is accurate and true. I consent to ARTMS collecting and
-                      processing my personal data for recruitment purposes.
-                      <span className="text-red-500"> *</span>
-                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-[#111A62]">Click to upload your resume</p>
+                      <p className="mt-0.5 text-xs text-slate-400">PDF, DOCX, DOC, or TXT files accepted</p>
+                    </div>
+                    <input
+                      id="resume-upload-inline"
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      className="sr-only"
+                      onChange={(e) => handleResumeChange(e.target.files?.[0] ?? null)}
+                    />
                   </label>
-                </div>
-
-                {/* Error Banner */}
-                {submitError && (
-                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                    <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {submitError}
+                ) : (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-[#111A62]/15 bg-white px-5 py-4 shadow-sm">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111A62]/10">
+                        <File className="h-5 w-5 text-[#111A62]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-800">{resumeFile.name}</p>
+                        <p className="text-xs text-slate-400">{(resumeFile.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeResume}
+                      className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
 
-                {/* Submit Buttons */}
-                <div className="flex gap-3">
-                  <Button type="button" onClick={onClose} variant="outline" className="flex-1 border-slate-300">
-                    Cancel
-                  </Button>
-                  <button type="submit" disabled={submitting || parsing}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#F97316] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#ea6a0a] disabled:cursor-not-allowed disabled:opacity-60">
-                    {submitting ? <><Loader2 size={14} className="animate-spin" /> Submitting…</> : "Submit Application"}
-                  </button>
-                </div>
-              </form>
+                {parsing && (
+                  <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-[#111A62]/15 bg-[#111A62]/5 px-4 py-3 text-sm font-medium text-[#111A62]">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    Analyzing your resume with AI — this takes a few seconds…
+                  </div>
+                )}
+                {!parsing && parseMsg && (
+                  <div className={`mt-3 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm ${
+                    parseMsg.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : parseMsg.type === "warn"  ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : "border-red-200 bg-red-50 text-red-600"
+                  }`}>
+                    {parseMsg.type === "success"
+                      ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+                    <span>{parseMsg.text}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Step 2: Personal Information ───────────────────── */}
+            <div>
+              <SectionHeader icon={<User className="h-4 w-4" />} title="Personal Information" subtitle={<>Fields marked <span className="text-red-500">*</span> are required.</>} />
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <Field label="First Name" required error={fieldErrors.firstName}>
+                  <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.firstName} onChange={set("firstName")} className={inputCls(fieldErrors.firstName)} required />
+                  </InlineInput>
+                </Field>
+                <Field label="Last Name" required error={fieldErrors.lastName}>
+                  <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.lastName} onChange={set("lastName")} className={inputCls(fieldErrors.lastName)} required />
+                  </InlineInput>
+                </Field>
+                <Field label="Middle Name" error={fieldErrors.middleName} className="sm:col-span-2">
+                  <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.middleName} onChange={set("middleName")} className={inputCls(fieldErrors.middleName)} />
+                  </InlineInput>
+                </Field>
+                <Field label="Email Address" required error={fieldErrors.email}>
+                  <InlineInput icon={<Mail className="h-4 w-4 text-slate-400" />}>
+                    <input type="email" value={form.email} onChange={set("email")} className={inputCls(fieldErrors.email)} required />
+                  </InlineInput>
+                </Field>
+                <Field label="Mobile Number" error={fieldErrors.phone}>
+                  <InlineInput icon={<Phone className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.phone} onChange={set("phone")} placeholder="09xxxxxxxxx" className={inputCls(fieldErrors.phone)} />
+                  </InlineInput>
+                </Field>
+                <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
+                  <InlineInput icon={<Calendar className="h-4 w-4 text-slate-400" />}>
+                    <input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} className={inputCls(fieldErrors.dateOfBirth)} />
+                  </InlineInput>
+                </Field>
+                <Field label="Gender" error={fieldErrors.gender}>
+                  <select value={form.gender} onChange={set("gender")} className={selectCls(fieldErrors.gender)}>
+                    {GENDERS.map((g) => <option key={g} value={g}>{g || "Select gender"}</option>)}
+                  </select>
+                </Field>
+                <Field label="Civil Status" error={fieldErrors.civilStatus}>
+                  <select value={form.civilStatus} onChange={set("civilStatus")} className={selectCls(fieldErrors.civilStatus)}>
+                    {CIVIL_STATUSES.map((s) => <option key={s} value={s}>{s || "Select civil status"}</option>)}
+                  </select>
+                </Field>
+                <Field label="Nationality" error={fieldErrors.nationality}>
+                  <InlineInput icon={<Globe className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.nationality} onChange={set("nationality")} placeholder="e.g. Filipino" className={inputCls(fieldErrors.nationality)} />
+                  </InlineInput>
+                </Field>
+                <Field label="Address" error={fieldErrors.address} className="sm:col-span-2">
+                  <InlineInput icon={<Home className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.address} onChange={set("address")} placeholder="City, Province, Philippines" className={inputCls(fieldErrors.address)} />
+                  </InlineInput>
+                </Field>
+              </div>
+            </div>
+
+            {/* ── Step 3: Cover Note ─────────────────────────────── */}
+            <div>
+              <SectionHeader
+                icon={<FileText className="h-4 w-4" />}
+                title={<>Cover Note <span className="text-xs font-normal text-slate-400">(optional)</span></>}
+                subtitle="Tell us briefly why you're a great fit for this role."
+              />
+              <textarea
+                rows={4}
+                value={form.coverLetter}
+                onChange={set("coverLetter")}
+                placeholder={`Why are you a great fit for the ${jobTitle} role?`}
+                className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#111A62] focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 transition"
+              />
+            </div>
+
+            {/* ── Informed Consent ───────────────────────────────── */}
+            <div className="rounded-2xl border border-[#111A62]/15 bg-[#111A62]/5 px-5 py-4">
+              <label className="flex cursor-pointer items-start gap-3.5">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-[#111A62]"
+                />
+                <span className="text-sm text-slate-700 leading-relaxed">
+                  I confirm that all information provided is accurate and true. I consent to ARTMS collecting and processing
+                  my personal data for recruitment purposes as governed by the Data Privacy Act of 2012 (RA 10173).
+                  <span className="text-red-500"> *</span>
+                </span>
+              </label>
+            </div>
+
+            {/* ── Error Banner ───────────────────────────────────── */}
+            {submitError && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{submitError}</span>
+              </div>
             )}
-          </div>
-        </div>
+
+            {/* ── Submit & Cancel ────────────────────────────────── */}
+            <div className="flex gap-3 pb-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || parsing}
+                className="flex-[2] inline-flex items-center justify-center gap-2 rounded-xl bg-[#F97316] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#ea6a0a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting application…</>
+                  : <>Submit Application for {jobTitle}</>
+                }
+              </button>
+            </div>
+          </form>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
-// Helper Components
+/* ── Helper Sub-components ────────────────────────────────────────── */
+
+function SectionHeader({ icon, title, subtitle }) {
+  return (
+    <div className="flex items-start gap-3 border-b border-slate-200 pb-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#111A62]/10 text-[#111A62]">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-bold text-[#111A62]">{title}</p>
+        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+function InlineInput({ icon, children }) {
+  return (
+    <div className="relative flex items-center">
+      <span className="pointer-events-none absolute left-3">{icon}</span>
+      <div className="w-full [&>input]:pl-9 [&>input]:pr-3">{children}</div>
+    </div>
+  );
+}
+
 function inputCls(hasError) {
   return [
-    "w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-sm text-slate-800",
-    "placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2",
-    hasError ? "border-red-300 focus:border-red-400 focus:ring-red-200"
-             : "border-slate-200 focus:border-[#111A62] focus:ring-[#111A62]/20",
+    "w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800",
+    "placeholder:text-slate-400 focus:outline-none focus:ring-2 transition",
+    hasError
+      ? "border-red-300 focus:border-red-400 focus:ring-red-200"
+      : "border-slate-200 focus:border-[#111A62] focus:ring-[#111A62]/20",
+  ].join(" ");
+}
+
+function selectCls(hasError) {
+  return [
+    "w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800",
+    "focus:outline-none focus:ring-2 transition appearance-none",
+    hasError
+      ? "border-red-300 focus:border-red-400 focus:ring-red-200"
+      : "border-slate-200 focus:border-[#111A62] focus:ring-[#111A62]/20",
   ].join(" ");
 }
 
 function Field({ label, required, error, className = "", children }) {
   return (
     <div className={className}>
-      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
         {label}{required && <span className="ml-0.5 text-red-500">*</span>}
       </label>
       {children}

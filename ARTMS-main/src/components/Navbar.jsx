@@ -5,17 +5,17 @@ import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 import artmsLogoWhite from "../assets/Logo/LOGO_ARTMS_WHITE.png";
 
 const NAV_LINKS = [
-  { label: "Home", to: "/" },
-  { label: "About", to: "/about" },
-  { label: "Job Postings", to: "/jobs" },
+  { label: "Home",              to: "/" },
   { label: "Application Guide", to: "/application-guide" },
-  { label: "Contact", to: "/contact" },
+  { label: "Job Postings",      to: "/jobs" },
+  { label: "About",             to: "/about" },
+  { label: "Contact",           to: "/contact" },
 ];
 
-// Only the homepage has a full-bleed hero photo behind the navbar, so only
-// that route is allowed to start transparent. Every other page gets the
-// solid white navbar straight away.
-const TRANSPARENT_ROUTES = ["/"];
+// Routes with a dark full-bleed hero photo — navbar starts transparent and
+// transitions to solid white once the user scrolls past 24 px.
+// About and Contact have no dark hero, so they always show the solid navbar.
+const TRANSPARENT_ROUTES = ["/", "/application-guide", "/jobs"];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);

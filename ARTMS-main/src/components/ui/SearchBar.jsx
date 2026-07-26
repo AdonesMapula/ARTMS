@@ -10,18 +10,18 @@ export default function SearchBar({
   return (
     <div
       className={cn(
-        "group flex h-11 items-center gap-2.5 rounded-xl border border-[var(--artms-border)] bg-slate-50 px-3.5 transition-all duration-200",
-        "focus-within:border-[#111A62] focus-within:bg-white focus-within:shadow-sm",
+        "search-pulse-border group flex h-11 items-center gap-2.5 rounded-xl border border-[var(--artms-border)] bg-slate-50 px-3.5 transition-all duration-300",
+        "hover:bg-white focus-within:bg-white",
         className
       )}
     >
       <FiSearch
-        className="shrink-0 text-slate-400 transition-colors duration-200 group-focus-within:text-[#111A62]"
+        className="shrink-0 text-slate-400 transition-colors duration-200 group-hover:text-[#F97316] group-focus-within:text-[#F97316]"
         size={18}
         aria-hidden="true"
       />
       <input
-        className="h-full w-full min-w-0 appearance-none border-0 bg-transparent text-base text-slate-900 placeholder:text-slate-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none sm:text-sm"
+        className="h-full w-full min-w-0 appearance-none border-0 bg-transparent text-base text-slate-900 placeholder:text-slate-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 sm:text-sm"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -122,36 +123,7 @@ const PROCESS_STEPS = [
   },
 ];
 
-const FEATURED_JOBS = [
-  {
-    id: 1,
-    company: "Nimbus Cloud Systems",
-    initials: "NC",
-    title: "Senior Product Designer",
-    location: "Remote · US",
-    type: "Full-time",
-    salary: "$120k – $150k",
-  },
-  {
-    id: 2,
-    company: "Fieldstone Analytics",
-    initials: "FA",
-    title: "Backend Engineer, Payments",
-    location: "New York, NY",
-    type: "Full-time",
-    salary: "$135k – $165k",
-  },
-  {
-    id: 3,
-    company: "Harbor & Co.",
-    initials: "HC",
-    title: "Talent Acquisition Lead",
-    location: "Austin, TX",
-    type: "Hybrid",
-    salary: "$95k – $118k",
-  },
-];
-
+// Headline animation data
 const HERO_HEADLINES = [
   { prefix: "Connecting Top Talent with", highlight: "Exceptional Opportunities" },
   { prefix: "AI Recruitment and Talent ", highlight: "Management System" },
@@ -233,11 +205,11 @@ function useCountAnimation(end, duration = 2000, start = 0) {
     const step = (timestamp) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      
+
       // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4);
       const currentCount = Math.floor(easeOutQuart * (end - start) + start);
-      
+
       setCount(currentCount);
 
       if (progress < 1) {
@@ -282,8 +254,8 @@ function SecondaryButton({ children, className = "", ...props }) {
 }
 
 /** Animated badge with counting number */
-function CountingBadge() {
-  const [count, setIsActive] = useCountAnimation(1240, 2500, 0);
+function CountingBadge({ targetCount = 0 }) {
+  const [count, setIsActive] = useCountAnimation(targetCount, 1500, 0);
   const badgeRef = useRef(null);
 
   useEffect(() => {
@@ -300,7 +272,7 @@ function CountingBadge() {
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [setIsActive]);
+  }, [targetCount, setIsActive]);
 
   return (
     <div
@@ -312,8 +284,8 @@ function CountingBadge() {
         backgroundColor: "rgba(249,115,22,0.08)",
       }}
     >
-      <Sparkles size={13} /> 
-      <span className="tabular-nums">{count.toLocaleString()}</span> roles hiring right now
+      <Sparkles size={13} />
+      <span className="tabular-nums">+{count.toLocaleString()}</span> {count === 1 ? "role" : "roles"} hiring right now
     </div>
   );
 }
@@ -352,10 +324,35 @@ function FlipHeadline({ headlines, interval = 4500 }) {
 
 export default function JobBoardLanding() {
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const [featuredJobs, setFeaturedJobs] = useState([]);
+  const [totalJobsCount, setTotalJobsCount] = useState(0);
+  const [jobsLoading, setJobsLoading] = useState(true);
 
   useEffect(() => {
-    const t = requestAnimationFrame(() => setHeroLoaded(true));
-    return () => cancelAnimationFrame(t);
+    const raf = requestAnimationFrame(() => setHeroLoaded(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || "/api";
+    axios
+      .get(`${API_URL}/public/job-postings`)
+      .then((res) => {
+        const all = Array.isArray(res.data)
+          ? res.data
+          : res.data.data ?? res.data.postings ?? [];
+        setTotalJobsCount(all.length);
+        // Sort by created_at descending, take latest 3
+        const sorted = [...all].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        setFeaturedJobs(sorted.slice(0, 3));
+      })
+      .catch(() => {
+        setTotalJobsCount(0);
+        setFeaturedJobs([]);
+      })
+      .finally(() => setJobsLoading(false));
   }, []);
 
   return (
@@ -408,7 +405,7 @@ export default function JobBoardLanding() {
               transform: heroLoaded ? "translateY(0)" : "translateY(10px)",
             }}
           >
-            <CountingBadge />
+            <CountingBadge targetCount={totalJobsCount} />
           </div>
 
           <h1
@@ -419,7 +416,7 @@ export default function JobBoardLanding() {
               transitionDelay: "100ms",
             }}
           >
-          <FlipHeadline headlines={HERO_HEADLINES} />
+            <FlipHeadline headlines={HERO_HEADLINES} />
           </h1>
 
           <p
@@ -472,9 +469,9 @@ export default function JobBoardLanding() {
 
       {/* ---------------- What is ARTMS ---------------- */}
       <section className="relative isolate overflow-hidden py-24">
-        
+
         {/* Animated gradient background */}
-        <div 
+        <div
           className="absolute inset-0 -z-20"
           style={{
             background: `linear-gradient(135deg, 
@@ -564,12 +561,12 @@ export default function JobBoardLanding() {
                     {/* Animated accent line */}
                     <div
                       className="absolute left-0 top-0 h-1 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
-                      style={{ 
-                        background: `linear-gradient(90deg, ${TOKENS.accent}, ${TOKENS.accentDark})` 
+                      style={{
+                        background: `linear-gradient(90deg, ${TOKENS.accent}, ${TOKENS.accentDark})`
                       }}
                       aria-hidden="true"
                     />
-                    
+
                     {/* Icon with glow effect on hover */}
                     <div className="relative">
                       <div
@@ -579,16 +576,16 @@ export default function JobBoardLanding() {
                       />
                       <div
                         className="relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
-                        style={{ 
-                          backgroundColor: "#EEF1FB", 
-                          color: TOKENS.navy 
+                        style={{
+                          backgroundColor: "#EEF1FB",
+                          color: TOKENS.navy
                         }}
                       >
                         <FeatureIcon size={22} />
                       </div>
                     </div>
 
-                    <h3 className="mt-5 text-base font-extrabold transition-colors duration-300" 
+                    <h3 className="mt-5 text-base font-extrabold transition-colors duration-300"
                       style={{ color: TOKENS.navy }}
                     >
                       {f.title}
@@ -661,7 +658,7 @@ export default function JobBoardLanding() {
 
       {/* ---------------- Featured Jobs Preview ---------------- */}
       <section id="jobs" className="relative isolate overflow-hidden py-24">
-        
+
         {/* Wave pattern background */}
         <div
           className="absolute inset-0 -z-20"
@@ -670,7 +667,7 @@ export default function JobBoardLanding() {
           }}
           aria-hidden="true"
         />
-        
+
         {/* Animated SVG waves */}
         <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
           <svg
@@ -759,12 +756,39 @@ export default function JobBoardLanding() {
           </Reveal>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {FEATURED_JOBS.map((job, i) => (
-            <Reveal key={job.id} delay={i * 100}>
-              <JobCard job={job} />
-            </Reveal>
-          ))}
-        </div>
+            {jobsLoading ? (
+              // Skeleton cards while loading
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="animate-pulse rounded-[12px] border bg-white p-6" style={{ borderColor: TOKENS.line }}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-slate-100" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 rounded bg-slate-100" />
+                      <div className="h-2.5 w-16 rounded bg-slate-100" />
+                    </div>
+                  </div>
+                  <div className="mt-5 space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-slate-100" />
+                    <div className="h-3 w-1/2 rounded bg-slate-100" />
+                  </div>
+                  <div className="mt-6 h-11 rounded-xl bg-slate-100" />
+                </div>
+              ))
+            ) : featuredJobs.length === 0 ? (
+              <div className="col-span-3 py-12 text-center">
+                <p className="text-sm" style={{ color: TOKENS.slateSoft }}>No open positions at the moment. Check back soon!</p>
+                <Link to="/jobs" className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold" style={{ color: TOKENS.accent }}>
+                  Browse all positions <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : (
+              featuredJobs.map((job, i) => (
+                <Reveal key={job.id} delay={i * 100}>
+                  <JobCard job={job} />
+                </Reveal>
+              ))
+            )}
+          </div>
         </div>
       </section>
 
@@ -790,7 +814,7 @@ export default function JobBoardLanding() {
 
       {/* ---------------- Contact CTA ---------------- */}
       <section id="contact" className="relative isolate overflow-hidden py-24">
-        
+
         {/* Radial gradient background */}
         <div
           className="absolute inset-0 -z-20"
@@ -799,7 +823,7 @@ export default function JobBoardLanding() {
           }}
           aria-hidden="true"
         />
-        
+
         {/* Subtle grid */}
         <div
           className="absolute inset-0 -z-10 opacity-[0.03]"
@@ -812,7 +836,7 @@ export default function JobBoardLanding() {
           }}
           aria-hidden="true"
         />
-        
+
         {/* Floating accent circle */}
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl -z-10 animate-pulse-gentle"
@@ -873,9 +897,9 @@ function InfiniteStatsMarquee() {
   const duplicatedStats = [...stats, ...stats];
 
   return (
-    <section 
+    <section
       className="relative overflow-hidden py-8"
-      style={{ 
+      style={{
         backgroundColor: TOKENS.navy,
         borderTop: `1px solid rgba(255,255,255,0.1)`,
         borderBottom: `1px solid rgba(255,255,255,0.1)`
@@ -891,14 +915,14 @@ function InfiniteStatsMarquee() {
             >
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-lg"
-                style={{ 
+                style={{
                   backgroundColor: "rgba(249,115,22,0.15)",
-                  color: TOKENS.accent 
+                  color: TOKENS.accent
                 }}
               >
                 <Icon size={20} />
               </div>
-              <span 
+              <span
                 className="text-sm font-bold"
                 style={{ color: "rgba(255,255,255,0.9)" }}
               >
@@ -946,7 +970,7 @@ function ProcessSection() {
 
   return (
     <section className="relative isolate overflow-hidden py-24">
-      
+
       {/* Diagonal striped background pattern */}
       <div
         className="absolute inset-0 -z-20"
@@ -1025,7 +1049,7 @@ function ProcessSection() {
               />
 
               <div className="relative flex justify-between">
-                
+
                 {PROCESS_STEPS.map((step, i) => {
                   const StepIcon = step.icon;
                   const isActive = i === active;
@@ -1034,8 +1058,8 @@ function ProcessSection() {
                     <button
                       key={step.id}
                       onClick={() => {
-                      setActive(i);
-                      setIsPaused(true);
+                        setActive(i);
+                        setIsPaused(true);
                       }}
                       className="group flex w-20 flex-col items-center gap-3 rounded-xl py-1 text-center focus:outline-none sm:w-24"
                       aria-current={isActive ? "step" : undefined}
@@ -1176,140 +1200,106 @@ function ProcessSection() {
 function JobCard({ job }) {
   const [hovered, setHovered] = useState(false);
 
+  // Map the API shape → display values
+  const title = job.job_library?.job_title || job.title || "Untitled Position";
+  const dept = job.department?.department_name ?? job.department?.name ?? "";
+  const location = job.location || "Remote";
+  const closing = job.closing_date
+    ? new Date(job.closing_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : null;
+  const vacancies = job.vacancies_count ?? 1;
+  // Two-letter initials from department or job title
+  const initials = dept
+    ? dept.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    : title.slice(0, 2).toUpperCase();
+
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="group relative flex h-full flex-col rounded-[12px] border bg-white p-6 transition-all duration-300"
-      style={{
-        borderColor: hovered ? "rgba(249,115,22,0.35)" : TOKENS.line,
-        boxShadow: hovered
-          ? "0 20px 40px -18px rgba(6,15,90,0.22)"
-          : "0 4px 16px -8px rgba(6,15,90,0.10)",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-black"
-          style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-        >
-          {job.initials}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-xs font-semibold" style={{ color: TOKENS.slateSoft }}>
-            {job.company}
-          </p>
-          <p className="flex items-center gap-1 text-[11px]" style={{ color: TOKENS.slateSoft }}>
-            <Building2 size={11} /> Verified employer
-          </p>
-        </div>
-      </div>
-
-      <h3 className="mt-5 text-lg font-extrabold leading-snug" style={{ color: TOKENS.navy }}>
-        {job.title}
-      </h3>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold"
-          style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-        >
-          <MapPin size={11} /> {job.location}
-        </span>
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold"
-          style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
-        >
-          <Briefcase size={11} /> {job.type}
-        </span>
-      </div>
-
-      <p className="mt-4 text-sm font-bold" style={{ color: TOKENS.slate }}>
-        {job.salary}
-      </p>
-
-      <div className="mt-6 flex-1" />
-
-      <button
-        className="relative mt-2 flex h-11 w-full items-center justify-center overflow-hidden rounded-xl text-sm font-bold text-white transition-colors duration-300"
-        style={{ backgroundColor: hovered ? TOKENS.accentDark : TOKENS.navy }}
+    <Link to={`/jobs`} className="block h-full">
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="group relative flex h-full flex-col rounded-[12px] border bg-white p-6 transition-all duration-300"
+        style={{
+          borderColor: hovered ? "rgba(249,115,22,0.35)" : TOKENS.line,
+          boxShadow: hovered
+            ? "0 20px 40px -18px rgba(6,15,90,0.22)"
+            : "0 4px 16px -8px rgba(6,15,90,0.10)",
+          transform: hovered ? "translateY(-4px)" : "translateY(0)",
+        }}
       >
-        <span
-          className="flex items-center gap-1.5 transition-transform duration-300"
-          style={{ transform: hovered ? "translateX(-2px)" : "translateX(0)" }}
+        {/* Accent bar on hover */}
+        <div
+          className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 rounded-t-[12px] transition-transform duration-500 group-hover:scale-x-100"
+          style={{ background: `linear-gradient(90deg, ${TOKENS.accent}, ${TOKENS.accentDark})` }}
+          aria-hidden="true"
+        />
+
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-black"
+            style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold" style={{ color: TOKENS.slateSoft }}>
+              {dept || "Open Position"}
+            </p>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+              style={{ backgroundColor: "rgba(249,115,22,0.08)", color: TOKENS.accent }}
+            >
+              {vacancies} {vacancies > 1 ? "Vacancies" : "Vacancy"}
+            </span>
+          </div>
+        </div>
+
+        <h3 className="mt-5 text-lg font-extrabold leading-snug" style={{ color: TOKENS.navy }}>
+          {title}
+        </h3>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold"
+            style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
+          >
+            <MapPin size={11} /> {location}
+          </span>
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold"
+            style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
+          >
+            <Briefcase size={11} /> Full-time
+          </span>
+          {closing && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold"
+              style={{ backgroundColor: "rgba(249,115,22,0.07)", color: TOKENS.accent }}
+            >
+              Closes {closing}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-6 flex-1" />
+
+        <button
+          className="relative mt-2 flex h-11 w-full items-center justify-center overflow-hidden rounded-xl text-sm font-bold text-white transition-colors duration-300"
+          style={{ backgroundColor: hovered ? TOKENS.accentDark : TOKENS.navy }}
         >
-          Apply Now
-          <ArrowRight
-            size={15}
-            className="transition-transform duration-300"
-            style={{ transform: hovered ? "translateX(3px)" : "translateX(0)" }}
-          />
-        </span>
-      </button>
-
-      <style>{`
-        @keyframes grid-pan {
-          0%   { background-position: 0px 0px; }
-          100% { background-position: 40px 40px; }
-        }
-        .animate-grid-pan {
-          animation: grid-pan 6s linear infinite;
-        }
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(8px); }
-        }
-        .animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
-
-        @keyframes flip-out {
-          0% { opacity: 1; transform: translateY(0) rotateX(0deg); }
-          100% { opacity: 0; transform: translateY(-14px) rotateX(40deg); }
-        }
-        @keyframes flip-in {
-          0% { opacity: 0; transform: translateY(14px) rotateX(-40deg); }
-          100% { opacity: 1; transform: translateY(0) rotateX(0deg); }
-        }
-        
-        @keyframes wave-move {
-          0%, 100% { transform: translateX(0) scaleY(1); }
-          50% { transform: translateX(-25px) scaleY(1.05); }
-        }
-        
-        @keyframes wave-move-reverse {
-          0%, 100% { transform: translateX(0) scaleY(1); }
-          50% { transform: translateX(25px) scaleY(0.95); }
-        }
-        
-        @keyframes float-icon {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(10px, -15px) rotate(5deg); }
-          66% { transform: translate(-5px, -25px) rotate(-3deg); }
-        }
-        
-        @keyframes float-icon-delayed {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-12px, -20px) rotate(-4deg); }
-          66% { transform: translate(8px, -10px) rotate(6deg); }
-        }
-        
-        @keyframes float-icon-slow {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(5px, -30px) scale(1.1); }
-        }
-        
-        .animate-float-icon {
-          animation: float-icon 15s ease-in-out infinite;
-        }
-        
-        .animate-float-icon-delayed {
-          animation: float-icon-delayed 18s ease-in-out infinite;
-        }
-        
-        .animate-float-icon-slow {
-          animation: float-icon-slow 20s ease-in-out infinite;
-        }
-      `}</style>
-    </div>
+          <span
+            className="flex items-center gap-1.5 transition-transform duration-300"
+            style={{ transform: hovered ? "translateX(-2px)" : "translateX(0)" }}
+          >
+            View &amp; Apply
+            <ArrowRight
+              size={15}
+              className="transition-transform duration-300"
+              style={{ transform: hovered ? "translateX(3px)" : "translateX(0)" }}
+            />
+          </span>
+        </button>
+      </div>
+    </Link>
   );
 }

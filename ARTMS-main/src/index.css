@@ -16,7 +16,6 @@
   --artms-card: #ffffff;
   --artms-soft: #f8fafc; /* slate-50 */
   --artms-ring: rgba(17, 26, 98, 0.35);
-
   color-scheme: light;
 }
 
@@ -27,10 +26,21 @@ body {
   color: var(--artms-fg);
 }
 
-/* Better default focus + smooth UI */
-:focus-visible {
+/* Better default focus + smooth UI (exclude form inputs which use custom container borders) */
+:focus-visible:not(input):not(select):not(textarea) {
   outline: 3px solid var(--artms-ring);
   outline-offset: 2px;
+}
+
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
 }
 
 /* Subtle, consistent scrollbar (supported browsers only) */
@@ -153,4 +163,26 @@ input[type="search"] {
 input[type="search"]:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Pulsating Orange Border for Search Bars on hover and active focus */
+.search-pulse-border {
+  transition: all 0.3s ease;
+}
+
+.search-pulse-border:hover,
+.search-pulse-border:focus-within {
+  border-color: #F97316 !important;
+  animation: orangeBorderPulse 2.5s ease-in-out infinite !important;
+}
+
+@keyframes orangeBorderPulse {
+  0%, 100% {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.25), 0 0 14px rgba(249, 115, 22, 0.25);
+  }
+  50% {
+    border-color: #F97316;
+    box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.5), 0 0 26px rgba(249, 115, 22, 0.5);
+  }
 }
