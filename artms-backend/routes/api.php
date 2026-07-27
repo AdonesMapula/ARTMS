@@ -14,6 +14,7 @@ use App\Http\Controllers\JobPostingController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LiveKitWebhookController;
 use App\Http\Controllers\ManpowerRequestController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ResumeParserController;
@@ -69,6 +70,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
+
+    // ── Notifications ────────────────────────────────────────────────────────
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // ── Dashboards ──────────────────────────────────────────────────────────
     Route::get('dashboard/admin', [DashboardController::class, 'adminStats'])
