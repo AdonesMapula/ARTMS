@@ -1,6 +1,6 @@
 # ARTMS — Automated Recruitment and Talent Management System
 
-A full-stack, high-performance web application built with **React (Vite)** for the frontend, **Laravel 11** for the backend REST API, **MySQL 8.0** database with composite indexing, and **Redis** for sub-millisecond read caching.
+A full-stack, high-performance web application built with **React (Vite)** for the frontend, **Laravel 11** for the backend REST API, **MySQL 8.0** database with composite indexing, **LiveKit Cloud WebRTC** for video conferencing, and **Redis** for sub-millisecond read caching.
 
 ---
 
@@ -25,7 +25,7 @@ Install all of the following before running the project on any device.
 | Node.js | 18+ | `node -v` | [nodejs.org](https://nodejs.org) |
 | npm | 9+ | `npm -v` | Included with Node.js |
 | MySQL | 8.0+ | `mysql --version` | [dev.mysql.com](https://dev.mysql.com/downloads/installer/) |
-| ngrok / localtunnel | latest | `ngrok --version` | [ngrok.com](https://ngrok.com) (for temporary public hosting) |
+| ngrok / localtunnel | latest | `ngrok --version` | [ngrok.com](https://ngrok.com) (for temporary public hosting & webhooks) |
 | Redis (Optional) | 6.0+ | `redis-cli ping` | Recommended for low-latency boot caching |
 | Git | any | `git --version` | [git-scm.com](https://git-scm.com) |
 
@@ -41,7 +41,7 @@ git clone https://github.com/YOUR_USERNAME/ARTMS.git
 cd ARTMS
 ```
 
-### Step 2 — Backend Initialization (Laravel)
+### Step 2 — Backend Initialization (Laravel 11)
 ```bash
 cd artms-backend
 
@@ -55,7 +55,7 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Open `artms-backend/.env` and configure your database credentials:
+Open `artms-backend/.env` and configure your database, LiveKit, and ngrok values:
 ```env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -63,6 +63,16 @@ DB_PORT=3306
 DB_DATABASE=artms_db
 DB_USERNAME=root
 DB_PASSWORD=your_mysql_password
+
+# LiveKit WebRTC Video Conferencing Keys
+LIVEKIT_URL=wss://artms-8tdvtcz7.livekit.cloud
+LIVEKIT_API_KEY=APIHjgS5A8nwofZ
+LIVEKIT_API_SECRET=Z7U9FUGf21cWva4Bitvpryfiebjh9g11Doref6AXTNzG
+LIVEKIT_HOST=wss://artms-8tdvtcz7.livekit.cloud
+LIVEKIT_WEBHOOK_URL=https://your-ngrok-url.ngrok-free.dev/api/livekit/webhook
+
+# xAI Grok Evaluation
+XAI_API_KEY=your_xai_grok_api_key_here
 ```
 
 Create the database in MySQL and run migrations with seeders & composite indexes:
@@ -77,7 +87,7 @@ php artisan migrate --seed
 php artisan artms:warm-cache --active-only
 ```
 
-### Step 3 — Frontend Initialization (React)
+### Step 3 — Frontend Initialization (React + Vite)
 Open a new terminal and navigate to the frontend:
 ```bash
 cd ARTMS-main
@@ -96,9 +106,38 @@ VITE_API_URL=http://localhost:8000/api
 
 ---
 
-## 🚀 How to Start the System (Daily Use & Temporary Hosting)
+## 📹 LiveKit Cloud WebRTC & Video Conferencing Setup
 
-To launch the system, open **3 separate CLI terminal windows** on your device:
+ARTMS features full video interviewing powered by **LiveKit Cloud** and **xAI Grok API**:
+
+1. **Token Generation**: When an interviewer or applicant joins a video room, Laravel validates the request and issues a signed JWT via `InterviewController.php`.
+2. **WebSockets Connection**: The React frontend (`ZoomVideoStage.jsx`) connects directly to `wss://artms-8tdvtcz7.livekit.cloud` using `@livekit/components-react`.
+3. **Live Transcripts & AI Reports**: Clicking **End Interview** dispatches background processing to generate AI evaluation scorecards via xAI Grok (`grok-4.5`).
+
+---
+
+## 🌐 ngrok Public Tunnel & Remote Access Setup
+
+ngrok allows external applicants on mobile phones or remote devices to join video calls and access the public job application pages.
+
+### 1. Authenticate ngrok (One-Time Setup)
+```bash
+ngrok config add-authtoken YOUR_NGROK_AUTHTOKEN
+```
+*(Get your token at [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken))*
+
+### 2. Start ngrok Tunnel
+```bash
+ngrok http 5173
+```
+- Copy the generated HTTPS forwarding URL (e.g. `https://xxxx.ngrok-free.app`).
+- Update `LIVEKIT_WEBHOOK_URL` in `artms-backend/.env` with your ngrok domain + `/api/livekit/webhook`.
+
+---
+
+## 🚀 How to Start the System (Daily Operation)
+
+To launch the full system, open **3 separate CLI terminal windows** on your device:
 
 ### Terminal 1 — Start Backend Server (Laravel API)
 ```bash
@@ -114,20 +153,11 @@ npm run dev -- --host
 ```
 > `-- --host` exposes the Vite frontend to external network access and tunnel proxies.
 
-### Terminal 3 — Start ngrok (Temporary Public Hosting)
-To generate a secure temporary HTTPS public URL accessible on mobile phones or external devices:
-
-**Using ngrok:**
+### Terminal 3 — Start ngrok Public Tunnel
 ```bash
 ngrok http 5173
 ```
-
-**Or using localtunnel:**
-```bash
-npx localtunnel --port 5173
-```
-
-> **Note:** Copy the generated `https://xxxx.ngrok-free.app` or `https://xxxx.loca.lt` URL and open it on any device.
+> Or use localtunnel: `npx localtunnel --port 5173`
 
 ---
 
@@ -171,13 +201,10 @@ These accounts are created automatically when running `php artisan migrate --see
 PHP is not in your system PATH. Add `C:\xampp\php` (or your PHP path) to Environment Variables -> PATH.
 
 ### ngrok prints USAGE help menu instead of starting
-In ngrok v3, an **Auth Token** is required. If no authtoken is configured or if the config file is missing, ngrok defaults to displaying the help screen.
+In ngrok v3, an **Auth Token** is required.
 1. Get a free token from [dashboard.ngrok.com](https://dashboard.ngrok.com)
 2. Run: `ngrok config add-authtoken YOUR_AUTHTOKEN_HERE`
 3. Alternatively, use zero-config localtunnel: `npx localtunnel --port 5173`
-
-### ngrok / Localtunnel connection issues
-Ensure both Laravel (`--host=0.0.0.0`) and Vite (`--host`) are running before launching the tunnel.
 
 ### Cache errors / stale data
 Clear the Laravel config and application cache:
