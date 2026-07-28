@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiScreeningController;
+use App\Http\Controllers\AppBootController;
 use App\Http\Controllers\ApplicantController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::prefix('public')->group(function () {
+    Route::get('boot', [AppBootController::class, 'publicBoot']);
     Route::get('job-postings', [JobPostingController::class, 'publicIndex']);
     Route::get('job-postings/{jobPosting}', [JobPostingController::class, 'show']);
     Route::post('applicants', [ApplicantController::class, 'store']); // online application form
@@ -69,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
+    Route::get('boot', [AppBootController::class, 'boot']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
     // ── Notifications ────────────────────────────────────────────────────────

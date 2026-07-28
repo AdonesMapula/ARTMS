@@ -13,8 +13,9 @@ export default defineConfig({
     exclude: ['maplibre-gl'],
   },
   server: {
+    host: true,
     port: 5173,
-    allowedHosts: true, // Allows ngrok and external tunnels
+    allowedHosts: true, // Allows localtunnel and external hosting
     // Proxy /api calls to Laravel during development — avoids CORS entirely
     proxy: {
       '/api': {

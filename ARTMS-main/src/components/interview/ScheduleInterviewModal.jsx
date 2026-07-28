@@ -62,11 +62,13 @@ const TIMEZONE_OPTIONS = [
   { value: "(GMT-05:00) Eastern Time (US & Canada)", label: "(GMT-05:00) Eastern Time (US & Canada)" },
 ];
 
+const DEFAULT_APPLICANTS = [];
+
 export default function ScheduleInterviewModal({
   open,
   onClose,
   onSaved,
-  applicants: applicantsProp = [],
+  applicants: applicantsProp = DEFAULT_APPLICANTS,
   prefillApplicantId = null,
   prefillInterview = null,
 }) {
@@ -98,17 +100,32 @@ export default function ScheduleInterviewModal({
 
   // Load applicants if not provided
   useEffect(() => {
-    if (!open) { setSent(false); setErrors({}); return; }
+    if (!open) { 
+      setSent(false); 
+      setErrors({}); 
+      return; 
+    }
 
-    if (applicantsProp.length > 0) {
-      setApplicants(applicantsProp);
+    if (applicantsProp && applicantsProp.length > 0) {
+      setApplicants((prev) => (prev === applicantsProp ? prev : applicantsProp));
     } else {
+      let isMounted = true;
       setLoadingApps(true);
       applicantService
         .getAll({ per_page: 200 })
-        .then(({ data }) => setApplicants(data.data ?? data ?? []))
-        .catch(() => setApplicants([]))
-        .finally(() => setLoadingApps(false));
+        .then(({ data }) => {
+          if (isMounted) setApplicants(data.data ?? data ?? []);
+        })
+        .catch(() => {
+          if (isMounted) setApplicants([]);
+        })
+        .finally(() => {
+          if (isMounted) setLoadingApps(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
     }
   }, [open, applicantsProp]);
 
@@ -117,29 +134,33 @@ export default function ScheduleInterviewModal({
     if (!open) return;
 
     if (prefillInterview) {
-      setSelectedApplicantId(prefillInterview.applicant_id || prefillInterview.applicant?.id || "");
+      const appVal = prefillInterview.applicant_id || prefillInterview.applicant?.id || "";
+      setSelectedApplicantId((prev) => (prev === appVal ? prev : appVal));
       if (prefillInterview.scheduled_at) {
         const dt = new Date(prefillInterview.scheduled_at);
         const yyyy = dt.getFullYear();
         const mm = String(dt.getMonth() + 1).padStart(2, "0");
         const dd = String(dt.getDate()).padStart(2, "0");
-        setInterviewDate(`${yyyy}-${mm}-${dd}`);
+        const dateVal = `${yyyy}-${mm}-${dd}`;
+        setInterviewDate((prev) => (prev === dateVal ? prev : dateVal));
         
         let hh = dt.getHours();
         const m = String(dt.getMinutes()).padStart(2, "0");
         const ampm = hh >= 12 ? "PM" : "AM";
         hh = hh % 12 || 12;
-        setInterviewTime(`${String(hh).padStart(2, "0")}:${m} ${ampm}`);
+        const timeVal = `${String(hh).padStart(2, "0")}:${m} ${ampm}`;
+        setInterviewTime((prev) => (prev === timeVal ? prev : timeVal));
       }
       if (prefillInterview.interview_type === "in_person") setInterviewMode("ON-SITE");
       else if (prefillInterview.interview_type === "phone") setInterviewMode("PHONE");
       else setInterviewMode("VIRTUAL");
     } else if (prefillApplicantId) {
-      setSelectedApplicantId(prefillApplicantId);
+      setSelectedApplicantId((prev) => (prev === prefillApplicantId ? prev : prefillApplicantId));
     } else if (applicants.length > 0 && !selectedApplicantId) {
-      setSelectedApplicantId(applicants[0].id);
+      const firstId = applicants[0].id;
+      setSelectedApplicantId((prev) => (prev ? prev : firstId));
     }
-  }, [open, prefillApplicantId, prefillInterview, applicants]);
+  }, [open, prefillApplicantId, prefillInterview, applicants, selectedApplicantId]);
 
   // Current selected applicant object
   const currentApplicant = useMemo(() => {

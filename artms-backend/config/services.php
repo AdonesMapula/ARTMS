@@ -48,9 +48,11 @@ return [
     ],
 
     'livekit' => [
-        'key'    => env('LIVEKIT_API_KEY'),
-        'secret' => env('LIVEKIT_API_SECRET'),
-        'host'   => env('LIVEKIT_HOST', 'https://cloud.livekit.io'),
+        'url'         => env('LIVEKIT_URL', env('LIVEKIT_HOST', 'wss://artms-8tdvtcz7.livekit.cloud')),
+        'key'         => env('LIVEKIT_API_KEY'),
+        'secret'      => env('LIVEKIT_API_SECRET'),
+        'host'        => env('LIVEKIT_HOST', 'wss://artms-8tdvtcz7.livekit.cloud'),
+        'webhook_url' => env('LIVEKIT_WEBHOOK_URL'),
     ],
 
     'xai' => [

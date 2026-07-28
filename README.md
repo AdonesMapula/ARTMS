@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-=======
-[README.md](https://github.com/user-attachments/files/30073394/README.md)
->>>>>>> 971c2ae3212afc7e25872403cb75a8ce50340e3a
 # ARTMS — Automated Recruitment and Talent Management System
 
-A full-stack web application built with **React (Vite)** for the frontend and **Laravel 11** for the backend REST API, connected to a **MySQL** database.
+A full-stack, high-performance web application built with **React (Vite)** for the frontend, **Laravel 11** for the backend REST API, **MySQL 8.0** database with composite indexing, and **Redis** for sub-millisecond read caching.
 
 ---
 
@@ -20,155 +16,146 @@ ARTMS/
 
 ## Prerequisites
 
-Install all of the following before running the project. Use the commands to verify each one is ready.
+Install all of the following before running the project on any device.
 
-| Software | Minimum Version | Verify Command | Download |
+| Software | Minimum Version | Verify Command | Download / Notes |
 |---|---|---|---|
 | PHP | 8.2+ | `php -v` | [windows.php.net](https://windows.php.net/download/) or via XAMPP |
 | Composer | 2.x | `composer -V` | [getcomposer.org](https://getcomposer.org/Composer-Setup.exe) |
 | Node.js | 18+ | `node -v` | [nodejs.org](https://nodejs.org) |
 | npm | 9+ | `npm -v` | Included with Node.js |
 | MySQL | 8.0+ | `mysql --version` | [dev.mysql.com](https://dev.mysql.com/downloads/installer/) |
+| ngrok / localtunnel | latest | `ngrok --version` | [ngrok.com](https://ngrok.com) (for temporary public hosting) |
+| Redis (Optional) | 6.0+ | `redis-cli ping` | Recommended for low-latency boot caching |
 | Git | any | `git --version` | [git-scm.com](https://git-scm.com) |
 
-> **Recommended:** Install [XAMPP](https://www.apachefriends.org/download.html) to get PHP 8.2 and MySQL together in one installer.
-
 ---
 
-## Setup Checklist
+## 💻 Setting Up the System on a New Device
 
-Work through each section in order. Do not skip steps.
-
----
+Follow this initial setup checklist when opening the repository on a new computer or laptop:
 
 ### Step 1 — Clone the Repository
-
 ```bash
 git clone https://github.com/YOUR_USERNAME/ARTMS.git
 cd ARTMS
 ```
 
----
-
-### Step 2 — Backend Setup
-
+### Step 2 — Backend Initialization (Laravel)
 ```bash
 cd artms-backend
-```
 
-#### 2a. Install PHP dependencies
-```bash
+# 1. Install PHP dependencies
 composer install
-```
 
-#### 2b. Create your environment file
-```bash
+# 2. Create environment configuration
 cp .env.example .env
-```
 
-Open `.env` in any text editor and fill in your values:
-
-```env
-DB_DATABASE=artms_db
-DB_USERNAME=root
-DB_PASSWORD=your_mysql_password_here
-
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_gmail_app_password
-```
-
-Leave everything else as-is for local development.
-
-#### 2c. Generate the application key
-```bash
+# 3. Generate Laravel encryption key
 php artisan key:generate
 ```
 
-You should see: `INFO Application key set successfully.`
-
-#### 2d. Create the MySQL database
-
-Open MySQL Workbench and run:
-```sql
-CREATE DATABASE artms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+Open `artms-backend/.env` and configure your database credentials:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=artms_db
+DB_USERNAME=root
+DB_PASSWORD=your_mysql_password
 ```
 
-Or run it from the terminal:
+Create the database in MySQL and run migrations with seeders & composite indexes:
 ```bash
+# Create MySQL DB
 mysql -u root -p -e "CREATE DATABASE artms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
 
-#### 2e. Run database migrations and seed default accounts
-```bash
+# Run migrations, seed accounts, and build performance indexes
 php artisan migrate --seed
+
+# Pre-warm boot payload cache
+php artisan artms:warm-cache --active-only
 ```
 
-This creates all database tables and inserts the default login accounts shown below.
-
-#### 2f. Start the backend server
-```bash
-php artisan serve --port=8000
-```
-
-**Confirm it works** — open this URL in your browser:
-```
-http://localhost:8000/api/public/job-postings
-```
-You should see a JSON response. If you do, the backend is running correctly.
-
----
-
-### Step 3 — Frontend Setup
-
-Open a **new terminal window**, then:
-
+### Step 3 — Frontend Initialization (React)
+Open a new terminal and navigate to the frontend:
 ```bash
 cd ARTMS-main
-```
 
-#### 3a. Install JavaScript dependencies
-```bash
+# 1. Install JavaScript dependencies
 npm install
-```
 
-#### 3b. Create your environment file
-```bash
+# 2. Create environment configuration
 cp .env.example .env
 ```
 
-The default value is already correct for local development:
+Ensure `ARTMS-main/.env` points to your backend API URL:
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```
 
-#### 3c. Start the frontend development server
+---
+
+## 🚀 How to Start the System (Daily Use & Temporary Hosting)
+
+To launch the system, open **3 separate CLI terminal windows** on your device:
+
+### Terminal 1 — Start Backend Server (Laravel API)
 ```bash
-npm run dev
+cd artms-backend
+php artisan serve --host=0.0.0.0 --port=8000
+```
+> `--host=0.0.0.0` binds Laravel to all network interfaces so local devices and ngrok tunnels can reach it.
+
+### Terminal 2 — Start Frontend Server (React Vite)
+```bash
+cd ARTMS-main
+npm run dev -- --host
+```
+> `-- --host` exposes the Vite frontend to external network access and tunnel proxies.
+
+### Terminal 3 — Start ngrok (Temporary Public Hosting)
+To generate a secure temporary HTTPS public URL accessible on mobile phones or external devices:
+
+**Using ngrok:**
+```bash
+ngrok http 5173
 ```
 
-Open your browser and go to:
+**Or using localtunnel:**
+```bash
+npx localtunnel --port 5173
 ```
-http://localhost:5173
-```
+
+> **Note:** Copy the generated `https://xxxx.ngrok-free.app` or `https://xxxx.loca.lt` URL and open it on any device.
 
 ---
 
-### Step 4 — Verify the App is Working
+## ⚡ New Implementations & Performance Features
 
-Go through this checklist in your browser:
+### 1. High-Performance Cache-Aside & Tagged Redis Layer
+- **`BootCacheService`** ([App\Services\Cache\BootCacheService](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Services/Cache/BootCacheService.php)): Encapsulates read-heavy boot payloads (User profiles, roles, permissions, department structure) in sub-millisecond cache with tag-based invalidation.
 
-- [ ] `http://localhost:5173` — Public home page loads
-- [ ] `http://localhost:5173/login` — Login form appears
-- [ ] Log in as Super Admin → dashboard loads with live data
-- [ ] Log in as HR Admin → redirected to HR dashboard
-- [ ] Log in as Department Head → redirected to department dashboard
-- [ ] Log out works correctly
+### 2. Event-Driven Cache Invalidation
+- **`UserObserver`** ([App\Observers\UserObserver](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Observers/UserObserver.php)): Automatically invalidates user cache entries instantly upon data updates or deletions.
+
+### 3. Composite Multi-Column Database Indexing
+- **Migration**: [2026_07_28_000001_add_performance_indexes.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/database/migrations/2026_07_28_000001_add_performance_indexes.php)
+- Adds high-efficiency ESR indexes (`users(department_id, is_active, role)`, `job_postings(status, is_active, created_at)`, `applicants(job_posting_id, status)`), eliminating full table scans in MySQL.
+
+### 4. Cache Warming Automation
+- **Artisan Command**: `php artisan artms:warm-cache` ([WarmCacheCommand.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Console/Commands/WarmCacheCommand.php))
+- Asynchronously pre-populates Redis memory with active user payloads during system startup or deployment.
+
+### 5. Consolidated Single-Flight Boot API
+- **Endpoint**: `GET /api/boot` and `GET /api/public/boot` ([AppBootController.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Http/Controllers/AppBootController.php))
+- Consolidates initial frontend data fetches into **1 single HTTP network roundtrip**.
 
 ---
 
 ## Default Login Accounts
 
-These are created automatically when you run `php artisan migrate --seed`.
+These accounts are created automatically when running `php artisan migrate --seed`:
 
 | Role | Email | Password |
 |---|---|---|
@@ -176,111 +163,27 @@ These are created automatically when you run `php artisan migrate --seed`.
 | HR Admin | hradmin@artms.com | HrAdmin@2024 |
 | COO | coo@artms.com | CooUser@2024 |
 
-> **Change these passwords immediately after first login in any non-development environment.**
-
----
-
-## Running the App (Daily Use)
-
-Every time you want to run the app, you need **two terminals open at the same time**:
-
-**Terminal 1 — Backend**
-```bash
-cd artms-backend
-php artisan serve --port=8000
-```
-
-**Terminal 2 — Frontend**
-```bash
-cd ARTMS-main
-npm run dev
-```
-
-Both must be running simultaneously. Closing either one will break the app.
-
 ---
 
 ## Troubleshooting
 
 ### `php artisan` is not recognized
-PHP is not in your system PATH. Either use the full path:
-```bash
-C:\xampp\php\php.exe artisan serve --port=8000
-```
-Or add `C:\xampp\php` to your Windows Environment Variables → PATH.
+PHP is not in your system PATH. Add `C:\xampp\php` (or your PHP path) to Environment Variables -> PATH.
 
----
+### ngrok prints USAGE help menu instead of starting
+In ngrok v3, an **Auth Token** is required. If no authtoken is configured or if the config file is missing, ngrok defaults to displaying the help screen.
+1. Get a free token from [dashboard.ngrok.com](https://dashboard.ngrok.com)
+2. Run: `ngrok config add-authtoken YOUR_AUTHTOKEN_HERE`
+3. Alternatively, use zero-config localtunnel: `npx localtunnel --port 5173`
 
-### `composer install` fails with a PHP version error
-Your PHP version is below 8.2. Download and install XAMPP 8.2+ from [apachefriends.org](https://www.apachefriends.org/download.html).
+### ngrok / Localtunnel connection issues
+Ensure both Laravel (`--host=0.0.0.0`) and Vite (`--host`) are running before launching the tunnel.
 
----
-
-### `SQLSTATE[HY000] [1045] Access denied`
-The database password in your `.env` is wrong. Open `artms-backend/.env` and correct `DB_PASSWORD`.
-
----
-
-### `SQLSTATE[HY000] [1049] Unknown database 'artms_db'`
-You skipped Step 2d. Create the database in MySQL first, then re-run `php artisan migrate --seed`.
-
----
-
-### Login returns a CORS error in the browser
-The backend server is not running. Open a terminal, go to `artms-backend`, and run `php artisan serve --port=8000`.
-
----
-
-### Login returns HTTP 419 (CSRF token mismatch)
-Open `artms-backend/bootstrap/app.php` and confirm the `statefulApi()` line is commented out:
-```php
-// $middleware->statefulApi();
-```
-Then restart the backend server.
-
----
-
-### Frontend shows a blank page or module errors
-```bash
-cd ARTMS-main
-rm -rf node_modules
-npm install
-npm run dev
-```
-
----
-
-### Changes to `.env` are not taking effect
-Clear the Laravel config cache:
+### Cache errors / stale data
+Clear the Laravel config and application cache:
 ```bash
 cd artms-backend
 php artisan config:clear
 php artisan cache:clear
+php artisan artms:warm-cache
 ```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, Vite 8, Tailwind CSS v4 |
-| Routing | React Router v7 |
-| HTTP Client | Axios |
-| Backend | Laravel 11 |
-| Authentication | Laravel Sanctum (Bearer token) |
-| Database | MySQL 8.0 |
-| ORM | Laravel Eloquent |
-
----
-
-## Environment Files
-
-Neither `.env` file is included in the repository for security reasons. Both `.env.example` files are included as templates.
-
-| File | Purpose |
-|---|---|
-| `artms-backend/.env.example` | Backend environment template |
-| `ARTMS-main/.env.example` | Frontend environment template |
-
-Copy each one to `.env` and fill in your credentials before running.
