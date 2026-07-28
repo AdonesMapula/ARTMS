@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
 import AlertModal from "../../components/ui/AlertModal";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
 
 const EMPLOYMENT_STATUS_OPTIONS = [
@@ -214,9 +215,13 @@ export default function ManpowerRequest() {
     setForm({ ...form, [field]: arr });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (!form.position_needed) {
+      showAlert("error", "Missing Field", "Please enter a Position Title.");
+      return;
+    }
     if (!form.job_library_id) {
       showAlert("error", "Missing Field", "Please select a position from the Job Library.");
       return;
@@ -250,6 +255,14 @@ export default function ManpowerRequest() {
       fit_threshold_high: Number(form.high_fit_min) || 75,
       fit_threshold_medium: Number(form.medium_fit_min) || 50,
     };
+
+    setConfirmSubmitPayload(payload);
+  };
+
+  const handleDoSubmit = async () => {
+    if (!confirmSubmitPayload) return;
+    const payload = confirmSubmitPayload;
+    setConfirmSubmitPayload(null);
 
     try {
       setSubmitting(true);
@@ -845,6 +858,18 @@ export default function ManpowerRequest() {
           </button>
         </div>
       </form>
+
+      {/* ── Confirmation Dialog ─────────────────────────────────────────────────── */}
+      <ConfirmDialog
+        open={!!confirmSubmitPayload}
+        title="Submit Manpower Request?"
+        description={`Are you sure you want to submit a request for ${confirmSubmitPayload?.headcount || 1} headcount of "${confirmSubmitPayload?.position_needed}"?`}
+        confirmLabel="Yes, Submit Request"
+        cancelLabel="Cancel"
+        tone="primary"
+        onConfirm={handleDoSubmit}
+        onClose={() => setConfirmSubmitPayload(null)}
+      />
 
       {/* ── Alert Modal ─────────────────────────────────────────────────────── */}
       <AlertModal

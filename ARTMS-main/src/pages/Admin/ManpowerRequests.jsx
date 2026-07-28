@@ -8,6 +8,8 @@ import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AlertModal from "../../components/ui/AlertModal";
+import { ManpowerViewModal } from "../../modals";
 import manpowerService from "../../services/manpowerService";
 
 const URGENCY_TONE = { 
@@ -38,6 +40,8 @@ export default function AdminManpowerRequests() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [viewRequest, setViewRequest] = useState(null);
+  const [alertModal, setAlertModal] = useState({ open: false, variant: "info", title: "", message: "" });
   const pageSize = 10;
 
   const loadRequests = useCallback(async () => {
@@ -81,9 +85,21 @@ export default function AdminManpowerRequests() {
     try {
       await manpowerService.delete(deleteConfirm.id);
       setDeleteConfirm(null);
+      setAlertModal({
+        open: true,
+        variant: "success",
+        title: "Request Deleted",
+        message: "Manpower request has been successfully deleted.",
+      });
       loadRequests();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete request.");
+      setDeleteConfirm(null);
+      setAlertModal({
+        open: true,
+        variant: "error",
+        title: "Failed to Delete",
+        message: err.response?.data?.message || "Failed to delete request.",
+      });
     }
   };
 
@@ -307,10 +323,7 @@ export default function AdminManpowerRequests() {
                         <div className="inline-flex gap-1.5">
                           {/* View Details button */}
                           <button
-                            onClick={() => {
-                              // TODO: Implement view details modal
-                              alert(`View details for PRF-${String(r.id).padStart(3, "0")}`);
-                            }}
+                            onClick={() => setViewRequest(r)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
                             title="View Details"
                           >
@@ -348,6 +361,13 @@ export default function AdminManpowerRequests() {
         </CardContent>
       </Card>
 
+      {/* View Details Modal */}
+      <ManpowerViewModal
+        open={!!viewRequest}
+        request={viewRequest}
+        onClose={() => setViewRequest(null)}
+      />
+
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
         open={!!deleteConfirm}
@@ -358,6 +378,15 @@ export default function AdminManpowerRequests() {
         tone="danger"
         onConfirm={handleDelete}
         onClose={() => setDeleteConfirm(null)}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        open={alertModal.open}
+        variant={alertModal.variant}
+        title={alertModal.title}
+        message={alertModal.message}
+        onClose={() => setAlertModal((prev) => ({ ...prev, open: false }))}
       />
     </div>
   );

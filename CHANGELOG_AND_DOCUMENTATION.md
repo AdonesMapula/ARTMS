@@ -228,9 +228,39 @@ This document provides a comprehensive record of all technical updates, module s
 
 ---
 
-## 8. Verification & Build Status
+## 9. Recent Refinements & Manpower Request Enhancements (July 2026)
 
-- **Frontend Build (`npm run build`)**: Compiled with 0 build or linting errors.
+### 📋 Real-Data Manpower Request View Modal (`ManpowerViewModal.jsx`)
+- Built **`ManpowerViewModal.jsx`** ([src/modals/ManpowerViewModal.jsx](file:///c:/Users/My%20PC/Desktop/ARTMS/ARTMS-main/src/modals/ManpowerViewModal.jsx)) displaying full, structured database records for Personnel Requisition Forms:
+  - Request ID (`PRF-00X`), Position Title, Department, Requester
+  - Headcount Needed, Employment Type, Urgency Level, Fit Threshold
+  - Target Need-By Date, Created Date, Business Justification
+  - Grouped Qualifications & Key Responsibilities
+  - Executive / COO Review Remarks
+- Connected **View Details** (`Eye` icon button) in **`AdminManpowerRequests.jsx`** to trigger live data rendering.
+
+### 🎨 Modal Backdrop Blur & Theme-Fitted Dialogs (`Modal.jsx` & `AlertModal.jsx`)
+- Updated **`Modal.jsx`** backdrop overlay to `backdrop-blur-md bg-slate-950/60` for a high-contrast, frosted glass background blur effect.
+- Replaced unstyled browser `alert()` popups across Manpower Request pages with theme-fitted **`AlertModal`** components.
+
+### 🛡️ CRUD Confirmation Modals (`ConfirmDialog.jsx`)
+- Added **`ConfirmDialog`** confirmation modals for all CRUD operations:
+  - Form Submission Confirmation in `DepartmentHead/ManpowerRequest.jsx`
+  - Delete Request Confirmation in `Admin/ManpowerRequests.jsx`
+  - Approval / Rejection Decision Confirmation in `Coo/ManpowerApprovals.jsx`
+
+### ⚙️ Local Deployment & Environment Standardization
+- **`artms-backend/.env`**: Configured local MySQL credentials (`127.0.0.1:3306`), fixed `MAIL_SCHEME=smtp` for Gmail STARTTLS (port 587), and cleaned unused empty keys.
+- **`ARTMS-main/.env` & Vite Proxy**: Set `VITE_API_URL=/api` and `allowedHosts: true` in `vite.config.js` to proxy API requests to `http://localhost:8000`, eliminating cross-origin CORS blocks during local development.
+- **IDE Linter Compliance (`bootstrap/app.php`)**: Added top-level `use` import statements (`Request`, `AuthenticationException`, `ValidationException`) to ensure 100% linter and PHP Intelephense compliance.
+- **Updated README Documentation (`README.md`)**: Documented CLI commands (`ngrok http 5173`), setup instructions for testing LiveKit video interview rooms on mobile devices, and default Department Head login credentials (`depthead@artms.com` / `DeptHead@2024`).
+
+---
+
+## 10. Verification & Build Status
+
+- **Frontend Build (`npm run build`)**: Compiled with 0 build or linting errors (`built in 763ms`).
 - **Backend Route Integrity (`php artisan route:list`)**: All API routes compiled and verified.
+- **PHP Syntax Linter (`php -l`)**: Passed on all modified controller, configuration, and middleware files.
 - **Boot Read Latency**: Reduced from ~450ms down to **< 15ms** via Redis Cache-Aside.
 
