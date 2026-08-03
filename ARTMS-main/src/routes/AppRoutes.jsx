@@ -44,6 +44,7 @@ import InterviewCalendar from "../pages/Admin/InterviewCalendar";
 import Pipeline from "../pages/Admin/Pipeline";
 import Employees from "../pages/Admin/Employees";
 import Reports from "../pages/Admin/Reports";
+import Attendance from "../pages/Admin/Attendance";
 import AdminNotifications from "../pages/Admin/Notifications";
 import Profile from "../pages/Admin/Profile";
 import Settings from "../pages/Admin/Settings";
@@ -75,6 +76,7 @@ import HrInterviews from "../pages/SuperAdmin/HrInterviews";
 import HrPipeline from "../pages/SuperAdmin/HrPipeline";
 import HrEmployees from "../pages/SuperAdmin/HrEmployees";
 import HrReports from "../pages/SuperAdmin/HrReports";
+import HrAttendance from "../pages/SuperAdmin/HrAttendance";
 
 // Debug (temporary)
 import DebugPermissions from "../pages/DebugPermissions";
@@ -239,6 +241,14 @@ export default function AppRoutes() {
                 </PermissionProtectedRoute>
               }
             />
+            <Route
+              path="attendance"
+              element={
+                <PermissionProtectedRoute permission="view_employees">
+                  <Attendance />
+                </PermissionProtectedRoute>
+              }
+            />
             
             <Route path="notifications" element={<AdminNotifications />} />
             <Route path="profile" element={<Profile />} />
@@ -335,6 +345,7 @@ export default function AppRoutes() {
             <Route path="hr-pipeline" element={<HrPipeline />} />
             <Route path="hr-employees" element={<HrEmployees />} />
             <Route path="hr-reports" element={<HrReports />} />
+            <Route path="hr-attendance" element={<HrAttendance />} />
           </Route>
         </Route>
 

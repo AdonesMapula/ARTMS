@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 import artmsLogoWhite from "../assets/Logo/LOGO_ARTMS_WHITE.png";
 
@@ -14,8 +14,7 @@ const NAV_LINKS = [
 
 // Routes with a dark full-bleed hero photo — navbar starts transparent and
 // transitions to solid white once the user scrolls past 24 px.
-// About and Contact have no dark hero, so they always show the solid navbar.
-const TRANSPARENT_ROUTES = ["/", "/application-guide", "/jobs"];
+const TRANSPARENT_ROUTES = ["/", "/application-guide", "/jobs", "/about", "/contact"];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -85,7 +84,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Right-side cluster: nav links + Admin Login grouped together */}
+        {/* Right-side cluster: nav links */}
         <div className="hidden items-center gap-9 md:flex">
           <ul className="flex items-center gap-9">
             {NAV_LINKS.map((link) => (
@@ -106,20 +105,6 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-
-          {/* Admin login */}
-          <Link
-            to="/login"
-            className={[
-              "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:scale-[1.03]",
-              scrolled
-                ? "bg-[#060F5A] text-white hover:bg-[#040a3e]"
-                : "bg-white/10 text-white backdrop-blur-sm border border-white/30 hover:bg-white/20",
-            ].join(" ")}
-          >
-            <ShieldCheck size={16} className="text-[var(--artms-accent)]" />
-            Sign In
-          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -162,17 +147,8 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-          {/* Mobile menu Admin Login */}
-          <Link
-            to="/login"
-            onClick={() => setOpen(false)}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#060F5A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#040a3e]"
-          >
-            <ShieldCheck size={16} className="text-[var(--artms-accent)]" />
-            Sign In
-          </Link>
         </div>
       )}
     </header>
   );
-}
+}
