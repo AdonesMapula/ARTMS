@@ -115,11 +115,11 @@ class AiScreeningController extends Controller
         $jobLib     = $jobPosting->jobLibrary;
         $prf        = $jobPosting->manpowerRequest;
 
-        $positionTitle        = $jobLib?->job_title            ?? $prf?->position_needed ?? 'N/A';
-        $educationReq         = $prf?->educational_background  ?? $jobLib?->qualifications ?? 'Not specified';
-        $experienceReq        = $prf?->work_experience         ?? 'Not specified';
-        $skillsReq            = $prf?->skills                  ?? 'Not specified';
-        $otherReq             = $prf?->other_preferred         ?? 'Not specified';
+        $positionTitle        = $this->formatRequirementAsString($jobLib?->job_title            ?? $prf?->position_needed ?? 'N/A');
+        $educationReq         = $this->formatRequirementAsString($prf?->educational_background  ?? $jobLib?->qualifications ?? 'Not specified');
+        $experienceReq        = $this->formatRequirementAsString($prf?->work_experience         ?? 'Not specified');
+        $skillsReq            = $this->formatRequirementAsString($prf?->skills                  ?? 'Not specified');
+        $otherReq             = $this->formatRequirementAsString($prf?->other_preferred         ?? 'Not specified');
         $highFitMin           = $prf?->high_fit_min_score      ?? 75;
         $mediumFitMin         = $prf?->medium_fit_min_score    ?? 50;
 
@@ -377,5 +377,56 @@ EOT;
             'skills'     => $skills,
             'raw_length' => strlen($text),
         ];
+    }
+
+    /**
+     * Safely format requirement fields (strings, arrays, JSON structures) into string text for prompts.
+     */
+    private function formatRequirementAsString(mixed $value): string
+    {
+        if (is_null($value)) {
+            return 'Not specified';
+        }
+        if (is_string($value)) {
+            return trim($value) === '' ? 'Not specified' : $value;
+        }
+        if (is_array($value) || is_object($value)) {
+            $lines = [];
+            $arr = (array) $value;
+            foreach ($arr as $item) {
+                if (is_string($item) || is_numeric($item)) {
+                    $lines[] = (string) $item;
+                } elseif (is_array($item) || is_object($item)) {
+                    $item = (array) $item;
+                    $title = $item['title'] ?? '';
+                    $details = $item['details'] ?? ($item['value'] ?? null);
+
+                    if (!empty($title)) {
+                        $lines[] = $title . ':';
+                    }
+                    if (is_array($details)) {
+                        foreach ($details as $d) {
+                            if (is_string($d) || is_numeric($d)) {
+                                $lines[] = "  - " . $d;
+                            } elseif (is_array($d) || is_object($d)) {
+                                $d = (array) $d;
+                                if (isset($d['value'])) {
+                                    $lines[] = "  - " . $d['value'];
+                                } elseif (isset($d['title'])) {
+                                    $lines[] = "  - " . $d['title'];
+                                }
+                            }
+                        }
+                    } elseif (is_string($details) || is_numeric($details)) {
+                        $lines[] = "  - " . $details;
+                    }
+                }
+            }
+            if (!empty($lines)) {
+                return implode("\n", $lines);
+            }
+            return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        }
+        return (string) $value;
     }
 }
