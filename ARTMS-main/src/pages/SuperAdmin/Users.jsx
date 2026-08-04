@@ -85,6 +85,7 @@ export default function Users() {
   };
 
   const handleSave = async (formData) => {
+    let result = null;
     if (editUser) {
       const payload = {
         email: formData.email,
@@ -118,11 +119,18 @@ export default function Users() {
         .filter(Boolean)
         .join(" ");
 
-      result = await userService.create({
+      const createPayload = {
         ...formData,
         name: combinedName,
         department_id: formData.department_id || null,
-      });
+      };
+
+      if (!createPayload.password) {
+        delete createPayload.password;
+        delete createPayload.password_confirmation;
+      }
+
+      result = await userService.create(createPayload);
     }
     load();
     return result;
