@@ -80,7 +80,7 @@ function Pill({ active, onClick, children }) {
 
 function SectionCard({ eyebrow, title, description, children, badge, icon }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-[#111A62]/20 sm:p-8">
+    <div className="group relative rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-[#111A62]/20 sm:p-8">
       {/* Decorative gradient corner */}
       <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-[#111A62]/5 to-[#F97316]/5 blur-2xl transition-all duration-300 group-hover:scale-150" />
       
@@ -384,7 +384,7 @@ export default function ManpowerRequest() {
           <div className="grid gap-6 sm:grid-cols-2">
 
             {/* Position dropdown from Job Library */}
-            <div className="sm:col-span-2">
+            <div>
               <label className={labelClass}>
                 <div className="flex items-center gap-2">
                   <FiBookOpen size={14} className="text-[#F97316]" />
