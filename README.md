@@ -153,11 +153,17 @@ npm run dev -- --host
 ```
 > `-- --host` exposes the Vite frontend to external network access and tunnel proxies.
 
-### Terminal 3 — Start ngrok Public Tunnel
+### Terminal 3 — Start ngrok (Temporary Public Hosting & Device Testing)
+To expose the React Vite frontend so mobile phones, tablets, or external devices can access the web application and test the video conferencing module:
+
 ```bash
 ngrok http 5173
 ```
-> Or use localtunnel: `npx localtunnel --port 5173`
+
+- **Backend Tunnel URL**: `https://strategic-shifty-gauntlet.ngrok-free.dev/`
+- **Frontend Tunnel URL**: Copy the temporary HTTPS URL output by ngrok (e.g. `https://xxxx.ngrok-free.app`) and open it on your mobile device or external browser.
+
+> **Note:** Make sure `php artisan serve --host=0.0.0.0 --port=8000` is running in Terminal 1 so ngrok API calls reach your backend server.
 
 ---
 
@@ -192,6 +198,7 @@ These accounts are created automatically when running `php artisan migrate --see
 | Super Admin | superadmin@artms.com | SuperAdmin@2024 |
 | HR Admin | hradmin@artms.com | HrAdmin@2024 |
 | COO | coo@artms.com | CooUser@2024 |
+| Department Head | depthead@artms.com | DeptHead@2024 |
 
 ---
 

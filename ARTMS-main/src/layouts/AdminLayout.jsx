@@ -10,6 +10,7 @@ import {
   FiUsers,
   FiCpu,
   FiCalendar,
+  FiClock,
   FiTrendingUp,
   FiUser,
   FiSettings,
@@ -56,7 +57,7 @@ export default function AdminLayout() {
     // MANAGEMENT Section
     { label: "MANAGEMENT", type: "label" },
     { label: "Employees", to: "/admin/employees", icon: <FiUsers /> },
-    { label: "Reports", to: "/admin/reports", icon: <FiFileText /> },
+    { label: "Attendance", to: "/admin/attendance", icon: <FiClock /> },
     
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },

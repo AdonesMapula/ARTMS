@@ -14,6 +14,7 @@ import {
   FiLayers,
   FiCpu,
   FiCalendar,
+  FiClock,
   FiTrendingUp,
   FiFileText,
   FiBell,
@@ -59,7 +60,7 @@ export default function SuperAdminLayout() {
     { label: "Interviews", to: "/superadmin/hr-interviews", icon: <FiCalendar /> },
     { label: "Pipeline", to: "/superadmin/hr-pipeline", icon: <FiTrendingUp /> },
     { label: "Employees", to: "/superadmin/hr-employees", icon: <FiUsers /> },
-    { label: "Reports", to: "/superadmin/hr-reports", icon: <FiFileText /> },
+    { label: "Attendance", to: "/superadmin/hr-attendance", icon: <FiClock /> },
 
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },

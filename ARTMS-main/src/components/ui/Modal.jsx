@@ -24,7 +24,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/50 p-4 sm:items-center cursor-pointer backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-4 sm:items-center cursor-pointer backdrop-blur-md transition-all duration-200"
       role="dialog"
       aria-modal="true"
       aria-label={title || "Dialog"}

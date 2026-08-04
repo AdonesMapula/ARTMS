@@ -11,6 +11,7 @@ import AlertModal from "../../components/ui/AlertModal";
 import { JobDetailsModal } from "../../modals";
 import ApplyModal from "../../modals/ApplyModal";
 import Reveal from "../../components/ui/Reavel";
+import GeometricBackground from "../../components/ui/GeometricBackground";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
@@ -159,7 +160,7 @@ export default function Jobs() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F8FAFC", fontFamily: "Inter, sans-serif" }}>
       {/* ── HERO — photo + navy wash + grid, identical to Home/ApplicationGuide */}
-      <section className="relative isolate overflow-hidden px-6 pt-28 pb-20 lg:px-10">
+      <section className="relative isolate overflow-hidden">
         {/* Background photo with navy wash */}
         <div
           className="absolute inset-0 -z-20 scale-105 bg-cover bg-center"
@@ -171,7 +172,7 @@ export default function Jobs() {
           style={{ background: "linear-gradient(135deg, rgba(6,15,90,0.96) 0%, rgba(11,27,120,0.90) 50%, rgba(6,15,90,0.84) 100%)" }}
           aria-hidden="true"
         />
-        {/* 24px grid overlay masked to radial — same as Home hero */}
+        {/* 24px grid overlay masked to radial */}
         <div
           className="absolute inset-0 -z-10"
           style={{
@@ -185,69 +186,55 @@ export default function Jobs() {
         {/* Floating glow orbs */}
         <div className="pointer-events-none absolute -left-32 top-10 -z-10 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "rgba(249,115,22,0.08)" }} aria-hidden="true" />
         <div className="pointer-events-none absolute -right-32 bottom-0 -z-10 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: "rgba(99,102,241,0.10)" }} aria-hidden="true" />
-        <div className="relative mx-auto max-w-7xl">
-          <div className="flex flex-col items-center text-center">
-            <Reveal>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm">
-                <Search className="h-4 w-4 text-[#F97316]" />
-                <p className="text-xs font-bold uppercase tracking-wider text-white">
-                  Career Opportunities
-                </p>
-              </div>
-            </Reveal>
-            
-            <Reveal delay={100}>
-              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Discover Your Next
-                <span className="block text-[#F97316]">Career Move</span>
-              </h1>
-            </Reveal>
-            
-            <Reveal delay={200}>
-              <p className="mt-6 max-w-3xl text-base text-slate-200 sm:text-lg">
-                Explore exciting opportunities across departments. Search, filter, and apply online—no account required.
-              </p>
-            </Reveal>
-            
-            {/* Stats Bar */}
-            <div className="mt-10 grid w-full max-w-2xl grid-cols-2 gap-4 sm:grid-cols-3">
-              <Reveal delay={300}>
-                <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
-                  <p className="text-3xl font-extrabold text-white">{jobs.length}</p>
-                  <p className="mt-1 text-sm text-slate-300">Open Positions</p>
-                </div>
-              </Reveal>
-              
-              <Reveal delay={350}>
-                <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm">
-                  <p className="text-3xl font-extrabold text-white">{departments.length - 1}</p>
-                  <p className="mt-1 text-sm text-slate-300">Departments</p>
-                </div>
-              </Reveal>
-              
-              <Reveal delay={400}>
-                <div className="col-span-2 rounded-2xl bg-white/10 px-6 py-4 backdrop-blur-sm sm:col-span-1">
-                  <p className="text-3xl font-extrabold text-white">100%</p>
-                  <p className="mt-1 text-sm text-slate-300">Remote-Friendly</p>
-                </div>
-              </Reveal>
+
+        <div className="mx-auto flex min-h-[420px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-16 text-center lg:px-10">
+          <Reveal>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-500/40 bg-orange-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[#F97316]">
+              <Search size={13} />
+              Career Opportunities
             </div>
-          </div>
+          </Reveal>
+
+          <Reveal delay={100}>
+            <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
+              Discover Your Next{" "}
+              <span className="text-[#F97316]">Career Move</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={200}>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-indigo-100/75 sm:text-lg">
+              Explore exciting opportunities across departments. Search, filter, and apply online — no account required.
+            </p>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── MAIN LISTING — floating blobs + dot-grid, same as ApplicationGuide steps */}
-      <section className="relative isolate overflow-hidden px-6 py-12 lg:px-10">
-        {/* Faint orange dot grid */}
-        <div className="pointer-events-none absolute inset-0 -z-10" style={{
-          backgroundImage: "radial-gradient(circle, #F97316 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-          opacity: 0.025,
-        }} aria-hidden="true" />
+      {/* ── QUICK STATS BAR — solid navy, same as ApplicationGuide ── */}
+      <div style={{ backgroundColor: "#060F5A" }} className="border-y border-white/10">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="grid grid-cols-3 divide-x divide-white/10">
+            {[
+              { val: String(jobs.length), label: "Open Positions" },
+              { val: String(departments.length > 1 ? departments.length - 1 : "—"), label: "Departments" },
+              { val: "100%", label: "Online — no account" },
+            ].map((s, i) => (
+              <div key={i} className="px-6 py-5 text-center">
+                <p className="text-lg font-extrabold text-white">{s.val}</p>
+                <p className="mt-0.5 text-xs text-indigo-100/60">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAIN LISTING ── */}
+      <section className="relative isolate overflow-hidden px-6 pt-10 pb-14 lg:px-10">
+        <GeometricBackground variant="isometric" />
         {/* Slow-floating blobs */}
-        <div className="pointer-events-none absolute -left-20 top-32 -z-10 h-80 w-80 rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: "#060F5A", animation: "float-blob-a 22s ease-in-out infinite" }} aria-hidden="true" />
-        <div className="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: "#F97316", animation: "float-blob-b 28s ease-in-out infinite" }} aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-20 left-1/3 -z-10 h-72 w-72 rounded-full opacity-[0.035] blur-3xl" style={{ backgroundColor: "#0B1B78", animation: "float-blob-a 35s ease-in-out infinite reverse" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute -left-20 top-32 -z-10 h-80 w-80 rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: "#060F5A", animation: "float-blob-a 22s ease-in-out infinite" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 rounded-full opacity-[0.06] blur-3xl" style={{ backgroundColor: "#F97316", animation: "float-blob-b 28s ease-in-out infinite" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-20 left-1/3 -z-10 h-72 w-72 rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: "#0B1B78", animation: "float-blob-a 35s ease-in-out infinite reverse" }} aria-hidden="true" />
         <style>{`
           @keyframes float-blob-a { 0%,100%{transform:translate(0,0)} 33%{transform:translate(24px,-24px)} 66%{transform:translate(-16px,20px)} }
           @keyframes float-blob-b { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-32px,24px)} 66%{transform:translate(24px,-16px)} }
@@ -255,7 +242,7 @@ export default function Jobs() {
         <div className="mx-auto max-w-7xl">
         {/* Search and Filters */}
         <Reveal>
-          <div className="relative -mt-16 rounded-2xl border border-slate-200/50 bg-white p-6 shadow-xl shadow-slate-900/5 backdrop-blur-sm">
+          <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-lg shadow-slate-900/5 backdrop-blur-sm">
             <div className="mb-4 flex items-center gap-2">
               <Filter className="h-4 w-4 text-[#111A62]" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-[#111A62]">
@@ -263,8 +250,34 @@ export default function Jobs() {
               </h2>
             </div>
             
-            {/* Search Bar */}
-            <div className="search-pulse-border group mb-4 flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm">
+            {/* Search Bar — smooth transition glow, no abrupt pulse */}
+            <div
+              className="group mb-4 flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm"
+              style={{
+                borderColor: "#CBD5E1",
+                transition: "border-color 300ms ease, box-shadow 300ms ease",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "rgba(249,115,22,0.5)";
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.12), 0 4px 12px -4px rgba(249,115,22,0.15)";
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = "rgba(249,115,22,0.6)";
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15), 0 4px 12px -4px rgba(249,115,22,0.20)";
+              }}
+              onMouseLeave={e => {
+                if (!e.currentTarget.contains(document.activeElement)) {
+                  e.currentTarget.style.borderColor = "#CBD5E1";
+                  e.currentTarget.style.boxShadow = "none";
+                }
+              }}
+              onBlur={e => {
+                if (!e.currentTarget.contains(document.activeElement)) {
+                  e.currentTarget.style.borderColor = "#CBD5E1";
+                  e.currentTarget.style.boxShadow = "none";
+                }
+              }}
+            >
               <Search className="h-5 w-5 text-slate-400 transition-colors duration-200 group-hover:text-[#F97316] group-focus-within:text-[#F97316]" />
               <input
                 type="text"
@@ -325,11 +338,28 @@ export default function Jobs() {
               const isExpanded = expandedJobId === job.id;
               return (
                 <Reveal key={job.id} delay={index * 60}>
-                  <div className={`overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
-                    isExpanded
-                      ? "border-[#111A62] shadow-xl shadow-[#111A62]/10"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
-                  }`}>
+                  <div
+                    className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
+                      isExpanded
+                        ? "border-[#111A62] shadow-xl shadow-[#111A62]/10"
+                        : "border-slate-200 bg-white hover:-translate-y-1"
+                    }`}
+                    style={{ borderColor: isExpanded ? "#111A62" : "#E2E8F0" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
+                      e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(6,15,90,0.18)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = isExpanded ? "#111A62" : "#E2E8F0";
+                      e.currentTarget.style.boxShadow = isExpanded ? "0 12px 32px -10px rgba(6,15,90,0.18)" : "none";
+                    }}
+                  >
+                    {/* Top orange gradient bar on hover */}
+                    <div
+                      className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100 z-10"
+                      style={{ background: "linear-gradient(90deg, #F97316, #EA580C)" }}
+                      aria-hidden="true"
+                    />
 
                     {/* ── Card Header (always visible) ─────────────── */}
                     <div className={`flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:gap-4 ${
@@ -345,7 +375,7 @@ export default function Jobs() {
                             {job.vacancies_count} {job.vacancies_count > 1 ? "Vacancies" : "Vacancy"}
                           </span>
                         </div>
-                        <h3 className="text-base font-extrabold text-[#111A62] leading-snug">
+                        <h3 className="text-base font-extrabold text-[#111A62] leading-snug group-hover:text-[#F97316] transition-colors duration-200">
                           {job.job_library?.job_title || "Untitled Position"}
                         </h3>
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
@@ -397,6 +427,7 @@ export default function Jobs() {
                         </button>
                       </div>
                     </div>
+
 
                     {/* ── Inline Application Form ───────────────────── */}
                     {isExpanded && expandedJobData && (

@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/Card";
+import GeometricBackground from "../../components/ui/GeometricBackground";
 
 /* ----------------------------------------------------------------------
  * Images
@@ -152,47 +153,99 @@ export default function About() {
   }, []);
 
   return (
-    <div className="bg-white ">
-      {/* ---------------- Intro ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 pt-28 lg:pt-32 lg:px-10">
-        <p
-          className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)] transition-all duration-700"
+    <div className="bg-[#F8FAFC]">
+      {/* ── HERO — photo + navy wash + grid, identical to Home/Jobs/ApplicationGuide ── */}
+      <section className="relative isolate overflow-hidden">
+        {/* Background photo with navy wash */}
+        <div
+          className="absolute inset-0 -z-20 scale-105 bg-cover bg-center"
+          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2000&auto=format&fit=crop)" }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 -z-10"
+          style={{ background: "linear-gradient(135deg, rgba(6,15,90,0.96) 0%, rgba(11,27,120,0.90) 50%, rgba(6,15,90,0.84) 100%)" }}
+          aria-hidden="true"
+        />
+        {/* 24px grid overlay masked to radial — same as Home hero */}
+        <div
+          className="absolute inset-0 -z-10"
           style={{
-            opacity: introLoaded ? 1 : 0,
-            transform: introLoaded ? "translateY(0)" : "translateY(16px)",
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            maskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
           }}
-        >
-          About ARTMS
-        </p>
-        <h1
-          className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight text-[#060F5A] transition-all duration-700 sm:text-5xl"
-          style={{
-            opacity: introLoaded ? 1 : 0,
-            transform: introLoaded ? "translateY(0)" : "translateY(20px)",
-            transitionDelay: "100ms",
-          }}
-        >
-          About Us
-        </h1>
-        <p
-          className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-600 transition-all duration-700 sm:text-base"
-          style={{
-            opacity: introLoaded ? 1 : 0,
-            transform: introLoaded ? "translateY(0)" : "translateY(20px)",
-            transitionDelay: "200ms",
-          }}
-        >
-          <span className="font-semibold text-[#060F5A]">ARTMS</span> is an AI
-          Recruitment and Talent Management System built to replace manual,
-          spreadsheet-driven HR work with one centralized platform — covering
-          everything from a candidate's first application to their full employee
-          lifecycle.
-        </p>
+          aria-hidden="true"
+        />
+        {/* Floating glow orbs */}
+        <div className="pointer-events-none absolute -left-32 top-10 -z-10 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "rgba(249,115,22,0.08)" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-32 bottom-0 -z-10 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: "rgba(99,102,241,0.10)" }} aria-hidden="true" />
+
+        <div className="mx-auto flex min-h-[420px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-16 text-center lg:px-10">
+          {/* Badge */}
+          <div
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-500/40 bg-orange-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--artms-accent)] transition-all duration-700"
+            style={{
+              opacity: introLoaded ? 1 : 0,
+              transform: introLoaded ? "translateY(0)" : "translateY(10px)",
+            }}
+          >
+            <FiCompass size={14} />
+            About ARTMS
+          </div>
+
+          <h1
+            className="max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl transition-all duration-700"
+            style={{
+              opacity: introLoaded ? 1 : 0,
+              transform: introLoaded ? "translateY(0)" : "translateY(24px)",
+              transitionDelay: "100ms",
+            }}
+          >
+            Revolutionizing HR Operations with <span className="text-[var(--artms-accent)]">AI Technology</span>
+          </h1>
+
+          <p
+            className="mt-5 max-w-2xl text-base leading-relaxed text-indigo-100/80 sm:text-lg transition-all duration-700"
+            style={{
+              opacity: introLoaded ? 1 : 0,
+              transform: introLoaded ? "translateY(0)" : "translateY(24px)",
+              transitionDelay: "220ms",
+            }}
+          >
+            ARTMS is an AI Recruitment and Talent Management System built to replace manual,
+            spreadsheet-driven HR work with one centralized platform — covering everything from a candidate's first application to their full employee lifecycle.
+          </p>
+        </div>
       </section>
 
+      {/* ── QUICK STATS BAR — solid navy, identical to ApplicationGuide ── */}
+      <div style={{ backgroundColor: "#060F5A" }} className="border-y border-white/10">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="grid grid-cols-3 divide-x divide-white/10">
+            {[
+              { val: "AI-Powered", label: "Recruitment Engine" },
+              { val: "End-to-End", label: "Employee Lifecycle" },
+              { val: "Role-Based", label: "Access Control" },
+            ].map((s, i) => (
+              <div key={i} className="px-6 py-5 text-center">
+                <p className="text-lg font-extrabold text-white">{s.val}</p>
+                <p className="mt-0.5 text-xs text-indigo-100/60">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
       {/* ---------------- Three-column overview ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
+      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 py-16 lg:px-10">
+        <GeometricBackground variant="polygons" />
+        <div className="pointer-events-none absolute -left-20 top-1/2 -z-10 h-80 w-80 -translate-y-1/2 rounded-full blur-3xl opacity-30" style={{ background: "radial-gradient(circle, rgba(6,15,90,0.08) 0%, transparent 70%)" }} aria-hidden="true" />
+
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-[var(--artms-border)]">
+
           {/* Column 1 — what it offers */}
           <Reveal className="lg:pr-8">
             <h2 className="text-lg font-extrabold text-[#060F5A]">What ARTMS Offers</h2>
@@ -294,30 +347,34 @@ export default function About() {
           </Reveal>
 
           <div className="mt-10 grid gap-8 lg:grid-cols-2">
-            <Reveal delay={100}>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm sm:p-8">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--artms-accent)]">
-                  <FiCompass size={18} aria-hidden="true" />
-                </span>
-                <h3 className="mt-4 text-lg font-extrabold text-white">Vision</h3>
-                <p className="mt-2 text-sm leading-relaxed text-indigo-100/80">
-                  A hiring and talent management experience where AI handles the
-                  repetitive work, so HR teams can spend their time on the decisions
-                  that actually need a human.
-                </p>
+            <Reveal delay={100} className="h-full">
+              <div className="h-full flex flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm sm:p-8">
+                <div>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--artms-accent)]">
+                    <FiCompass size={18} aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-4 text-lg font-extrabold text-white">Vision</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-indigo-100/80">
+                    A hiring and talent management experience where AI handles the
+                    repetitive work, so HR teams can spend their time on the decisions
+                    that actually need a human.
+                  </p>
+                </div>
               </div>
             </Reveal>
-            <Reveal delay={200}>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm sm:p-8">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--artms-accent)]">
-                  <FiTarget size={18} aria-hidden="true" />
-                </span>
-                <h3 className="mt-4 text-lg font-extrabold text-white">Mission</h3>
-                <p className="mt-2 text-sm leading-relaxed text-indigo-100/80">
-                  Deliver a secure, centralized platform that connects recruitment and
-                  employee records end to end, cutting manual tracking and giving
-                  every hiring decision a clear, auditable trail.
-                </p>
+            <Reveal delay={200} className="h-full">
+              <div className="h-full flex flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm sm:p-8">
+                <div>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-[var(--artms-accent)]">
+                    <FiTarget size={18} aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-4 text-lg font-extrabold text-white">Mission</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-indigo-100/80">
+                    Deliver a secure, centralized platform that connects recruitment and
+                    employee records end to end, cutting manual tracking and giving
+                    every hiring decision a clear, auditable trail.
+                  </p>
+                </div>
               </div>
             </Reveal>
           </div>
@@ -325,8 +382,20 @@ export default function About() {
       </section>
 
       {/* ---------------- Values ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
+      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 py-20 lg:px-10">
+        {/* Background Dot Texture & Glow Orbs */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(6,15,90,0.035) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+          aria-hidden="true"
+        />
+        <div className="pointer-events-none absolute -right-20 top-1/2 -z-10 h-80 w-80 -translate-y-1/2 rounded-full blur-3xl opacity-25" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)" }} aria-hidden="true" />
+
         <Reveal>
+
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
@@ -341,18 +410,36 @@ export default function About() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {VALUES.map((v, i) => (
-            <Reveal key={v.title} delay={i * 80}>
-              <Card className="h-full transition hover:-translate-y-0.5 hover:shadow-lg">
-                <CardHeader>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#060F5A]/8 text-[#060F5A]">
-                    {v.icon}
-                  </div>
-                  <CardTitle className="mt-3 text-[#060F5A]">{v.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-slate-600">{v.desc}</p>
-                </CardContent>
-              </Card>
+            <Reveal key={v.title} delay={i * 80} className="h-full">
+              <div
+                className="group relative h-full overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1"
+                style={{ borderColor: "#E2E8F0", boxShadow: "0 4px 16px -10px rgba(6,15,90,0.10)" }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
+                  e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(6,15,90,0.18)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "#E2E8F0";
+                  e.currentTarget.style.boxShadow = "0 4px 16px -10px rgba(6,15,90,0.10)";
+                }}
+              >
+                {/* Accent top bar on hover */}
+                <div
+                  className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+                  style={{ background: "linear-gradient(90deg, #F97316, #EA580C)" }}
+                  aria-hidden="true"
+                />
+
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+                  style={{ backgroundColor: "#EEF1FB", color: "#060F5A" }}
+                >
+                  {v.icon}
+                </div>
+
+                <h3 className="mt-4 text-base font-extrabold text-[#060F5A]">{v.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600">{v.desc}</p>
+              </div>
             </Reveal>
           ))}
         </div>

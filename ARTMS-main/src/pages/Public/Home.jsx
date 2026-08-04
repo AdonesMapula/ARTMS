@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import GeometricBackground from "../../components/ui/GeometricBackground";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -495,6 +496,7 @@ export default function JobBoardLanding() {
 
       {/* ---------------- What is ARTMS ---------------- */}
       <section className="relative isolate overflow-hidden py-24">
+        <GeometricBackground variant="mesh" />
 
         {/* Animated gradient background */}
         <div
@@ -527,14 +529,22 @@ export default function JobBoardLanding() {
           />
         </div>
 
-        {/* Animated particle dots */}
+        {/* Animated particle dots & dot grid texture */}
         <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "radial-gradient(circle, rgba(6,15,90,0.035) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+            }}
+          />
           <div className="absolute inset-0 animate-particle-float" style={{
             backgroundImage: `radial-gradient(circle, ${TOKENS.accent} 1.5px, transparent 1.5px)`,
             backgroundSize: "50px 50px",
             opacity: 0.04,
           }} />
         </div>
+
 
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
           <Reveal>
@@ -684,15 +694,19 @@ export default function JobBoardLanding() {
 
       {/* ---------------- Featured Jobs Preview ---------------- */}
       <section id="jobs" className="relative isolate overflow-hidden py-24">
+        <GeometricBackground variant="isometric" />
 
-        {/* Wave pattern background */}
+        {/* Wave pattern background & dot grid texture */}
         <div
           className="absolute inset-0 -z-20"
           style={{
             backgroundColor: "#F1F5F9",
+            backgroundImage: "radial-gradient(circle, rgba(6,15,90,0.035) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
           }}
           aria-hidden="true"
         />
+
 
         {/* Animated SVG waves */}
         <div className="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
@@ -840,6 +854,7 @@ export default function JobBoardLanding() {
 
       {/* ---------------- Contact CTA ---------------- */}
       <section id="contact" className="relative isolate overflow-hidden py-24">
+        <GeometricBackground variant="waves" />
 
         {/* Radial gradient background */}
         <div

@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Reveal from "../../components/ui/Reavel";
+import GeometricBackground from "../../components/ui/GeometricBackground";
 
 /* ─── Design tokens — identical to Home.jsx ────────────────────────────── */
 const T = {
@@ -101,6 +102,16 @@ export default function ApplicationGuide() {
   const [loaded, setLoaded] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [openStep, setOpenStep] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const stepsSectionRef = useRef(null);
+
+  const handleStepsMouseMove = (e) => {
+    const rect = stepsSectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setMousePos({ x, y });
+  };
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setLoaded(true));
@@ -135,7 +146,7 @@ export default function ApplicationGuide() {
           aria-hidden="true"
         />
 
-        <div className="mx-auto flex min-h-[520px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-20 text-center lg:px-10">
+        <div className="mx-auto flex min-h-[420px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-16 text-center lg:px-10">
           {/* Badge */}
           <div
             className="mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-700"
@@ -204,19 +215,111 @@ export default function ApplicationGuide() {
         </div>
       </div>
 
-      {/* ── APPLICATION STEPS — white bg + floating orbs (same as "What is ARTMS") */}
-      <section id="steps" className="relative isolate overflow-hidden py-20 lg:py-24">
-        {/* Animated floating blobs */}
+      {/* ── APPLICATION STEPS ── */}
+      <section
+        id="steps"
+        ref={stepsSectionRef}
+        onMouseMove={handleStepsMouseMove}
+        className="relative isolate overflow-hidden py-20 lg:py-24"
+      >
+        {/* Dynamic mouse-tracking radial glow */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          aria-hidden="true"
+          style={{
+            background: `radial-gradient(circle 700px at ${mousePos.x}% ${mousePos.y}%, rgba(249,115,22,0.06) 0%, rgba(6,15,90,0.04) 45%, transparent 70%)`,
+            transition: "background 80ms linear",
+          }}
+        />
+
+        {/* Animated gradient sweep — slow diagonal drift */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          aria-hidden="true"
+          style={{
+            background: "linear-gradient(135deg, rgba(6,15,90,0.03) 0%, rgba(249,115,22,0.04) 50%, rgba(6,15,90,0.03) 100%)",
+            backgroundSize: "400% 400%",
+            animation: "stepsGradientShift 18s ease-in-out infinite",
+          }}
+        />
+
+        {/* Mesh grid overlay */}
+        <GeometricBackground variant="mesh" />
+
+        {/* Floating orbs — staggered, different sizes and colours */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-          <div className="absolute -left-24 top-10 h-72 w-72 animate-[float-slow_20s_ease-in-out_infinite] rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: T.navy }} />
-          <div className="absolute -right-24 bottom-10 h-80 w-80 animate-[float-slower_25s_ease-in-out_infinite] rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: T.accent }} />
+          {/* Large navy orb — top-left */}
+          <div
+            className="absolute rounded-full blur-3xl"
+            style={{
+              width: 340, height: 340,
+              top: "-60px", left: "-80px",
+              backgroundColor: "rgba(6,15,90,0.07)",
+              animation: "orbDriftA 22s ease-in-out infinite",
+            }}
+          />
+          {/* Medium accent orb — right */}
+          <div
+            className="absolute rounded-full blur-3xl"
+            style={{
+              width: 280, height: 280,
+              top: "30%", right: "-60px",
+              backgroundColor: "rgba(249,115,22,0.07)",
+              animation: "orbDriftB 28s ease-in-out infinite",
+            }}
+          />
+          {/* Small indigo orb — bottom-centre */}
+          <div
+            className="absolute rounded-full blur-2xl"
+            style={{
+              width: 180, height: 180,
+              bottom: "40px", left: "40%",
+              backgroundColor: "rgba(99,102,241,0.06)",
+              animation: "orbDriftC 35s ease-in-out infinite",
+            }}
+          />
+          {/* Tiny accent ring — decorative */}
+          <div
+            className="absolute rounded-full border"
+            style={{
+              width: 160, height: 160,
+              bottom: "15%", right: "10%",
+              borderColor: "rgba(249,115,22,0.10)",
+              animation: "orbDriftB 40s ease-in-out infinite reverse",
+            }}
+          />
+          <div
+            className="absolute rounded-full border"
+            style={{
+              width: 80, height: 80,
+              top: "20%", left: "20%",
+              borderColor: "rgba(6,15,90,0.08)",
+              animation: "orbDriftA 30s ease-in-out infinite reverse",
+            }}
+          />
         </div>
-        {/* Faint dot pattern */}
-        <div className="pointer-events-none absolute inset-0 -z-10" style={{
-          backgroundImage: `radial-gradient(circle, ${T.accent} 1px, transparent 1px)`,
-          backgroundSize: "48px 48px",
-          opacity: 0.025,
-        }} aria-hidden="true" />
+
+        {/* Keyframes injected once */}
+        <style>{`
+          @keyframes stepsGradientShift {
+            0%,100% { background-position: 0% 50%; }
+            50%      { background-position: 100% 50%; }
+          }
+          @keyframes orbDriftA {
+            0%,100% { transform: translate(0,0) scale(1); }
+            33%     { transform: translate(32px,-28px) scale(1.06); }
+            66%     { transform: translate(-20px,24px) scale(0.95); }
+          }
+          @keyframes orbDriftB {
+            0%,100% { transform: translate(0,0) scale(1); }
+            33%     { transform: translate(-36px,20px) scale(1.04); }
+            66%     { transform: translate(28px,-18px) scale(0.97); }
+          }
+          @keyframes orbDriftC {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(20px,-32px) scale(1.08); }
+          }
+        `}</style>
 
         <div className="mx-auto max-w-5xl px-6 lg:px-10">
           <Reveal>
@@ -240,21 +343,51 @@ export default function ApplicationGuide() {
               return (
                 <Reveal key={step.id} delay={i * 60}>
                   <div
-                    className="overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm transition-all duration-300"
+                    className="group relative overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm"
                     style={{
                       borderColor: isOpen ? T.accent : T.line,
                       boxShadow: isOpen
-                        ? "0 8px 32px -12px rgba(249,115,22,0.18)"
+                        ? "0 8px 32px -12px rgba(249,115,22,0.22)"
                         : "0 2px 8px -4px rgba(6,15,90,0.08)",
+                      transition: "border-color 250ms ease, box-shadow 250ms ease, transform 200ms ease",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isOpen) {
+                        e.currentTarget.style.borderColor = "rgba(249,115,22,0.5)";
+                        e.currentTarget.style.boxShadow = "0 8px 28px -10px rgba(6,15,90,0.14)";
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isOpen) {
+                        e.currentTarget.style.borderColor = T.line;
+                        e.currentTarget.style.boxShadow = "0 2px 8px -4px rgba(6,15,90,0.08)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }
                     }}
                   >
+                    {/* Left accent stripe — slides in on hover / open */}
+                    <div
+                      className="absolute left-0 top-0 h-full w-1 origin-top rounded-l-2xl"
+                      style={{
+                        background: `linear-gradient(180deg, ${T.accent}, ${T.accentDk})`,
+                        transform: isOpen ? "scaleY(1)" : "scaleY(0)",
+                        transition: "transform 300ms ease",
+                      }}
+                      aria-hidden="true"
+                    />
                     <button
                       className="flex w-full items-center gap-4 px-5 py-4 text-left"
                       onClick={() => setOpenStep(isOpen ? null : step.id)}
+                      aria-expanded={isOpen}
                     >
                       {/* Step badge */}
                       <div className="relative shrink-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: "#EEF1FB", color: T.navy }}>
+                        <div
+                          className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+                          style={{ backgroundColor: isOpen ? "rgba(249,115,22,0.12)" : "#EEF1FB", color: isOpen ? T.accent : T.navy }}
+                        >
                           <Icon size={18} />
                         </div>
                         <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white"
@@ -265,18 +398,27 @@ export default function ApplicationGuide() {
 
                       {/* Title */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-extrabold" style={{ color: isOpen ? T.accent : T.navy }}>
+                        <p className="text-sm font-extrabold transition-colors duration-200" style={{ color: isOpen ? T.accent : T.navy }}>
                           {step.title}
                         </p>
-                        <p className="mt-0.5 text-xs leading-relaxed line-clamp-1" style={{ color: T.soft }}>
+                        <p className="mt-0.5 text-xs leading-relaxed line-clamp-1 transition-colors duration-200" style={{ color: T.soft }}>
                           {step.body}
                         </p>
                       </div>
 
-                      <ChevronDown
-                        size={16}
-                        style={{ color: T.soft, flexShrink: 0, transition: "transform 300ms", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-                      />
+                      {/* Chevron + click hint */}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <span
+                          className="hidden text-[10px] font-semibold uppercase tracking-wide opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:block"
+                          style={{ color: T.accent }}
+                        >
+                          {isOpen ? "close" : "expand"}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          style={{ color: isOpen ? T.accent : T.soft, transition: "transform 300ms, color 200ms", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                        />
+                      </div>
                     </button>
 
                     {/* Expanded tips */}
@@ -310,24 +452,47 @@ export default function ApplicationGuide() {
         `}</style>
       </section>
 
-      {/* ── DOCUMENTS — light slate bg + wave decoration ─────────────── */}
-      <section className="relative isolate overflow-hidden py-20 lg:py-24" style={{ backgroundColor: "#F1F5F9" }}>
-        {/* Subtle wave SVG */}
-        <div className="pointer-events-none absolute bottom-0 left-0 w-full overflow-hidden" aria-hidden="true" style={{ height: "120px" }}>
-          <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="absolute bottom-0 w-full" style={{ height: "120px" }}>
-            <path fill="rgba(6,15,90,0.04)"
-              d="M0,64L60,58.7C120,53,240,43,360,48C480,53,600,75,720,80C840,85,960,75,1080,64C1200,53,1320,43,1380,37.3L1440,32L1440,120L0,120Z"/>
+      {/* ── DOCUMENTS — navy bg, framed section ── */}
+      <section className="relative isolate overflow-hidden py-20 lg:py-24" style={{ backgroundColor: T.navy }}>
+        {/* 24px grid overlay — same as hero */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          aria-hidden="true"
+          style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            maskImage: "radial-gradient(ellipse at 50% 50%, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at 50% 50%, black 40%, transparent 80%)",
+          }}
+        />
+        {/* Glow orbs */}
+        <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-80 w-80 rounded-full blur-3xl" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%)" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-32 bottom-0 -z-10 h-96 w-96 rounded-full blur-3xl" style={{ background: "radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%)" }} aria-hidden="true" />
+        {/* Wave cap at top edge — links visually to the section above */}
+        <div className="pointer-events-none absolute top-0 left-0 w-full overflow-hidden" aria-hidden="true" style={{ height: "60px" }}>
+          <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="absolute top-0 w-full" style={{ height: "60px" }}>
+            <path fill="rgba(255,255,255,0.03)" d="M0,32L120,26.7C240,21,480,11,720,16C960,21,1200,43,1320,53.3L1440,64L1440,0L0,0Z" />
+          </svg>
+        </div>
+        {/* Wave cap at bottom edge */}
+        <div className="pointer-events-none absolute bottom-0 left-0 w-full overflow-hidden" aria-hidden="true" style={{ height: "60px" }}>
+          <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="absolute bottom-0 w-full" style={{ height: "60px" }}>
+            <path fill="rgba(255,255,255,0.03)" d="M0,32L120,37.3C240,43,480,53,720,48C960,43,1200,21,1320,10.7L1440,0L1440,60L0,60Z" />
           </svg>
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 lg:px-10">
           <Reveal>
             <div className="text-center">
-              <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: T.accent }}>Document Checklist</p>
-              <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: T.navy }}>
+              {/* Pill badge */}
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: T.accent }}>
+                Document Checklist
+              </div>
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                 What You'll Need
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: T.soft }}>
+              <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "rgba(199,210,254,0.70)" }}>
                 Have these ready before you start — the whole process is faster when you're prepared.
               </p>
             </div>
@@ -339,29 +504,51 @@ export default function ApplicationGuide() {
               return (
                 <Reveal key={doc.title} delay={i * 80}>
                   <div
-                    className="group relative h-full overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1"
-                    style={{ borderColor: T.line, boxShadow: "0 4px 16px -10px rgba(6,15,90,0.10)" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)"; e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(6,15,90,0.18)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.boxShadow = "0 4px 16px -10px rgba(6,15,90,0.10)"; }}
+                    className="group relative h-full overflow-hidden rounded-2xl border p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      boxShadow: "0 4px 24px -10px rgba(0,0,0,0.30)",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "rgba(249,115,22,0.45)";
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.09)";
+                      e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(0,0,0,0.40), 0 0 0 1px rgba(249,115,22,0.20)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                      e.currentTarget.style.boxShadow = "0 4px 24px -10px rgba(0,0,0,0.30)";
+                    }}
                   >
                     {/* Accent top bar on hover */}
-                    <div className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
-                      style={{ background: `linear-gradient(90deg, ${T.accent}, ${T.accentDk})` }} aria-hidden="true" />
+                    <div
+                      className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+                      style={{ background: `linear-gradient(90deg, ${T.accent}, ${T.accentDk})` }}
+                      aria-hidden="true"
+                    />
 
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
-                      style={{ backgroundColor: "#EEF1FB", color: T.navy }}>
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+                      style={{ backgroundColor: "rgba(249,115,22,0.15)", color: T.accent }}
+                    >
                       <Icon size={18} />
                     </div>
 
                     <div className="mt-4 flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-extrabold" style={{ color: T.navy }}>{doc.title}</h3>
-                      <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                        style={{ backgroundColor: doc.required ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", color: doc.required ? "#DC2626" : "#16A34A" }}>
+                      <h3 className="text-sm font-extrabold text-white">{doc.title}</h3>
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{
+                          backgroundColor: doc.required ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)",
+                          color: doc.required ? "#FCA5A5" : "#86EFAC",
+                        }}
+                      >
                         {doc.required ? "Required" : "Optional"}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed" style={{ color: T.soft }}>{doc.desc}</p>
-                    <p className="mt-3 text-[11px] font-semibold" style={{ color: "#94A3B8" }}>{doc.sub}</p>
+                    <p className="mt-2 text-xs leading-relaxed" style={{ color: "rgba(199,210,254,0.70)" }}>{doc.desc}</p>
+                    <p className="mt-3 text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.30)" }}>{doc.sub}</p>
                   </div>
                 </Reveal>
               );
@@ -370,11 +557,10 @@ export default function ApplicationGuide() {
         </div>
       </section>
 
-      {/* ── FAQ — white bg + radial gradient, same as Home contact section ─ */}
+
+      {/* ── FAQ — white bg + isometric texture ── */}
       <section className="relative isolate overflow-hidden py-20 lg:py-24">
-        <div className="pointer-events-none absolute inset-0 -z-10" style={{
-          background: `radial-gradient(circle at 50% 50%, rgba(249,115,22,0.03) 0%, rgba(6,15,90,0.02) 50%, transparent 100%)`,
-        }} aria-hidden="true" />
+        <GeometricBackground variant="isometric" />
 
         <div className="mx-auto max-w-3xl px-6 lg:px-10">
           <Reveal>
@@ -395,23 +581,74 @@ export default function ApplicationGuide() {
               return (
                 <Reveal key={i} delay={i * 35}>
                   <div
-                    className="overflow-hidden rounded-xl border bg-white transition-all duration-200"
-                    style={{ borderColor: isOpen ? T.accent : T.line }}
+                    className="group overflow-hidden rounded-xl border bg-white"
+                    style={{
+                      borderColor: isOpen ? T.accent : T.line,
+                      boxShadow: isOpen
+                        ? "0 6px 24px -10px rgba(249,115,22,0.18)"
+                        : "0 1px 4px -2px rgba(6,15,90,0.06)",
+                      transition: "border-color 250ms ease, box-shadow 250ms ease, transform 200ms ease",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isOpen) {
+                        e.currentTarget.style.borderColor = "rgba(249,115,22,0.4)";
+                        e.currentTarget.style.boxShadow = "0 4px 16px -8px rgba(6,15,90,0.12)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isOpen) {
+                        e.currentTarget.style.borderColor = T.line;
+                        e.currentTarget.style.boxShadow = "0 1px 4px -2px rgba(6,15,90,0.06)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }
+                    }}
                   >
                     <button
-                      className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+                      className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left"
                       onClick={() => setOpenFaq(isOpen ? null : i)}
+                      aria-expanded={isOpen}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-black transition-colors"
-                          style={{ backgroundColor: isOpen ? T.accent : "#EEF1FB", color: isOpen ? "#fff" : T.navy }}>
+                        <div
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-black"
+                          style={{
+                            backgroundColor: isOpen ? T.accent : "#EEF1FB",
+                            color: isOpen ? "#fff" : T.navy,
+                            transition: "background-color 250ms ease, color 250ms ease",
+                          }}
+                        >
                           {i + 1}
                         </div>
-                        <span className="text-sm font-bold truncate" style={{ color: isOpen ? T.accent : T.navy }}>
+                        <span
+                          className="text-sm font-bold truncate"
+                          style={{
+                            color: isOpen ? T.accent : T.navy,
+                            transition: "color 200ms ease",
+                          }}
+                        >
                           {faq.q}
                         </span>
                       </div>
-                      <ChevronDown size={15} style={{ flexShrink: 0, color: T.soft, transition: "transform 300ms", transform: isOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                      {/* Right side: click hint + chevron */}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <span
+                          className="hidden text-[10px] font-semibold uppercase tracking-wide opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:block"
+                          style={{ color: T.accent }}
+                        >
+                          {isOpen ? "close" : "view"}
+                        </span>
+                        <ChevronDown
+                          size={15}
+                          style={{
+                            flexShrink: 0,
+                            color: isOpen ? T.accent : T.soft,
+                            transition: "transform 300ms, color 200ms",
+                            transform: isOpen ? "rotate(180deg)" : "rotate(0)",
+                          }}
+                        />
+                      </div>
                     </button>
                     <div style={{ maxHeight: isOpen ? "200px" : "0", overflow: "hidden", transition: "max-height 350ms ease" }}>
                       <div className="border-t px-5 pb-4 pt-3" style={{ borderColor: T.line, backgroundColor: T.paper }}>

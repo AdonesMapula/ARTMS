@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Ca
 import AlertModal from "../../components/ui/AlertModal";
 import Reveal from "../../components/ui/Reavel";
 import CompanyMap from "../../components/map/CompanyMap";
+import GeometricBackground from "../../components/ui/GeometricBackground";
 
 const TOKENS = {
   navy: "#060F5A",
@@ -91,49 +92,93 @@ export default function Contact() {
 
   return (
     <div style={{ backgroundColor: TOKENS.paper, fontFamily: "Inter, sans-serif" }}>
-      {/* ---------------- Intro ---------------- */}
-      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 pt-28 pb-8 lg:px-10 lg:pt-32">
+      {/* ── HERO — photo + navy wash + grid, identical to Home/Jobs/ApplicationGuide/About ── */}
+      <section className="relative isolate overflow-hidden">
+        {/* Background photo with navy wash */}
         <div
-          className="pointer-events-none absolute -right-24 -top-10 h-72 w-72 rounded-full blur-3xl -z-10"
-          style={{ backgroundColor: TOKENS.navy, opacity: 0.05 }}
+          className="absolute inset-0 -z-20 scale-105 bg-cover bg-center"
+          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1534536281715-e28d76689b4d?q=80&w=2000&auto=format&fit=crop)" }}
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -left-20 top-40 h-56 w-56 rounded-full blur-3xl -z-10"
-          style={{ backgroundColor: TOKENS.accent, opacity: 0.05 }}
+          className="absolute inset-0 -z-10"
+          style={{ background: "linear-gradient(135deg, rgba(6,15,90,0.96) 0%, rgba(11,27,120,0.90) 50%, rgba(6,15,90,0.84) 100%)" }}
           aria-hidden="true"
         />
+        {/* 24px grid overlay masked to radial — same as Home hero */}
+        <div
+          className="absolute inset-0 -z-10"
+          style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            maskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
+          }}
+          aria-hidden="true"
+        />
+        {/* Floating glow orbs */}
+        <div className="pointer-events-none absolute -left-32 top-10 -z-10 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "rgba(249,115,22,0.08)" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-32 bottom-0 -z-10 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: "rgba(99,102,241,0.10)" }} aria-hidden="true" />
 
-        <Reveal>
-          <p className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: TOKENS.accent }}>
-            Contact
-          </p>
-          <h1
-            className="mt-3 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl"
-            style={{ color: TOKENS.navy }}
-          >
-            Let's talk about your next great hire
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed sm:text-base" style={{ color: TOKENS.slateSoft }}>
-            Whether you're building a team or exploring what ARTMS can do for your
-            HR workflow, send us a note and we'll get back to you within one
-            business day.
-          </p>
-        </Reveal>
+        <div className="mx-auto flex min-h-[420px] max-w-7xl flex-col items-center justify-center px-6 pt-28 pb-16 text-center lg:px-10">
+          <Reveal>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-500/40 bg-orange-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--artms-accent)]">
+              <Mail size={14} />
+              Contact Us
+            </div>
+          </Reveal>
+
+          <Reveal delay={100}>
+            <h1 className="max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
+              Let's Talk About Your Next <span className="text-[var(--artms-accent)]">Great Hire</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={220}>
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-indigo-100/80 sm:text-lg">
+              Whether you're building a team or exploring what ARTMS can do for your
+              HR workflow, send us a note and we'll get back to you within one business day.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── QUICK STATS BAR — solid navy, identical to ApplicationGuide ── */}
+      <div style={{ backgroundColor: "#060F5A" }} className="border-y border-white/10">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="grid grid-cols-3 divide-x divide-white/10">
+            {[
+              { val: "1 Day", label: "Response time" },
+              { val: "24/7", label: "Support available" },
+              { val: "100%", label: "Secure messaging" },
+            ].map((s, i) => (
+              <div key={i} className="px-6 py-5 text-center">
+                <p className="text-lg font-extrabold text-white">{s.val}</p>
+                <p className="mt-0.5 text-xs text-indigo-100/60">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ---------------- Quick Contact Cards ---------------- */}
+      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 py-12 lg:px-10">
+        <GeometricBackground variant="polygons" />
+        <div className="pointer-events-none absolute -left-20 top-1/2 -z-10 h-80 w-80 -translate-y-1/2 rounded-full blur-3xl opacity-30" style={{ background: "radial-gradient(circle, rgba(6,15,90,0.08) 0%, transparent 70%)" }} aria-hidden="true" />
 
         {/* Quick contact cards */}
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {QUICK_CONTACTS.map((c, i) => {
             const Icon = c.icon;
             const content = (
               <div
-                className="group flex h-full flex-col gap-3 rounded-2xl border bg-white p-5 transition-all duration-300 hover:-translate-y-1"
+                className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border bg-white/90 backdrop-blur-sm p-5 transition-all duration-300 hover:-translate-y-1"
                 style={{
                   borderColor: TOKENS.line,
                   boxShadow: "0 4px 16px -10px rgba(6,15,90,0.12)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 20px 40px -18px rgba(6,15,90,0.20)";
+                  e.currentTarget.style.boxShadow = "0 16px 40px -16px rgba(6,15,90,0.18)";
                   e.currentTarget.style.borderColor = "rgba(249,115,22,0.35)";
                 }}
                 onMouseLeave={(e) => {
@@ -141,8 +186,15 @@ export default function Contact() {
                   e.currentTarget.style.borderColor = TOKENS.line;
                 }}
               >
+                {/* Accent top bar on hover */}
                 <div
-                  className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="absolute left-0 top-0 h-0.5 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+                  style={{ background: "linear-gradient(90deg, #F97316, #EA580C)" }}
+                  aria-hidden="true"
+                />
+
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
                   style={{ backgroundColor: "#EEF1FB", color: TOKENS.navy }}
                 >
                   <Icon size={18} />
@@ -182,7 +234,10 @@ export default function Contact() {
       </section>
 
       {/* ---------------- Form + Map ---------------- */}
-      <section className="mx-auto max-w-7xl px-6 py-14 lg:px-10">
+      <section className="relative isolate overflow-hidden mx-auto max-w-7xl px-6 py-14 lg:px-10">
+        <GeometricBackground variant="mesh" />
+        <div className="pointer-events-none absolute -right-20 top-1/2 -z-10 h-80 w-80 -translate-y-1/2 rounded-full blur-3xl opacity-25" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)" }} aria-hidden="true" />
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Message form */}
         <Reveal className="lg:col-span-1" delay={60}>
