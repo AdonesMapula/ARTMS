@@ -15,7 +15,7 @@ return new class extends Migration {
         });
 
         Schema::table('job_postings', function (Blueprint $table) {
-            $table->index(['status', 'is_active', 'created_at'], 'idx_job_postings_status_active_created');
+            $table->index(['status', 'is_published', 'created_at'], 'idx_job_postings_status_active_created');
             $table->index(['department_id', 'status'], 'idx_job_postings_dept_status');
         });
 
