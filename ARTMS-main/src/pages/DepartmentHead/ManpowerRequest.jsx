@@ -918,6 +918,126 @@ export default function ManpowerRequest() {
           }
         }}
       />
+
+      {/* Qualification / Responsibility Block Sub-Modal */}
+      <Modal
+        open={blockModal.open}
+        containerClassName="z-[110]"
+        onClose={() => setBlockModal({ open: false, field: "qualifications", editingIdx: null })}
+        className="max-w-xl"
+        title={
+          <div className="flex items-center gap-2">
+            {blockModal.field === "qualifications" ? (
+              <GraduationCap className="h-5 w-5 text-blue-600" />
+            ) : (
+              <List className="h-5 w-5 text-blue-600" />
+            )}
+            <span>
+              {blockModal.editingIdx !== null ? "Edit" : "Add"}{" "}
+              {blockModal.field === "qualifications" ? "Qualification Block" : "Responsibility Block"}
+            </span>
+          </div>
+        }
+        description={
+          blockModal.field === "qualifications"
+            ? "Group qualifications into categories (e.g. Educational Background, Skills) with bullet items."
+            : "Group responsibilities into categories (e.g. Core Duties, Reporting) with bullet items."
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBlockModal({ open: false, field: "qualifications", editingIdx: null })}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveBlockModal}
+              disabled={!blockTitle.trim()}
+              className="gap-1.5"
+            >
+              <FileCheck size={16} />
+              <span>Save Block</span>
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-2">
+          {/* Title */}
+          <div>
+            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <FileCheck size={14} className="text-slate-400" />
+              Category / Block Title <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={blockTitle}
+              onChange={(e) => setBlockTitle(e.target.value)}
+              placeholder={
+                blockModal.field === "qualifications"
+                  ? "e.g., Educational Background, Technical Skills"
+                  : "e.g., Core Duties, Daily Operations"
+              }
+              autoFocus
+            />
+          </div>
+
+          {/* Details Bullet Items */}
+          <div>
+            <label className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-700">
+              <div className="flex items-center gap-2">
+                <List size={14} className="text-slate-400" />
+                <span>Specific Bullet Items</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddModalDetail}
+                className="h-7 gap-1 text-xs border-[#111A62] text-[#111A62] hover:bg-[#111A62]/10"
+              >
+                <Plus size={12} /> Add Item
+              </Button>
+            </label>
+
+            {blockDetails.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No detail items added yet. Click &quot;Add Item&quot; to add bullet points.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {blockDetails.map((detail, index) => (
+                  <div key={detail.id} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400 w-4 text-center shrink-0">
+                      {index + 1}.
+                    </span>
+                    <Input
+                      placeholder={
+                        blockModal.field === "qualifications"
+                          ? "e.g., Bachelor's Degree in Computer Science"
+                          : "e.g., Manage customer inquiries and process support tickets"
+                      }
+                      value={detail.value}
+                      onChange={(e) => handleUpdateModalDetail(detail.id, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveModalDetail(detail.id)}
+                      className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 h-10 px-2.5 cursor-pointer"
+                      title="Remove Item"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
