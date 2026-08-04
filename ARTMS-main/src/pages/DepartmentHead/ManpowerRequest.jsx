@@ -190,6 +190,86 @@ export default function ManpowerRequest() {
     setAutoFilled(true);
   };
 
+  // ── Block Modal State & Handlers (Qualifications & Responsibilities Step 3) ──
+  const [blockModal, setBlockModal] = useState({
+    open: false,
+    field: "qualifications",
+    editingIdx: null,
+  });
+  const [blockTitle, setBlockTitle] = useState("");
+  const [blockDetails, setBlockDetails] = useState([]);
+
+  const openAddBlockModal = (field) => {
+    setBlockModal({ open: true, field, editingIdx: null });
+    setBlockTitle("");
+    setBlockDetails([{ id: Date.now(), value: "" }]);
+  };
+
+  const openEditBlockModal = (field, block, idx) => {
+    setBlockModal({ open: true, field, editingIdx: idx });
+    setBlockTitle(block.title || "");
+    setBlockDetails(
+      Array.isArray(block.details) && block.details.length > 0
+        ? block.details.map((d) => ({
+            id: d.id || Date.now() + Math.random(),
+            value: typeof d === "string" ? d : (d.value ?? ""),
+          }))
+        : [{ id: Date.now(), value: "" }]
+    );
+  };
+
+  const handleRemoveBlock = (field, idx) => {
+    const list = Array.from(form[field] || []);
+    list.splice(idx, 1);
+    setForm((prev) => ({ ...prev, [field]: list }));
+  };
+
+  const handleAddModalDetail = () => {
+    setBlockDetails((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), value: "" },
+    ]);
+  };
+
+  const handleUpdateModalDetail = (id, value) => {
+    setBlockDetails((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, value } : d))
+    );
+  };
+
+  const handleRemoveModalDetail = (id) => {
+    setBlockDetails((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handleSaveBlockModal = () => {
+    if (!blockTitle.trim()) {
+      alert("Please enter a category / block title.");
+      return;
+    }
+
+    const cleanDetails = blockDetails.filter((d) => d.value.trim() !== "");
+    const currentBlocks = Array.from(form[blockModal.field] || []);
+
+    if (blockModal.editingIdx !== null) {
+      currentBlocks[blockModal.editingIdx] = {
+        ...currentBlocks[blockModal.editingIdx],
+        title: blockTitle.trim(),
+        details: cleanDetails,
+      };
+    } else {
+      currentBlocks.push({
+        id: Date.now(),
+        title: blockTitle.trim(),
+        details: cleanDetails,
+      });
+    }
+
+    setForm((prev) => ({ ...prev, [blockModal.field]: currentBlocks }));
+    setBlockModal({ open: false, field: "qualifications", editingIdx: null });
+    setBlockTitle("");
+    setBlockDetails([]);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
