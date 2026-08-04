@@ -34,14 +34,15 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
+import { useToast } from "../../context/ToastContext";
 
 const fmt = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
     : "—";
 
 const fmtMoney = (v) =>
@@ -186,12 +187,12 @@ export default function JobLibrary() {
       title: typeof b === "string" ? b : (b.title || ""),
       details: Array.isArray(b.details)
         ? b.details.map((d, j) => ({
-            id: typeof d === "object" && d !== null && d.id ? d.id : Date.now() + i * 100 + j,
-            value: typeof d === "object" && d !== null ? (d.value ?? d.title ?? "") : String(d ?? ""),
-          }))
+          id: typeof d === "object" && d !== null && d.id ? d.id : Date.now() + i * 100 + j,
+          value: typeof d === "object" && d !== null ? (d.value ?? d.title ?? "") : String(d ?? ""),
+        }))
         : typeof b.details === "string" && b.details
-        ? [{ id: Date.now() + i * 100, value: b.details }]
-        : [],
+          ? [{ id: Date.now() + i * 100, value: b.details }]
+          : [],
     }));
   };
 
@@ -450,11 +451,10 @@ export default function JobLibrary() {
                     setFilter(f.value);
                     setPage(1);
                   }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    filter === f.value
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${filter === f.value
                       ? "border-[#111A62] bg-[#111A62] text-white"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -602,51 +602,50 @@ export default function JobLibrary() {
                           <span>Click anywhere on card to view details</span>
                         </div>
                         <div className="flex gap-2">
-                        {isCOO && j.approval_status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setApproveModal({
-                                open: true,
-                                job: j,
-                                status: "approved",
-                                remarks: "",
-                              });
-                            }}
-                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
-                          >
-                            <Eye size={14} />
-                            Review
-                          </Button>
-                        )}
-                        {canEdit && (
-                          <>
-                            <Button
-                              variant={j.approval_status === "rejected" ? "primary" : "outline"}
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); openEdit(j); }}
-                              className={`flex-1 gap-1.5 ${
-                                j.approval_status === "rejected"
-                                  ? "bg-red-600 hover:bg-red-700 text-white font-bold"
-                                  : "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                              }`}
-                            >
-                              <Edit size={14} />
-                              {j.approval_status === "rejected" ? "Revise & Resubmit" : "Edit"}
-                            </Button>
+                          {isCOO && j.approval_status === "pending" && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, job: j }); }}
-                              className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApproveModal({
+                                  open: true,
+                                  job: j,
+                                  status: "approved",
+                                  remarks: "",
+                                });
+                              }}
+                              className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
                             >
-                              <Trash2 size={14} />
-                              Delete
+                              <Eye size={14} />
+                              Review
                             </Button>
-                          </>
-                        )}
+                          )}
+                          {canEdit && (
+                            <>
+                              <Button
+                                variant={j.approval_status === "rejected" ? "primary" : "outline"}
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); openEdit(j); }}
+                                className={`flex-1 gap-1.5 ${j.approval_status === "rejected"
+                                    ? "bg-red-600 hover:bg-red-700 text-white font-bold"
+                                    : "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                                  }`}
+                              >
+                                <Edit size={14} />
+                                {j.approval_status === "rejected" ? "Revise & Resubmit" : "Edit"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, job: j }); }}
+                                className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </CardContent>

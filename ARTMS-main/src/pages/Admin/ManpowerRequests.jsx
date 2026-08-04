@@ -13,11 +13,11 @@ import { ManpowerViewModal, ManpowerEditModal } from "../../modals";
 import manpowerService from "../../services/manpowerService";
 import { useToast } from "../../context/ToastContext";
 
-const URGENCY_TONE = { 
-  low: "default", 
-  medium: "info", 
-  high: "warning", 
-  critical: "danger" 
+const URGENCY_TONE = {
+  low: "default",
+  medium: "info",
+  high: "warning",
+  critical: "danger"
 };
 
 const STATUS_TONE = {
@@ -50,7 +50,7 @@ export default function AdminManpowerRequests() {
   const [editRequest, setEditRequest] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [alertModal, setAlertModalState] = useState({ open: false, variant: "info", title: "", message: "" });
-  
+
   const setAlertModal = (modalConfig) => {
     setAlertModalState(modalConfig);
     if (modalConfig?.title) {
@@ -58,7 +58,7 @@ export default function AdminManpowerRequests() {
       toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
     }
   };
-  
+
   const pageSize = 10;
 
   const loadRequests = useCallback(async () => {
@@ -351,11 +351,10 @@ export default function AdminManpowerRequests() {
                 <button
                   key={f.value}
                   onClick={() => handleStatusChange(f.value)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    statusFilter === f.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === f.value
+                    ? "border-[#111A62] bg-[#111A62] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -453,9 +452,14 @@ export default function AdminManpowerRequests() {
                         <div className="inline-flex items-center justify-end gap-1.5">
                           {/* View Details button */}
                           <button
-                            onClick={() => setViewRequest(r)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewRequest(r);
+                            }}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                             title="View Details"
+                            aria-label="View request details"
                           >
                             <Eye size={15} />
                           </button>
@@ -476,9 +480,14 @@ export default function AdminManpowerRequests() {
                           {/* Delete/Remove button - for pending, revised, or rejected */}
                           {["pending", "rejected", "revised", "needs_revision"].includes(r.status) && (
                             <button
-                              onClick={() => setDeleteConfirm(r)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirm(r);
+                              }}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                               title="Remove Request"
+                              aria-label="Remove request"
                             >
                               <Trash2 size={15} />
                             </button>

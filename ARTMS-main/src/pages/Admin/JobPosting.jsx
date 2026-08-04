@@ -17,6 +17,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
+import { useToast } from "../../context/ToastContext";
 
 const STATUS_TONE = {
   published: "success",
@@ -167,20 +168,20 @@ export default function JobPosting() {
       return;
     }
 
-    const isModified = 
+    const isModified =
       !deepEqual(formData.qualifications, selectedPRF.qualifications || []) ||
       !deepEqual(formData.responsibilities, selectedPRF.responsibilities || []);
 
     try {
       await api.post("/job-postings", {
-        job_library_id:      selectedPRF.job_library_id,
-        department_id:       selectedPRF.department_id,
+        job_library_id: selectedPRF.job_library_id,
+        department_id: selectedPRF.department_id,
         manpower_request_id: selectedPRF.id,
-        vacancies_count:     selectedPRF.headcount,
-        location:            formData.location,
-        closing_date:        formData.closing_date || null,
-        qualifications:      formData.qualifications,
-        responsibilities:    formData.responsibilities,
+        vacancies_count: selectedPRF.headcount,
+        location: formData.location,
+        closing_date: formData.closing_date || null,
+        qualifications: formData.qualifications,
+        responsibilities: formData.responsibilities,
         is_modified_from_prf: isModified,
       });
 
@@ -208,7 +209,7 @@ export default function JobPosting() {
   const handleEditPosting = async () => {
     if (!selectedPosting) return;
 
-    const isModified = 
+    const isModified =
       !deepEqual(formData.qualifications, selectedPosting.qualifications || selectedPosting.job_library?.qualifications || []) ||
       !deepEqual(formData.responsibilities, selectedPosting.responsibilities || selectedPosting.job_library?.responsibilities || []);
 
@@ -616,8 +617,8 @@ export default function JobPosting() {
                           prf.urgency === "critical"
                             ? "danger"
                             : prf.urgency === "high"
-                            ? "warning"
-                            : "info"
+                              ? "warning"
+                              : "info"
                         }
                       >
                         {prf.urgency}
@@ -673,11 +674,10 @@ export default function JobPosting() {
                     setStatusFilter(f.value);
                     setPage(1);
                   }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    statusFilter === f.value
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === f.value
                       ? "border-[#111A62] bg-[#111A62] text-white"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>

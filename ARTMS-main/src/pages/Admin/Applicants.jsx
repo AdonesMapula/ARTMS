@@ -12,6 +12,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { ApplicantDetailModal } from "../../modals";
 import applicantService from "../../services/applicantService";
 import { useToast } from "../../context/ToastContext";
+import ConfirmationModal from "../../modals/ConfirmationModal";
 
 const STATUSES = [
   { value: "all", label: "All Status" },
@@ -91,7 +92,7 @@ export default function Applicants() {
 
   const handleReadyForInterview = async () => {
     if (!interviewConfirm) return;
-    
+
     setActionLoading(interviewConfirm.id);
     try {
       await applicantService.readyForInterview(interviewConfirm.id, {
@@ -144,7 +145,7 @@ export default function Applicants() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
-    
+
     setActionLoading(deleteConfirm.id);
     try {
       await applicantService.reject(deleteConfirm.id, { remarks: "Application deleted" });
@@ -266,11 +267,10 @@ export default function Applicants() {
                 <button
                   key={s.value}
                   onClick={() => handleStatusChange(s.value)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    status === s.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${status === s.value
+                    ? "border-[#111A62] bg-[#111A62] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                 >
                   {s.label}
                 </button>
@@ -405,40 +405,54 @@ export default function Applicants() {
 
                             {/* Email button */}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSendEmail(a);
                               }}
                               disabled={actionLoading === a.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer disabled:opacity-50"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                               title="Send Status Email"
+                              aria-label={`Send status email to ${a.first_name} ${a.last_name}`}
                             >
-                              <Mail size={16} />
+                              {actionLoading === a.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                              ) : (
+                                <Mail size={16} />
+                              )}
                             </button>
 
                             {/* View Details button */}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleViewDetails(a.id);
                               }}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-purple-500 hover:bg-purple-50 hover:text-purple-600 cursor-pointer"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-200 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                               title="View Details"
+                              aria-label={`View details for ${a.first_name} ${a.last_name}`}
                             >
                               <Eye size={16} />
                             </button>
 
                             {/* Delete button */}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setDeleteConfirm(a);
                               }}
                               disabled={actionLoading === a.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer disabled:opacity-50"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                               title="Delete Applicant"
+                              aria-label={`Delete ${a.first_name} ${a.last_name}`}
                             >
-                              <Trash2 size={16} />
+                              {actionLoading === a.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
                             </button>
                           </div>
                         </TD>
