@@ -23,6 +23,11 @@ import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 import AlertModal from "../../components/ui/AlertModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
+import Select from "../../components/ui/Select";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import { GraduationCap, List, Plus, Trash2, Edit, FileCheck, X } from "lucide-react";
 
 const EMPLOYMENT_STATUS_OPTIONS = [
   { value: "probationary", label: "Probationary" },
@@ -185,38 +190,6 @@ export default function ManpowerRequest() {
     setAutoFilled(true);
   };
 
-  // ── Array operations for nested items ──
-  const handleAddBlock = (field) => {
-    const newBlock = { id: Date.now(), title: "", details: [] };
-    setForm({ ...form, [field]: [...(form[field] || []), newBlock] });
-  };
-  const handleRemoveBlock = (field, idx) => {
-    const arr = [...(form[field] || [])];
-    arr.splice(idx, 1);
-    setForm({ ...form, [field]: arr });
-  };
-  const handleUpdateBlockTitle = (field, idx, val) => {
-    const arr = [...(form[field] || [])];
-    arr[idx].title = val;
-    setForm({ ...form, [field]: arr });
-  };
-  const handleAddDetail = (field, blockIdx) => {
-    const arr = [...(form[field] || [])];
-    if (!arr[blockIdx].details) arr[blockIdx].details = [];
-    arr[blockIdx].details.push({ id: Date.now() + Math.random(), value: "" });
-    setForm({ ...form, [field]: arr });
-  };
-  const handleRemoveDetail = (field, blockIdx, detailIdx) => {
-    const arr = [...(form[field] || [])];
-    arr[blockIdx].details.splice(detailIdx, 1);
-    setForm({ ...form, [field]: arr });
-  };
-  const handleUpdateDetailValue = (field, blockIdx, detailIdx, val) => {
-    const arr = [...(form[field] || [])];
-    arr[blockIdx].details[detailIdx].value = val;
-    setForm({ ...form, [field]: arr });
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -358,19 +331,17 @@ export default function ManpowerRequest() {
                   </div>
                 </div>
               ) : (
-                <select
-                  className={inputClass}
+                <Select
                   value={form.job_library_id}
                   onChange={(e) => handleJobLibrarySelect(e.target.value)}
-                >
-                  <option value="">Select a position from the Job Library…</option>
-                  {jobLibrary.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.job_title}
-                      {j.job_category ? ` — ${j.job_category}` : ""}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Select a position from the Job Library…" },
+                    ...jobLibrary.map((j) => ({
+                      value: String(j.id),
+                      label: `${j.job_title}${j.job_category ? ` — ${j.job_category}` : ""}`,
+                    })),
+                  ]}
+                />
               )}
             </div>
 
@@ -544,144 +515,126 @@ export default function ManpowerRequest() {
             <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-slate-50/50 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                  <FiAward size={16} className="text-[#F97316]" />
+                  <GraduationCap size={16} className="text-[#F97316]" />
                   Qualifications
                 </label>
-                <button
+                <Button
                   type="button"
-                  onClick={() => handleAddBlock("qualifications")}
-                  className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openAddBlockModal("qualifications")}
+                  className="h-8 gap-1.5 border border-[#111A62] bg-transparent text-[#111A62] hover:bg-[#111A62]/10 transition-all duration-200 cursor-pointer shadow-2xs font-semibold px-2.5"
                 >
-                  <FiPlus size={14} /> Add Background
-                </button>
+                  <Plus size={14} /> Add Block
+                </Button>
               </div>
 
-              <div className="space-y-4">
-                {(form.qualifications || []).map((block, idx) => (
-                  <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-200">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <input
-                        type="text"
-                        value={block.title}
-                        onChange={(e) => handleUpdateBlockTitle("qualifications", idx, e.target.value)}
-                        placeholder="e.g., Educational Background"
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBlock("qualifications", idx)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {(block.details || []).map((detail, dIdx) => (
-                        <div key={detail.id || dIdx} className="flex items-start gap-2">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"></span>
-                          <textarea
-                            rows={1}
-                            value={detail.value}
-                            onChange={(e) => handleUpdateDetailValue("qualifications", idx, dIdx, e.target.value)}
-                            placeholder="Add a detail..."
-                            className="w-full resize-none rounded-lg border border-transparent bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
+              {(!form.qualifications || form.qualifications.length === 0) ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center">
+                  <p className="text-xs text-slate-500 italic">No qualifications added yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(form.qualifications || []).map((block, idx) => (
+                    <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-sm font-bold text-slate-800 truncate">{block.title || "Untitled Block"}</h4>
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleRemoveDetail("qualifications", idx, dIdx)}
-                            className="mt-1 shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                            onClick={() => openEditBlockModal("qualifications", block, idx)}
+                            className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            title="Edit Block"
                           >
-                            <FiTrash2 size={14} />
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBlock("qualifications", idx)}
+                            className="p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Delete Block"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => handleAddDetail("qualifications", idx)}
-                        className="ml-4 mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
-                      >
-                        <FiPlus size={14} /> Add Detail
-                      </button>
+                      </div>
+
+                      {block.details && block.details.length > 0 && (
+                        <ul className="mt-2 pl-4 list-disc space-y-1 marker:text-slate-300">
+                          {block.details.map((detail, dIdx) => (
+                            <li key={detail.id || dIdx} className="text-xs text-slate-600 leading-relaxed">
+                              {detail.value}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  </div>
-                ))}
-                {(!form.qualifications || form.qualifications.length === 0) && (
-                  <p className="text-center text-sm text-slate-500 italic">No qualifications added yet.</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Responsibilities */}
             <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-slate-50/50 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                  <FiBriefcase size={16} className="text-[#F97316]" />
+                  <List size={16} className="text-[#F97316]" />
                   Responsibilities
                 </label>
-                <button
+                <Button
                   type="button"
-                  onClick={() => handleAddBlock("responsibilities")}
-                  className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openAddBlockModal("responsibilities")}
+                  className="h-8 gap-1.5 border border-[#111A62] bg-transparent text-[#111A62] hover:bg-[#111A62]/10 transition-all duration-200 cursor-pointer shadow-2xs font-semibold px-2.5"
                 >
-                  <FiPlus size={14} /> Add Category
-                </button>
+                  <Plus size={14} /> Add Block
+                </Button>
               </div>
 
-              <div className="space-y-4">
-                {(form.responsibilities || []).map((block, idx) => (
-                  <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-blue-200">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <input
-                        type="text"
-                        value={block.title}
-                        onChange={(e) => handleUpdateBlockTitle("responsibilities", idx, e.target.value)}
-                        placeholder="e.g., Core Duties"
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBlock("responsibilities", idx)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {(block.details || []).map((detail, dIdx) => (
-                        <div key={detail.id || dIdx} className="flex items-start gap-2">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"></span>
-                          <textarea
-                            rows={1}
-                            value={detail.value}
-                            onChange={(e) => handleUpdateDetailValue("responsibilities", idx, dIdx, e.target.value)}
-                            placeholder="Add a detail..."
-                            className="w-full resize-none rounded-lg border border-transparent bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                          />
+              {(!form.responsibilities || form.responsibilities.length === 0) ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center">
+                  <p className="text-xs text-slate-500 italic">No responsibilities added yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(form.responsibilities || []).map((block, idx) => (
+                    <div key={block.id || idx} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-sm font-bold text-slate-800 truncate">{block.title || "Untitled Block"}</h4>
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleRemoveDetail("responsibilities", idx, dIdx)}
-                            className="mt-1 shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                            onClick={() => openEditBlockModal("responsibilities", block, idx)}
+                            className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            title="Edit Block"
                           >
-                            <FiTrash2 size={14} />
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBlock("responsibilities", idx)}
+                            className="p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Delete Block"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => handleAddDetail("responsibilities", idx)}
-                        className="ml-4 mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
-                      >
-                        <FiPlus size={14} /> Add Detail
-                      </button>
+                      </div>
+
+                      {block.details && block.details.length > 0 && (
+                        <ul className="mt-2 pl-4 list-disc space-y-1 marker:text-slate-300">
+                          {block.details.map((detail, dIdx) => (
+                            <li key={detail.id || dIdx} className="text-xs text-slate-600 leading-relaxed">
+                              {detail.value}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  </div>
-                ))}
-                {(!form.responsibilities || form.responsibilities.length === 0) && (
-                  <p className="text-center text-sm text-slate-500 italic">No responsibilities added yet.</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </SectionCard>
@@ -890,6 +843,125 @@ export default function ManpowerRequest() {
           }
         }}
       />
+      {/* Qualification / Responsibility Block Sub-Modal */}
+      <Modal
+        open={blockModal.open}
+        containerClassName="z-[110]"
+        onClose={() => setBlockModal({ open: false, field: "qualifications", editingIdx: null })}
+        className="max-w-xl"
+        title={
+          <div className="flex items-center gap-2">
+            {blockModal.field === "qualifications" ? (
+              <GraduationCap className="h-5 w-5 text-blue-600" />
+            ) : (
+              <List className="h-5 w-5 text-blue-600" />
+            )}
+            <span>
+              {blockModal.editingIdx !== null ? "Edit" : "Add"}{" "}
+              {blockModal.field === "qualifications" ? "Qualification Block" : "Responsibility Block"}
+            </span>
+          </div>
+        }
+        description={
+          blockModal.field === "qualifications"
+            ? "Group qualifications into categories (e.g. Educational Background, Skills) with bullet items."
+            : "Group responsibilities into categories (e.g. Core Duties, Reporting) with bullet items."
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBlockModal({ open: false, field: "qualifications", editingIdx: null })}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveBlockModal}
+              disabled={!blockTitle.trim()}
+              className="gap-1.5"
+            >
+              <FileCheck size={16} />
+              <span>Save Block</span>
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-2">
+          {/* Title */}
+          <div>
+            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <FileCheck size={14} className="text-slate-400" />
+              Category / Block Title <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={blockTitle}
+              onChange={(e) => setBlockTitle(e.target.value)}
+              placeholder={
+                blockModal.field === "qualifications"
+                  ? "e.g., Educational Background, Technical Skills"
+                  : "e.g., Core Duties, Daily Operations"
+              }
+              autoFocus
+            />
+          </div>
+
+          {/* Details Bullet Items */}
+          <div>
+            <label className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-700">
+              <div className="flex items-center gap-2">
+                <List size={14} className="text-slate-400" />
+                <span>Specific Bullet Items</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddModalDetail}
+                className="h-7 gap-1 text-xs border-[#111A62] text-[#111A62] hover:bg-[#111A62]/10"
+              >
+                <Plus size={12} /> Add Item
+              </Button>
+            </label>
+
+            {blockDetails.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No detail items added yet. Click &quot;Add Item&quot; to add bullet points.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {blockDetails.map((detail, index) => (
+                  <div key={detail.id} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400 w-4 text-center shrink-0">
+                      {index + 1}.
+                    </span>
+                    <Input
+                      placeholder={
+                        blockModal.field === "qualifications"
+                          ? "e.g., Bachelor's Degree in Computer Science"
+                          : "e.g., Manage customer inquiries and process support tickets"
+                      }
+                      value={detail.value}
+                      onChange={(e) => handleUpdateModalDetail(detail.id, e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveModalDetail(detail.id)}
+                      className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 h-10 px-2.5 cursor-pointer"
+                      title="Remove Item"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
