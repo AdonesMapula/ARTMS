@@ -1,34 +1,132 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Interview Invitation — ARTMS</title></head>
-<body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;">
-<div style="max-width:560px;margin:auto;background:#fff;border-radius:8px;padding:32px;">
-    <h2 style="color:#1e3a5f;">Interview Invitation</h2>
-    <p>Dear <strong>{{ $applicant->first_name }} {{ $applicant->last_name }}</strong>,</p>
-    <p>Congratulations! You have been shortlisted for an interview.</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:16px;">
-        <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Date & Time</td><td style="padding:8px;border-bottom:1px solid #eee;">{{ \Carbon\Carbon::parse($interview->scheduled_at)->format('M d, Y h:i A') }}</td></tr>
-        <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Interview Type</td><td style="padding:8px;border-bottom:1px solid #eee;">{{ ucfirst(str_replace('_', ' ', $interview->interview_type)) }}</td></tr>
-        @if($interview->location)
-        <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Location</td><td style="padding:8px;border-bottom:1px solid #eee;">{{ $interview->location }}</td></tr>
-        @endif
-        @if($interview->meeting_link)
-        <tr><td style="padding:8px;font-weight:bold;">Video Room URL</td><td style="padding:8px;"><a href="{{ $interview->meeting_link }}" style="color:#2563eb;word-break:break-all;">{{ $interview->meeting_link }}</a></td></tr>
-        @endif
+<head>
+  <meta charset="utf-8">
+  <title>Interview Invitation — ARTMS</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;">
+
+<div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+  {{-- ── Header Banner ────────────────────────────────── --}}
+  <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:36px 40px 28px;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#93c5fd;text-transform:uppercase;">
+      ARTMS Recruitment
+    </p>
+    <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;line-height:1.25;">
+      Interview Invitation
+    </h1>
+    {{-- Dynamic stage badge --}}
+    @php
+      $stageLabels = [
+        'interview_1' => 'Initial Interview',
+        'interview_2' => 'Second Interview',
+        'final'       => 'Final Interview',
+      ];
+      $stageLabel = $stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage));
+
+      $stageBg = match($interview->interview_stage) {
+        'interview_1' => '#dbeafe',
+        'interview_2' => '#fef3c7',
+        'final'       => '#d1fae5',
+        default       => '#e0e7ff',
+      };
+      $stageColor = match($interview->interview_stage) {
+        'interview_1' => '#1e40af',
+        'interview_2' => '#92400e',
+        'final'       => '#065f46',
+        default       => '#3730a3',
+      };
+    @endphp
+    <span style="display:inline-block;margin-top:14px;padding:5px 16px;background:{{ $stageBg }};color:{{ $stageColor }};border-radius:999px;font-size:13px;font-weight:700;letter-spacing:0.04em;">
+      {{ $stageLabel }}
+    </span>
+  </div>
+
+  {{-- ── Body ─────────────────────────────────────────── --}}
+  <div style="padding:36px 40px;">
+    <p style="margin:0 0 6px;font-size:15px;color:#374151;">Dear <strong>{{ $applicant->first_name }} {{ $applicant->last_name }}</strong>,</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
+      Congratulations! We are pleased to invite you to the
+      <strong style="color:{{ $stageColor }};">{{ $stageLabel }}</strong>
+      for the position you applied for at <strong>ARTMS</strong>.
+      Please review the details below and take note of the schedule.
+    </p>
+
+    {{-- ── Detail Table ─────────────────────────────── --}}
+    <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;width:38%;border-bottom:1px solid #e5e7eb;">Interview Stage</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #e5e7eb;">
+          <span style="display:inline-block;padding:3px 12px;background:{{ $stageBg }};color:{{ $stageColor }};border-radius:999px;font-size:13px;font-weight:700;">
+            {{ $stageLabel }}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Date &amp; Time</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;">
+          {{ \Carbon\Carbon::parse($interview->scheduled_at)->format('l, F d, Y \a\t g:i A') }}
+        </td>
+      </tr>
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Interview Format</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;">
+          {{ ucwords(str_replace('_', ' ', $interview->interview_type)) }}
+        </td>
+      </tr>
+      @if($interview->location)
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Location</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;">{{ $interview->location }}</td>
+      </tr>
+      @endif
+      @if($interview->meeting_link)
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;">Video Room Link</td>
+        <td style="padding:12px 16px;font-size:14px;">
+          <a href="{{ $interview->meeting_link }}" style="color:#2563eb;word-break:break-all;font-weight:600;">
+            {{ $interview->meeting_link }}
+          </a>
+        </td>
+      </tr>
+      @endif
     </table>
-    
-    @if($interview->meeting_link)
-    <div style="margin-top:24px;text-align:center;">
-        <a href="{{ $interview->meeting_link }}" style="display:inline-block;padding:14px 28px;background:#1e3a5f;color:#ffffff;font-size:15px;font-weight:bold;text-decoration:none;border-radius:6px;">🎥 Join Video Interview Room</a>
+
+    {{-- ── CTA Button ───────────────────────────────── --}}
+    <div style="margin-top:28px;text-align:center;">
+      @if($interview->meeting_link)
+        <a href="{{ $interview->meeting_link }}"
+           style="display:inline-block;padding:14px 32px;background:#1e3a5f;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;letter-spacing:0.02em;">
+          🎥 Join Video Interview Room
+        </a>
+      @else
+        <a href="{{ config('app.url') }}/api/interviews/{{ $interview->id }}/confirm"
+           style="display:inline-block;padding:14px 32px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;letter-spacing:0.02em;">
+          ✅ Confirm My Attendance
+        </a>
+      @endif
     </div>
-    @else
-    <p style="margin-top:16px;">Please confirm your attendance by clicking the button below:</p>
-    <div style="margin-top:16px;text-align:center;">
-        <a href="{{ config('app.url') }}/api/interviews/{{ $interview->id }}/confirm" style="display:inline-block;padding:12px 24px;background:#1e3a5f;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:6px;">Confirm Attendance</a>
-    </div>
-    @endif
-    <hr style="margin-top:32px;">
-    <p style="font-size:12px;color:#999;">ARTMS Automated Recruitment and Talent Management System</p>
+
+    <p style="margin-top:28px;font-size:13px;color:#6b7280;line-height:1.6;">
+      If you have any questions or need to reschedule, please reply to this email or contact our HR team directly.
+      We look forward to meeting you!
+    </p>
+
+    <p style="margin-top:24px;font-size:14px;color:#374151;">
+      Best regards,<br>
+      <strong>ARTMS Recruitment Team</strong>
+    </p>
+  </div>
+
+  {{-- ── Footer ───────────────────────────────────────── --}}
+  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
+    <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:0.05em;">
+      ARTMS — AI Recruitment and Talent Management System
+    </p>
+  </div>
+
 </div>
 </body>
 </html>
+

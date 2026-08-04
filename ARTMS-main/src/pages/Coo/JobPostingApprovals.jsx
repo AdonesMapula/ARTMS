@@ -9,6 +9,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import { JobPostingApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import api from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 const STATUS_TONE   = { published: "success", pending_approval: "warning", cancelled: "danger", closed: "default" };
@@ -30,6 +31,7 @@ const STATUS_FILTERS = [
 const PAGE_SIZE = 10;
 
 export default function JobPostingApprovals() {
+  const toast = useToast();
   const [rows,         setRows]         = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [page,         setPage]         = useState(1);
@@ -44,10 +46,12 @@ export default function JobPostingApprovals() {
   const [remarks,  setRemarks]  = useState("");
   const [saving,   setSaving]   = useState(false);
 
-  // Alert modal
+  // Alert modal & Toast helper
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
-  const showAlert  = (variant, title, message) =>
+  const showAlert = (variant, title, message) => {
     setAlert({ open: true, variant, title, message });
+    toast[variant] ? toast[variant](title, message) : toast.showToast({ title, message, type: variant });
+  };
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   // ── Fetch ───────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import { UserModal, QuickAddRoleModal, QuickAddDepartmentModal } from "../../mod
 import userService from "../../services/userService";
 import departmentService from "../../services/departmentService";
 import api from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 const ROLES = [
   { value: "all", label: "All Roles" },
@@ -36,6 +37,7 @@ const ROLE_TONE = {
 };
 
 export default function Users() {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [depts, setDepts] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -93,17 +95,14 @@ export default function Users() {
         department_id: formData.department_id || null,
       };
 
-      // Only include name fields if they have values
       if (formData.first_name) payload.first_name = formData.first_name;
       if (formData.middle_name) payload.middle_name = formData.middle_name;
       if (formData.last_name) payload.last_name = formData.last_name;
 
-      // Combined name for backend compatibility
       payload.name = [formData.first_name, formData.middle_name, formData.last_name]
         .filter(Boolean)
         .join(" ");
 
-      // Handle empty department_id
       if (formData.department_id === "") {
         payload.department_id = null;
       }
@@ -113,8 +112,8 @@ export default function Users() {
         payload.password_confirmation = formData.password_confirmation;
       }
       result = await userService.update(editUser.id, payload);
+      toast.success("User Updated", `${payload.name || "User"} has been updated successfully.`);
     } else {
-      // Build combined name for backends that expect a flat name field
       const combinedName = [formData.first_name, formData.middle_name, formData.last_name]
         .filter(Boolean)
         .join(" ");
@@ -131,42 +130,52 @@ export default function Users() {
       }
 
       result = await userService.create(createPayload);
+      toast.success("User Created", `${combinedName || "New user"} has been created successfully.`);
     }
     load();
     return result;
   };
 
   const handleToggle = async (id) => {
+    const target = users.find((u) => u.id === id);
+    const action = target?.is_active ? "disabled" : "enabled";
+    const name = [target?.first_name, target?.last_name].filter(Boolean).join(" ") || target?.name || "User";
     try {
       await userService.toggleStatus(id);
       setConfirmId(null);
       setConfirmUser(null);
-      load(); // Reload users to show updated status
+      load();
+      toast.success(`Account ${action === "disabled" ? "Disabled" : "Enabled"}`, `${name}'s account has been ${action}.`);
     } catch (error) {
       console.error("Failed to toggle user status:", error);
-      alert("Failed to update user status. Please try again.");
+      toast.error("Action Failed", "Failed to update user status. Please try again.");
     }
   };
 
   const handleAddRole = async (roleData) => {
     await api.post("/roles", roleData);
+    toast.success("Role Added", "New role has been created successfully.");
     load();
   };
 
   const handleAddDepartment = async (deptData) => {
     await departmentService.create(deptData);
+    toast.success("Department Added", "New department has been created successfully.");
     load();
   };
 
   const handleDelete = async (id) => {
+    const target = users.find((u) => u.id === id);
+    const name = [target?.first_name, target?.last_name].filter(Boolean).join(" ") || target?.name || "User";
     try {
       await userService.delete(id);
       setDeleteId(null);
       setDeleteUser(null);
-      load(); // Reload users after deletion
+      load();
+      toast.success("User Deleted", `${name} has been permanently deleted.`);
     } catch (error) {
       console.error("Failed to delete user:", error);
-      alert(error.response?.data?.message || "Failed to delete user. Please try again.");
+      toast.error("Delete Failed", error.response?.data?.message || "Failed to delete user. Please try again.");
     }
   };
 

@@ -1,6 +1,6 @@
-﻿# ARTMS — Database Schema Documentation
+# ARTMS — Database Schema Documentation
 
-> **Last Updated:** July 26, 2026
+> **Last Updated:** August 4, 2026
 > **Database Engine:** MySQL 8.0
 > **ORM:** Laravel 11 Eloquent
 > **Charset:** utf8mb4 / utf8mb4_unicode_ci
@@ -27,7 +27,7 @@ ARTMS (Automated Recruitment and Talent Management System) uses a **MySQL 8.0** 
 | Core / Auth | departments, users, sessions, password_reset_tokens, personal_access_tokens |
 | Access Control | permissions, custom_roles |
 | Workforce and HR | employees, attendance_logs, leave_requests, payroll, employee_documents, performance_evaluations |
-| Recruitment Pipeline | job_library, manpower_requests, job_postings, applicants, applicant_documents, applicant_notes, ai_evaluations |
+| Recruitment Pipeline | job_categories, job_library, manpower_requests, job_postings, applicants, applicant_documents, applicant_notes, ai_evaluations |
 | Interview and AI | interviews, interview_transcripts, ai_interview_reports |
 | System | audit_logs, notifications, cache, jobs |
 
@@ -35,6 +35,7 @@ ARTMS (Automated Recruitment and Talent Management System) uses a **MySQL 8.0** 
 
 ## Entity Relationship Summary
 
+```
 departments
   +-- users (department_id)
   |     +-- employees (user_id)
@@ -45,6 +46,9 @@ departments
   |           +-- performance_evaluations
   +-- manpower_requests (department_id)
   +-- job_postings (department_id)
+
+job_categories
+  +-- job_library (job_category)
 
 job_library
   +-- manpower_requests (job_library_id)
@@ -63,6 +67,7 @@ manpower_requests
 users
   +-- permissions (role-based boolean columns, no pivot table)
   +-- custom_roles (RBAC extension layer)
+```
 
 ---
 
@@ -114,7 +119,7 @@ System accounts for all roles. Split name fields added 2026-07-25.
 | updated_at | timestamp | Yes | NULL | |
 | deleted_at | timestamp | Yes | NULL | Soft delete |
 
-**Indexes:** email UNIQUE, employee_id UNIQUE, department_id FK
+**Indexes:** email UNIQUE, employee_id UNIQUE, department_id FK, idx_users_dept_active_role (department_id, is_active, role)
 
 ---
 
@@ -224,6 +229,7 @@ HR profile record linked 1:1 to a users row.
 | updated_at | timestamp | Yes | NULL | |
 | deleted_at | timestamp | Yes | NULL | Soft delete |
 
+---
 
 ### attendance_logs
 
@@ -330,6 +336,21 @@ HR profile record linked 1:1 to a users row.
 
 ---
 
+### job_categories
+
+Master lookup table for standardized job categories. Added 2026-08-04.
+
+| Column | Type | Nullable | Default | Notes |
+|---|---|---|---|---|
+| id | bigint UNSIGNED PK | - | auto | |
+| name | varchar(255) | No | - | Unique category name e.g. Engineering |
+| created_at | timestamp | Yes | NULL | |
+| updated_at | timestamp | Yes | NULL | |
+
+**Indexes:** name UNIQUE
+
+---
+
 ### job_library
 
 Master catalog of standardized job definitions, subject to COO approval.
@@ -339,13 +360,14 @@ Master catalog of standardized job definitions, subject to COO approval.
 | id | bigint UNSIGNED PK | - | auto | |
 | job_title | varchar(255) | No | - | |
 | job_description | text | No | - | |
-| qualifications | json | No | - | Array of qualification strings |
-| responsibilities | json | No | - | Array of responsibility strings |
+| qualifications | json | No | - | Array of qualification strings or group objects |
+| responsibilities | json | No | - | Array of responsibility strings or group objects |
 | job_category | varchar(255) | Yes | NULL | e.g. Engineering, Finance |
 | employment_type | varchar(255) | No | full_time | |
+| salary_type | enum | No | exact | exact, range. Added 2026-08-04 |
 | salary_min | decimal(12,2) | Yes | NULL | |
 | salary_max | decimal(12,2) | Yes | NULL | |
-| approval_status | enum | No | pending | pending, approved, rejected |
+| approval_status | enum | No | pending | pending, approved, revised, rejected |
 | approved_by | bigint UNSIGNED FK | Yes | NULL | -> users.id nullOnDelete |
 | approved_at | timestamp | Yes | NULL | |
 | approval_remarks | text | Yes | NULL | |
@@ -370,11 +392,11 @@ Position Requisition Form (PRF) submitted by department heads.
 | position_needed | varchar(255) | No | - | Free-text position name |
 | headcount | int | No | 1 | Number of positions |
 | justification | text | Yes | NULL | Business justification |
-| qualifications | json | Yes | NULL | Custom qualifications override |
-| responsibilities | json | Yes | NULL | Custom responsibilities override |
+| qualifications | json | Yes | NULL | Custom qualifications override. Added 2026-07-25 |
+| responsibilities | json | Yes | NULL | Custom responsibilities override. Added 2026-07-25 |
 | needed_by | date | Yes | NULL | Deadline for hiring |
 | urgency | enum | No | medium | low, medium, high, critical |
-| status | enum | No | pending | pending, approved, rejected, fulfilled |
+| status | enum | No | pending | pending, approved, revised, rejected, fulfilled |
 | approved_by | bigint UNSIGNED FK | Yes | NULL | -> users.id nullOnDelete |
 | approved_at | timestamp | Yes | NULL | |
 | approval_remarks | text | Yes | NULL | |
@@ -384,6 +406,7 @@ Position Requisition Form (PRF) submitted by department heads.
 | updated_at | timestamp | Yes | NULL | |
 | deleted_at | timestamp | Yes | NULL | Soft delete |
 
+---
 
 ### job_postings
 
@@ -400,7 +423,7 @@ Published job ads derived from an approved PRF and job library entry.
 | posting_date | date | Yes | NULL | |
 | closing_date | date | Yes | NULL | |
 | status | enum | No | draft | draft, pending_approval, published, closed, cancelled |
-| approval_status | enum | No | pending | pending, approved, rejected |
+| approval_status | enum | No | pending | pending, approved, revised, rejected |
 | approved_by | bigint UNSIGNED FK | Yes | NULL | -> users.id nullOnDelete |
 | approved_at | timestamp | Yes | NULL | |
 | approval_remarks | text | Yes | NULL | |
@@ -413,6 +436,8 @@ Published job ads derived from an approved PRF and job library entry.
 | created_at | timestamp | Yes | NULL | |
 | updated_at | timestamp | Yes | NULL | |
 | deleted_at | timestamp | Yes | NULL | Soft delete |
+
+**Indexes:** idx_job_postings_status_active_created (status, is_published, created_at), idx_job_postings_dept_status (department_id, status)
 
 ---
 
@@ -446,7 +471,7 @@ Individual job applications submitted for a specific posting.
 | updated_at | timestamp | Yes | NULL | |
 | deleted_at | timestamp | Yes | NULL | Soft delete |
 
-**Indexes:** application_id UNIQUE, email INDEX
+**Indexes:** application_id UNIQUE, email INDEX, idx_applicants_posting_status (job_posting_id, status), idx_applicants_status_created (status, created_at)
 
 ---
 
@@ -619,6 +644,8 @@ Laravel built-in polymorphic notification store.
 | created_at | timestamp | Yes | |
 | updated_at | timestamp | Yes | |
 
+**Indexes:** idx_notifications_user_read (notifiable_id, read_at)
+
 ---
 
 ### cache / jobs (Laravel)
@@ -630,7 +657,6 @@ Laravel built-in polymorphic notification store.
 | jobs | Queue job payloads |
 | job_batches | Batched job tracking |
 | failed_jobs | Failed job records for retry |
-
 
 ---
 
@@ -646,11 +672,12 @@ Laravel built-in polymorphic notification store.
 | payroll.status | draft, released |
 | employee_documents.status | required, submitted, verified, rejected |
 | performance_evaluations.rating | excellent, very_good, good, needs_improvement, unsatisfactory |
-| job_library.approval_status | pending, approved, rejected |
+| job_library.salary_type | exact, range |
+| job_library.approval_status | pending, approved, revised, rejected |
 | manpower_requests.urgency | low, medium, high, critical |
-| manpower_requests.status | pending, approved, rejected, fulfilled |
+| manpower_requests.status | pending, approved, revised, rejected, fulfilled |
 | job_postings.status | draft, pending_approval, published, closed, cancelled |
-| job_postings.approval_status | pending, approved, rejected |
+| job_postings.approval_status | pending, approved, revised, rejected |
 | applicants.status | VARCHAR(255) - applied, ai_screening, screening_passed, screening_failed, interview_1_scheduled, interview_1_done, interview_2_scheduled, interview_2_done, for_hiring, hired, rejected, withdrawn |
 | ai_evaluations.fit_label | high, medium, low |
 | ai_evaluations.hr_decision | qualified, not_qualified, pending |
@@ -666,7 +693,7 @@ Laravel built-in polymorphic notification store.
 
 ## Key Relationships
 
-`
+```
 departments      1 --* users
 departments      1 --* employees
 departments      1 --* manpower_requests
@@ -674,6 +701,8 @@ departments      1 --* job_postings
 
 users            1 --1 employees
 users             * --* permissions  (boolean columns per role, no pivot)
+
+job_categories   1 --* job_library
 
 job_library      1 --* manpower_requests
 job_library      1 --* job_postings
@@ -696,7 +725,7 @@ employees        1 --* leave_requests
 employees        1 --* payroll
 employees        1 --* employee_documents
 employees        1 --* performance_evaluations
-`
+```
 
 ---
 
@@ -735,8 +764,12 @@ employees        1 --* performance_evaluations
 | 2026_07_25_000001 | 2026-07-25 | Add first_name, middle_name, last_name to users |
 | 2026_07_25_000002 | 2026-07-25 | Add department_code (unique) to departments |
 | 2026_07_25_213318 | 2026-07-25 | Add qualifications, responsibilities, is_modified_from_prf to job_postings |
+| 2026_07_25_213319 | 2026-07-25 | Add qualifications and responsibilities to manpower_requests |
+| 2026_07_28_000001 | 2026-07-28 | Add composite performance indexes to users, job_postings, applicants, notifications |
+| 2026_08_04_093259 | 2026-08-04 | Add salary_type (exact, range) to job_library |
+| 2026_08_04_094414 | 2026-08-04 | Create job_categories table |
 
 ---
 
 *Generated from Laravel migration files in artms-backend/database/migrations/*
-*Total: 27 application tables + 5 Laravel framework tables = 32 tables*
+*Total: 28 application tables + 5 Laravel framework tables = 33 tables*

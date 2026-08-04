@@ -23,6 +23,7 @@ import { cn } from "../../utils/cn";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import applicantService from "../../services/applicantService";
 import jobService from "../../services/jobService";
+import { useToast } from "../../context/ToastContext";
 
 // ── Pipeline Stage Definitions ───────────────────────────────────────────────
 
@@ -204,6 +205,7 @@ function CandidateDetailModal({ applicant, open, onClose, onSchedule, onStatusCh
 // ── Main Pipeline Component ───────────────────────────────────────────────────
 
 export default function Pipeline() {
+  const toast = useToast();
   const [applicants, setApplicants]     = useState([]);
   const [jobPostings, setJobPostings]   = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -281,14 +283,19 @@ export default function Pipeline() {
     setUpdatingId(applicantId);
     
     // Optimistic UI update
+    const oldApplicant = applicants.find(a => a.id === applicantId);
     setApplicants((prev) =>
       prev.map((a) => (a.id === applicantId ? { ...a, status: newStage } : a))
     );
 
     try {
       await applicantService.update(applicantId, { status: newStage });
+      const name = oldApplicant ? `${oldApplicant.first_name} ${oldApplicant.last_name}` : "Applicant";
+      const stageLabel = newStage.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      toast.success("Stage Updated", `${name} moved to "${stageLabel}".`);
     } catch (err) {
       console.error("Failed to update applicant stage:", err);
+      toast.error("Update Failed", err?.response?.data?.message || "Failed to move applicant. Changes have been reverted.");
       // Rollback on error
       loadData();
     } finally {

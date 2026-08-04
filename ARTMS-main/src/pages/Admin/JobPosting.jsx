@@ -46,6 +46,7 @@ function deepEqual(a, b) {
 }
 
 export default function JobPosting() {
+  const toast = useToast();
   const [approvedPRFs, setApprovedPRFs] = useState([]);
   const [postings, setPostings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,12 +68,20 @@ export default function JobPosting() {
     responsibilities: [],
     closing_date: "",
   });
-  const [alertModal, setAlertModal] = useState({
+  const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
     title: "",
     message: "",
   });
+
+  const setAlertModal = (modalConfig) => {
+    setAlertModalState(modalConfig);
+    if (modalConfig?.title) {
+      const v = modalConfig.variant === "danger" ? "error" : modalConfig.variant || "info";
+      toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
+    }
+  };
 
   useEffect(() => {
     fetchData();

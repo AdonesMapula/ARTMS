@@ -77,6 +77,7 @@ const EMPTY_FORM = {
 };
 
 export default function JobLibrary() {
+  const toast = useToast();
   const { user } = useAuth();
   const isCOO = user?.role === "coo" || user?.role === "super_admin";
   const canEdit = ["hr_admin", "super_admin", "coo"].includes(user?.role);
@@ -102,12 +103,20 @@ export default function JobLibrary() {
     status: "approved",
     remarks: "",
   });
-  const [alertModal, setAlertModal] = useState({
+  const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
     title: "",
     message: "",
   });
+
+  const setAlertModal = (modalConfig) => {
+    setAlertModalState(modalConfig);
+    if (modalConfig?.title) {
+      const v = modalConfig.variant === "danger" ? "error" : modalConfig.variant || "info";
+      toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
+    }
+  };
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);

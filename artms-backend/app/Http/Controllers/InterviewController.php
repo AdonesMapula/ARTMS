@@ -48,18 +48,29 @@ class InterviewController extends Controller
             $interview->update(['meeting_link' => "{$baseUrl}/interview/{$interview->id}/room"]);
         }
 
-        // Send email & in-app notifications
+        // Send invitation email using the proper template with stage label
         $applicant = $interview->applicant;
         $formattedTime = \Carbon\Carbon::parse($interview->scheduled_at)->format('M d, Y \a\t g:i A');
 
+        $stageLabels = [
+            'interview_1' => 'Initial Interview',
+            'interview_2' => 'Second Interview',
+            'final'       => 'Final Interview',
+        ];
+        $stageLabel = $stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage));
+
         if ($applicant) {
-            NotificationService::notifyEmail(
-                $applicant->email,
-                'Interview Scheduled — ARTMS',
-                "Hello {$applicant->first_name}, your interview has been scheduled for {$formattedTime}.",
-                $interview->meeting_link,
-                'interview'
-            );
+            try {
+                Mail::send('emails.interview_invitation', [
+                    'applicant' => $applicant,
+                    'interview' => $interview,
+                ], function ($mail) use ($applicant, $stageLabel) {
+                    $mail->to($applicant->email)
+                         ->subject("{$stageLabel} Invitation — ARTMS");
+                });
+            } catch (\Throwable $e) {
+                \Log::error("Failed to send interview invitation to {$applicant->email}: " . $e->getMessage());
+            }
             $interview->update(['invitation_sent' => true]);
         }
 

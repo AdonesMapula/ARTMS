@@ -5,6 +5,7 @@ import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import { Card, CardContent } from "../components/ui/Card";
 import api from "../services/api";
+import { useToast } from "../context/ToastContext";
 
 const ROLE_COLORS = {
   super_admin: "bg-purple-100 text-purple-700 border-purple-200",
@@ -97,6 +98,7 @@ const ROLE_AVAILABLE_PERMISSIONS = {
 };
 
 export default function PermissionModal({ open, role, onClose, onSave }) {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allPermissions, setAllPermissions] = useState({});
@@ -179,27 +181,27 @@ export default function PermissionModal({ open, role, onClose, onSave }) {
       await api.post(`/permissions/role/${role}`, {
         permission_ids: Array.from(selectedPermissions),
       });
-      
-      // Notify parent to reload
+
       if (onSave) onSave();
-      
-      // Show success message
-      alert(`Permissions updated successfully for ${ROLE_DISPLAY_NAMES[role]}!`);
-      
-      // Close modal
+
+      toast.success("Permissions Saved", `Permissions updated successfully for ${ROLE_DISPLAY_NAMES[role]}.`);
+
       onClose();
-      
-      // If current logged-in user belongs to this role, they need to re-login
-      // to see permission changes take effect
+
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       if (currentUser.role === role && role !== "super_admin") {
-        const shouldReload = confirm(
-          "You updated permissions for your own role. You need to logout and login again for changes to take effect. Logout now?"
+        toast.warning(
+          "Re-login Required",
+          "You updated permissions for your own role. Please logout and login again for changes to take effect.",
+          {
+            duration: 0,
+            actionLabel: "Logout Now",
+            onAction: () => {
+              localStorage.clear();
+              window.location.href = "/login";
+            },
+          }
         );
-        if (shouldReload) {
-          localStorage.clear();
-          window.location.href = "/login";
-        }
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save permissions");

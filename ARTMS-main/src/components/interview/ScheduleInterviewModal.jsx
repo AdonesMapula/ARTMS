@@ -197,6 +197,13 @@ export default function ScheduleInterviewModal({
     setInterviewers(interviewers.filter((i) => i !== name));
   };
 
+  // Derive the human-readable stage label to show in confirmation
+  const STAGE_LABELS = {
+    interview_1: "Initial Interview",
+    interview_2: "Second Interview",
+    final: "Final Interview",
+  };
+
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -229,7 +236,7 @@ export default function ScheduleInterviewModal({
       };
 
       const { data } = await interviewService.create(payload);
-      setSent(true);
+      setSent(STAGE_LABELS[stageKey] || "Interview");
       onSaved?.(data.interview);
     } catch (err) {
       setErrors({ general: err.response?.data?.message || "Failed to schedule interview." });
@@ -266,9 +273,15 @@ export default function ScheduleInterviewModal({
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl">
               ✓
             </div>
-            <h3 className="text-xl font-extrabold text-slate-900">Interview Scheduled!</h3>
+            <div>
+              <span className="inline-block mb-3 px-4 py-1 rounded-full text-xs font-bold tracking-wide bg-indigo-100 text-indigo-700">
+                {sent}
+              </span>
+              <h3 className="text-xl font-extrabold text-slate-900">Interview Scheduled!</h3>
+            </div>
             <p className="text-sm text-slate-500 max-w-md">
-              The invitation has been successfully sent to <strong>{applicantName}</strong>. The LiveKit video room link has been emailed automatically.
+              A <strong>{sent}</strong> invitation has been successfully sent to <strong>{applicantName}</strong>.
+              {" "}The email includes the exact interview stage, schedule, and the video room link (if applicable).
             </p>
             <Button onClick={onClose} className="bg-[#3730a3] hover:bg-[#312e81] text-white font-bold px-8">
               Close & Done

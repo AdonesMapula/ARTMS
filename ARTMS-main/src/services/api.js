@@ -31,7 +31,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message || "An unexpected error occurred.";
+
+    if (status === 401) {
       const isPublicUrl = error.config?.url?.includes('/public/');
       const isPublicPage = window.location.pathname.startsWith('/interview/') || window.location.pathname.startsWith('/jobs') || window.location.pathname === '/';
       
@@ -40,7 +43,16 @@ api.interceptors.response.use(
         localStorage.removeItem('artms_user');
         window.location.href = '/login';
       }
+    } else if (error.config?.silent !== true) {
+      // Trigger visual error toast alert unless explicitly suppressed
+      if (status >= 400 && status !== 404) {
+        window.artmsToast?.error(
+          status === 403 ? "Access Denied" : status === 422 ? "Validation Error" : "System Error",
+          message
+        );
+      }
     }
+
     return Promise.reject(error);
   },
 );

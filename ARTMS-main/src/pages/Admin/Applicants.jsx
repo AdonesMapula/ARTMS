@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, UserCheck, Clock, XCircle, Mail, Eye, CheckCircle, Trash2, Filter, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
@@ -11,6 +11,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { ApplicantDetailModal } from "../../modals";
 import applicantService from "../../services/applicantService";
+import { useToast } from "../../context/ToastContext";
 
 const STATUSES = [
   { value: "all", label: "All Status" },
@@ -28,6 +29,7 @@ const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
 const FIT_LABEL = { high: "High Fit", medium: "Medium Fit", low: "Low Fit" };
 
 export default function Applicants() {
+  const toast = useToast();
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -97,8 +99,9 @@ export default function Applicants() {
       });
       setInterviewConfirm(null);
       loadApplicants();
+      toast.success("Status Updated", `${interviewConfirm.first_name} ${interviewConfirm.last_name} is now marked as Ready for Interview.`);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update status.");
+      toast.error("Update Failed", err.response?.data?.message || "Failed to update status.");
     } finally {
       setActionLoading(null);
     }
@@ -117,18 +120,26 @@ export default function Applicants() {
     };
 
     const message = statusMessages[applicant.status] || "Your application status has been updated.";
-    
-    if (!confirm(`Send email notification to ${applicant.email}?\n\nMessage: "${message}"`)) return;
-    
-    setActionLoading(applicant.id);
-    try {
-      await applicantService.update(applicant.id, { send_status_email: true });
-      alert("Email sent successfully!");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to send email.");
-    } finally {
-      setActionLoading(null);
-    }
+
+    toast.info(
+      `Send Email to ${applicant.first_name}?`,
+      `"${message}"`,
+      {
+        duration: 0,
+        actionLabel: "Send Email",
+        onAction: async () => {
+          setActionLoading(applicant.id);
+          try {
+            await applicantService.update(applicant.id, { send_status_email: true });
+            toast.success("Email Sent", `Notification email sent to ${applicant.email}.`);
+          } catch (err) {
+            toast.error("Email Failed", err.response?.data?.message || "Failed to send email.");
+          } finally {
+            setActionLoading(null);
+          }
+        },
+      }
+    );
   };
 
   const handleDelete = async () => {
@@ -139,8 +150,9 @@ export default function Applicants() {
       await applicantService.reject(deleteConfirm.id, { remarks: "Application deleted" });
       setDeleteConfirm(null);
       loadApplicants();
+      toast.success("Application Deleted", `${deleteConfirm.first_name} ${deleteConfirm.last_name}'s application has been removed.`);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete applicant.");
+      toast.error("Delete Failed", err.response?.data?.message || "Failed to delete applicant.");
     } finally {
       setActionLoading(null);
     }
@@ -169,7 +181,7 @@ export default function Applicants() {
             Applicant Management
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            View and manage all job applications ΓÇó AI-powered screening
+            View and manage all job applications • AI-powered screening
           </p>
         </div>
         <Button
@@ -339,7 +351,7 @@ export default function Applicants() {
                         </TD>
                         <TD className="max-w-[180px]">
                           <div className="truncate font-medium text-slate-900">
-                            {job?.job_title || "ΓÇö"}
+                            {job?.job_title || "—"}
                           </div>
                           {a.application_id && (
                             <div className="text-xs text-slate-400">{a.application_id}</div>
@@ -366,7 +378,7 @@ export default function Applicants() {
                               {FIT_LABEL[eval_.fit_label]}
                             </Badge>
                           ) : (
-                            <span className="text-xs text-slate-400">ΓÇö</span>
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </TD>
                         <TD className="text-right">

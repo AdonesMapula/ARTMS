@@ -7,6 +7,7 @@ import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
+import { useToast } from "../../context/ToastContext";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const FIT_TONE  = { high: "success", medium: "warning", low: "danger" };
@@ -34,6 +35,7 @@ function fitRingColor(label) {
 
 // ── main component ────────────────────────────────────────────────────────────
 export default function AiScreening() {
+  const toast = useToast();
   const [tab,          setTab]          = useState("pending");   // "pending" | "screened"
   const [pending,      setPending]      = useState([]);
   const [screened,     setScreened]     = useState([]);
@@ -104,12 +106,14 @@ export default function AiScreening() {
     setScreenError(null);
     try {
       await aiService.screen(applicantId);
-      // refresh both lists — applicant moves from pending → screened
       await Promise.all([loadPending(), loadScreened()]);
       setTab("screened");
       setSelected(applicantId);
+      toast.success("Screening Complete", "AI resume screening has been completed successfully.");
     } catch (err) {
-      setScreenError(err.response?.data?.message ?? "Screening failed. Check your OpenAI API key.");
+      const msg = err.response?.data?.message ?? "Screening failed. Check your OpenAI API key.";
+      setScreenError(msg);
+      toast.error("Screening Failed", msg);
     } finally {
       setScreening(null);
     }
@@ -127,7 +131,11 @@ export default function AiScreening() {
       setHrSaved(true);
       setTimeout(() => setHrSaved(false), 2500);
       await loadScreened();
-    } catch { /* silent */ } finally {
+      const label = hrForm.decision === "qualified" ? "Qualified" : "Not Qualified";
+      toast.success("HR Decision Saved", `${active.first_name} ${active.last_name} marked as ${label}.`);
+    } catch (err) {
+      toast.error("Save Failed", err?.response?.data?.message || "Failed to save HR review.");
+    } finally {
       setSavingHr(false);
     }
   };

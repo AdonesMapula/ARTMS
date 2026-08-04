@@ -16,6 +16,7 @@ import {
 import Button from "../../components/ui/Button";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import interviewService from "../../services/interviewService";
+import { useToast } from "../../context/ToastContext";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ function fmtDateFull(dt) {
 
 export default function InterviewCalendar({ onClose, embedded = false }) {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Current Date State
   const [currentDate, setCurrentDate]   = useState(new Date());
@@ -115,7 +117,7 @@ export default function InterviewCalendar({ onClose, embedded = false }) {
   // Export Agenda Handler
   const handleExportAgenda = () => {
     if (selectedDayInterviews.length === 0) {
-      alert("No interviews scheduled for this day to export.");
+      toast.warning("No Interviews", "No interviews are scheduled for this day to export.");
       return;
     }
     let csv = "Time,Applicant,Job Role,Stage,Type,Status\n";

@@ -25,6 +25,7 @@ import Modal from "../../components/ui/Modal";
 import { Table, THead, TH, TD } from "../../components/ui/Table";
 import attendanceService from "../../services/attendanceService";
 import employeeService from "../../services/employeeService";
+import { useToast } from "../../context/ToastContext";
 
 // Fallback Mock Attendance Logs
 const MOCK_ATTENDANCE_LOGS = [
@@ -145,6 +146,7 @@ const STATUS_CONFIG = {
 };
 
 export default function Attendance() {
+  const toast = useToast();
   const [logs, setLogs]             = useState(MOCK_ATTENDANCE_LOGS);
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState("live_log"); // 'live_log' | 'employee_summary'
@@ -299,6 +301,7 @@ export default function Attendance() {
     if (editingLog) {
       // Update
       setLogs(prev => prev.map(item => item.id === editingLog.id ? { ...item, ...formData } : item));
+      toast.success("Log Updated", `Attendance record for ${formData.employee_name} has been updated.`);
     } else {
       // Create new
       const newLog = {
@@ -307,6 +310,7 @@ export default function Attendance() {
         ...formData,
       };
       setLogs(prev => [newLog, ...prev]);
+      toast.success("Log Created", `New attendance log added for ${formData.employee_name}.`);
     }
     setIsLogModalOpen(false);
   };

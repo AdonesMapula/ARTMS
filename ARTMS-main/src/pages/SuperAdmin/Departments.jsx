@@ -9,6 +9,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Skeleton from "../../components/ui/Skeleton";
 import DepartmentModal from "../../modals/DepartmentModal";
 import departmentService from "../../services/departmentService";
+import { useToast } from "../../context/ToastContext";
 
 const STATUSES = [
   { value: "all", label: "All Status" },
@@ -17,6 +18,7 @@ const STATUSES = [
 ];
 
 export default function Departments() {
+  const toast = useToast();
   const [depts, setDepts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -54,21 +56,25 @@ export default function Departments() {
   const handleSave = async (formData) => {
     if (editDept) {
       await departmentService.update(editDept.id, formData);
+      toast.success("Department Updated", `${formData.department_name || "Department"} has been updated successfully.`);
     } else {
       await departmentService.create(formData);
+      toast.success("Department Created", `${formData.department_name || "Department"} has been created successfully.`);
     }
     load();
   };
 
   const handleDelete = async (id) => {
+    const target = depts.find((d) => d.id === id);
     try {
       await departmentService.delete(id);
       setDeleteId(null);
       setDeleteDept(null);
       load();
+      toast.success("Department Deleted", `${target?.department_name || "Department"} has been permanently deleted.`);
     } catch (error) {
       console.error("Failed to delete department:", error);
-      alert(error.response?.data?.message || "Failed to delete department. Please try again.");
+      toast.error("Delete Failed", error.response?.data?.message || "Failed to delete department. Please try again.");
     }
   };
 

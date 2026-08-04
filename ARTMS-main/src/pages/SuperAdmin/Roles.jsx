@@ -11,6 +11,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import Modal from "../../components/ui/Modal";
 import { PermissionModal } from "../../modals";
 import api from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 const ROLE_COLORS = {
   super_admin: "purple",
@@ -44,6 +45,7 @@ const PERMISSION_LEVELS = [
 ];
 
 export default function Roles() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [roles, setRoles] = useState([]);
@@ -108,18 +110,26 @@ export default function Roles() {
   };
 
   const handleSyncDefaults = async () => {
-    if (!confirm("This will reset all role permissions to default settings. Continue?")) return;
-    
-    setSyncing(true);
-    try {
-      await api.post("/permissions/sync-defaults");
-      alert("Default permissions synchronized successfully!");
-      loadRoles();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to sync permissions");
-    } finally {
-      setSyncing(false);
-    }
+    toast.warning(
+      "Sync Default Permissions?",
+      "This will reset all role permissions to default settings.",
+      {
+        duration: 0,
+        actionLabel: "Yes, Sync Now",
+        onAction: async () => {
+          setSyncing(true);
+          try {
+            await api.post("/permissions/sync-defaults");
+            toast.success("Permissions Synced", "Default permissions have been synchronized successfully.");
+            loadRoles();
+          } catch (err) {
+            toast.error("Sync Failed", err.response?.data?.message || "Failed to sync permissions.");
+          } finally {
+            setSyncing(false);
+          }
+        },
+      }
+    );
   };
 
   const handleOpenCreateModal = () => {
@@ -129,7 +139,7 @@ export default function Roles() {
 
   const handleCreateRole = async () => {
     if (!roleForm.name.trim()) {
-      alert("Please enter a role name");
+      toast.warning("Missing Field", "Please enter a role name.");
       return;
     }
 
@@ -139,13 +149,12 @@ export default function Roles() {
         name: roleForm.name.trim(),
         description: roleForm.description.trim(),
       });
-      
       setCreateModalOpen(false);
       setRoleForm({ name: "", description: "" });
       loadRoles();
-      alert("Role created successfully!");
+      toast.success("Role Created", `"${roleForm.name.trim()}" has been created successfully.`);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to create role");
+      toast.error("Create Failed", err.response?.data?.message || "Failed to create role.");
     } finally {
       setSaving(false);
     }

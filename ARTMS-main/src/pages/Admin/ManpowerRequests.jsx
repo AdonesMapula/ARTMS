@@ -36,6 +36,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function AdminManpowerRequests() {
+  const toast = useToast();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -47,7 +48,16 @@ export default function AdminManpowerRequests() {
   const [viewRequest, setViewRequest] = useState(null);
   const [editRequest, setEditRequest] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
-  const [alertModal, setAlertModal] = useState({ open: false, variant: "info", title: "", message: "" });
+  const [alertModal, setAlertModalState] = useState({ open: false, variant: "info", title: "", message: "" });
+  
+  const setAlertModal = (modalConfig) => {
+    setAlertModalState(modalConfig);
+    if (modalConfig?.title) {
+      const v = modalConfig.variant === "danger" ? "error" : modalConfig.variant || "info";
+      toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
+    }
+  };
+  
   const pageSize = 10;
 
   const loadRequests = useCallback(async () => {

@@ -34,6 +34,7 @@ import InterviewCalendar from "./InterviewCalendar";
 
 import interviewService from "../../services/interviewService";
 import applicantService from "../../services/applicantService";
+import { useToast } from "../../context/ToastContext";
 
 // ── constants ──────────────────────────────────────────────────────────────
 const STAGE_TABS = [
@@ -89,6 +90,7 @@ function fmtYear(dt) {
 // ── component ──────────────────────────────────────────────────────────────
 export default function Interviews() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // ── view state ────────────────────────────────────────────────────────
   const [view,        setView]       = useState("list");    // "list" | "calendar"
@@ -164,7 +166,10 @@ export default function Interviews() {
       setInterviews((prev) =>
         prev.map((i) => (i.id === interview.id ? { ...i, ...data.interview } : i))
       );
-    } catch {/* silent */} finally {
+      toast.success("Status Updated", `Interview status changed to "${newStatus}".`);
+    } catch (err) {
+      toast.error("Update Failed", err?.response?.data?.message || "Failed to update interview status.");
+    } finally {
       setActionLoading((s) => ({ ...s, [interview.id]: false }));
     }
   }
@@ -177,7 +182,11 @@ export default function Interviews() {
       setInterviews((prev) =>
         prev.map((i) => (i.id === interview.id ? { ...i, reminder_sent: true } : i))
       );
-    } catch {/* silent */} finally {
+      const name = `${interview.applicant?.first_name ?? ""} ${interview.applicant?.last_name ?? ""}`.trim();
+      toast.success("Reminder Sent", `Email reminder sent to ${name || "applicant"}.`);
+    } catch (err) {
+      toast.error("Reminder Failed", err?.response?.data?.message || "Failed to send reminder.");
+    } finally {
       setActionLoading((s) => ({ ...s, [`r_${interview.id}`]: false }));
     }
   }
@@ -192,6 +201,7 @@ export default function Interviews() {
   function handleScheduled(newInterview) {
     setScheduleOpen(false);
     fetchInterviews();
+    toast.success("Interview Scheduled", "The interview has been scheduled and an email invitation has been sent.");
   }
 
   // ── after evaluation saved ────────────────────────────────────────────
@@ -199,6 +209,7 @@ export default function Interviews() {
     setInterviews((prev) =>
       prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
     );
+    toast.success("Evaluation Saved", "Interview evaluation has been recorded successfully.");
   }
 
   // ── calendar: get days that have interviews this month ─────────────────

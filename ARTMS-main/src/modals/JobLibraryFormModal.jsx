@@ -6,6 +6,7 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import api from "../services/api";
 import { calculateSalaryBreakdown } from "../utils/salaryUtils";
+import { useToast } from "../context/ToastContext";
 
 /**
  * JobLibraryFormModal - Create or Edit Job Library Entry
@@ -20,6 +21,7 @@ export default function JobLibraryFormModal({
   onSave,
   saving = false,
 }) {
+  const toast = useToast();
   const isRejected = mode === "edit" && data?.approval_status === "rejected";
   const remarksText = data?.approval_remarks || data?.remarks;
 
@@ -69,7 +71,7 @@ export default function JobLibraryFormModal({
       setNewCategory("");
     } catch (e) {
       console.error('Failed to add category', e);
-      alert(e.response?.data?.message || 'Failed to add category');
+      toast.error("Category Error", e.response?.data?.message || 'Failed to add category.');
     } finally {
       setSavingCategory(false);
     }
@@ -119,7 +121,7 @@ export default function JobLibraryFormModal({
 
   const handleSaveBlockModal = () => {
     if (!blockTitle.trim()) {
-      alert("Please enter a title for this block.");
+      toast.warning("Missing Title", "Please enter a title for this block before saving.");
       return;
     }
 

@@ -4,6 +4,7 @@ import Modal from "../components/ui/Modal";
 import Badge from "../components/ui/Badge";
 import { Card, CardContent } from "../components/ui/Card";
 import applicantService from "../services/applicantService";
+import { useToast } from "../context/ToastContext";
 
 const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
 const FIT_LABEL = { high: "High", medium: "Medium", low: "Low" };
@@ -39,6 +40,7 @@ function fitRingColor(label) {
 }
 
 export default function ApplicantDetailModal({ open, applicantId, onClose, onStatusChange }) {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -68,31 +70,42 @@ export default function ApplicantDetailModal({ open, applicantId, onClose, onSta
     if (!data) return;
     setShowStatusMenu(false);
     setActionLoading("status");
-    
     try {
       await applicantService.update(data.id, { status: newStatus });
       if (onStatusChange) onStatusChange();
       loadApplicant();
-      alert("Status updated successfully!");
+      toast.success("Status Updated", `Applicant status changed to "${newStatus.replace(/_/g, " ")}".`);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update status.");
+      toast.error("Update Failed", err.response?.data?.message || "Failed to update status.");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleReject = async () => {
-    if (!data || !confirm("Reject this applicant?")) return;
-    setActionLoading("reject");
-    try {
-      await applicantService.reject(data.id, { remarks: "Did not meet requirements" });
-      if (onStatusChange) onStatusChange();
-      loadApplicant();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to reject applicant.");
-    } finally {
-      setActionLoading(null);
-    }
+    if (!data) return;
+    const name = `${data.first_name} ${data.last_name}`;
+    toast.warning(
+      "Reject Applicant?",
+      `Are you sure you want to reject ${name}? This will mark them as rejected.`,
+      {
+        duration: 0,
+        actionLabel: "Yes, Reject",
+        onAction: async () => {
+          setActionLoading("reject");
+          try {
+            await applicantService.reject(data.id, { remarks: "Did not meet requirements" });
+            if (onStatusChange) onStatusChange();
+            loadApplicant();
+            toast.error("Applicant Rejected", `${name} has been marked as rejected.`);
+          } catch (err) {
+            toast.error("Reject Failed", err.response?.data?.message || "Failed to reject applicant.");
+          } finally {
+            setActionLoading(null);
+          }
+        },
+      }
+    );
   };
 
   if (!open) return null;

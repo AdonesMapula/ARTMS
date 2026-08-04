@@ -9,6 +9,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import { ManpowerApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import manpowerService from "../../services/manpowerService";
+import { useToast } from "../../context/ToastContext";
 
 const URGENCY_TONE = { low: "default", medium: "info", high: "warning", critical: "danger" };
 const STATUS_TONE = { pending: "warning", approved: "success", revised: "warning", rejected: "danger" };
@@ -28,6 +29,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function ManpowerApprovals() {
+  const toast = useToast();
   const [rows,      setRows]      = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [page,      setPage]      = useState(1);
@@ -42,10 +44,12 @@ export default function ManpowerApprovals() {
   const [remarks,   setRemarks]   = useState("");
   const [saving,    setSaving]    = useState(false);
 
-  // Alert modal
+  // Alert modal & Toast helper
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
-  const showAlert = (variant, title, message) =>
+  const showAlert = (variant, title, message) => {
     setAlert({ open: true, variant, title, message });
+    toast[variant] ? toast[variant](title, message) : toast.showToast({ title, message, type: variant });
+  };
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   const pageSize = 10;

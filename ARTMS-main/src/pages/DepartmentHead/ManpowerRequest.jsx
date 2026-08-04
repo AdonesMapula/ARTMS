@@ -20,9 +20,9 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
-import AlertModal from "../../components/ui/AlertModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 
 const EMPLOYMENT_STATUS_OPTIONS = [
   { value: "probationary", label: "Probationary" },
@@ -116,12 +116,11 @@ function SectionCard({ eyebrow, title, description, children, badge, icon }) {
 export default function ManpowerRequest() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [submitting, setSubmitting] = useState(false);
   const [confirmSubmitPayload, setConfirmSubmitPayload] = useState(null);
-  const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
 
-  // Job Library approved entries for the position dropdown
   const [jobLibrary, setJobLibrary] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
 
@@ -132,10 +131,6 @@ export default function ManpowerRequest() {
       .catch(() => setJobLibrary([]))
       .finally(() => setLibraryLoading(false));
   }, []);
-
-  const showAlert = (variant, title, message) =>
-    setAlert({ open: true, variant, title, message });
-  const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
 
   const initialForm = {
     job_library_id: "",
@@ -221,19 +216,19 @@ export default function ManpowerRequest() {
     e.preventDefault();
 
     if (!form.position_needed) {
-      showAlert("error", "Missing Field", "Please enter a Position Title.");
+      toast.warning("Missing Field", "Please enter a Position Title.");
       return;
     }
     if (!form.job_library_id) {
-      showAlert("error", "Missing Field", "Please select a position from the Job Library.");
+      toast.warning("Missing Field", "Please select a position from the Job Library.");
       return;
     }
     if (!form.employment_status) {
-      showAlert("error", "Missing Field", "Please select an Employment Status.");
+      toast.warning("Missing Field", "Please select an Employment Status.");
       return;
     }
     if (!form.plantilla_type) {
-      showAlert("error", "Missing Field", "Please select a Plantilla Requirement.");
+      toast.warning("Missing Field", "Please select a Plantilla Requirement.");
       return;
     }
 
@@ -271,14 +266,14 @@ export default function ManpowerRequest() {
       await manpowerService.create(payload);
       setForm(initialForm);
       setAutoFilled(false);
-      showAlert(
-        "success",
+      toast.success(
         "Request Submitted",
-        "Your Personnel Requisition Form has been submitted for HR review. You will be notified once it is processed."
+        "Your Personnel Requisition Form has been submitted for HR review. You will be notified once it is processed.",
+        { duration: 6000 }
       );
+      navigate("/department-head/request-history");
     } catch (err) {
-      showAlert(
-        "error",
+      toast.error(
         "Submission Failed",
         err?.response?.data?.message ?? "Failed to submit request. Please try again."
       );
@@ -875,20 +870,6 @@ export default function ManpowerRequest() {
         tone="primary"
         onConfirm={handleDoSubmit}
         onClose={() => setConfirmSubmitPayload(null)}
-      />
-
-      {/* ── Alert Modal ─────────────────────────────────────────────────────── */}
-      <AlertModal
-        open={alert.open}
-        variant={alert.variant}
-        title={alert.title}
-        message={alert.message}
-        onClose={() => {
-          closeAlert();
-          if (alert.variant === "success") {
-            navigate("/department-head/request-history");
-          }
-        }}
       />
     </div>
   );
