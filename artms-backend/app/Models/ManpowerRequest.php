@@ -29,6 +29,21 @@ class ManpowerRequest extends Model
         'fit_threshold_medium',
     ];
 
+    protected $appends = [
+        'remarks',
+        'approval_remarks',
+    ];
+
+    public function getRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
+    public function getApprovalRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
     protected $casts = [
         'needed_by'        => 'date',
         'approved_at'      => 'datetime',

@@ -8,12 +8,18 @@ export default function CooNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading]             = useState(true);
 
-  useEffect(() => {
+  const fetchNotifications = () => {
     notificationService
       .getAll()
       .then(({ data }) => setNotifications(data.notifications || []))
       .catch((err) => console.warn("Failed to load notifications:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

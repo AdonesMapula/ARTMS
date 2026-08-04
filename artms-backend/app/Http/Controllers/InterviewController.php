@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Interview;
 use App\Models\InterviewTranscript;
 use App\Services\LiveKitService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -47,19 +48,38 @@ class InterviewController extends Controller
             $interview->update(['meeting_link' => "{$baseUrl}/interview/{$interview->id}/room"]);
         }
 
-        // Send email invitation to applicant
+        // Send email & in-app notifications
         $applicant = $interview->applicant;
-        try {
-            Mail::send('emails.interview_invitation', [
-                'applicant' => $applicant,
-                'interview' => $interview->fresh(),
-            ], function ($mail) use ($applicant) {
-                $mail->to($applicant->email)
-                     ->subject('Interview Invitation — ARTMS');
-            });
+        $formattedTime = \Carbon\Carbon::parse($interview->scheduled_at)->format('M d, Y \a\t g:i A');
+
+        if ($applicant) {
+            NotificationService::notifyEmail(
+                $applicant->email,
+                'Interview Scheduled — ARTMS',
+                "Hello {$applicant->first_name}, your interview has been scheduled for {$formattedTime}.",
+                $interview->meeting_link,
+                'interview'
+            );
             $interview->update(['invitation_sent' => true]);
-        } catch (\Exception $e) {
-            // Non-fatal
+        }
+
+        // Notify HR & Interviewers
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
+            'New Interview Scheduled',
+            "Interview session scheduled for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
+            '/admin/interviews',
+            'interview'
+        );
+
+        if ($interview->interviewer) {
+            NotificationService::notifyUser(
+                $interview->interviewer,
+                'Assigned Interview Session',
+                "You are assigned to conduct an interview for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
+                '/admin/interviews',
+                'interview'
+            );
         }
 
         // Update applicant status
@@ -120,6 +140,15 @@ class InterviewController extends Controller
             'applicant_confirmed_at' => now(),
             'status'                 => 'confirmed',
         ]);
+
+        $applicantName = $interview->applicant ? "{$interview->applicant->first_name} {$interview->applicant->last_name}" : "Applicant";
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
+            'Interview Confirmed by Candidate',
+            "Candidate {$applicantName} confirmed attendance for their interview session.",
+            '/admin/interviews',
+            'interview'
+        );
 
         if ($request->wantsJson() && ! $request->isMethod('get')) {
             return response()->json(['message' => 'Interview confirmed. A reminder will be sent before the interview.']);

@@ -327,13 +327,13 @@ export default function ManpowerApproveModal({
         </div>
 
         {/* Existing Approval Remarks (if viewing an already processed request) */}
-        {request.approval_remarks && request.status !== "pending" && (
-           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-               Approval Remarks
+        {(request.approval_remarks || request.remarks) && request.status !== "pending" && (
+           <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+               COO / Executive Review Remarks & Comments
              </p>
-             <p className="text-sm text-slate-700 italic">
-               "{request.approval_remarks}"
+             <p className="text-sm font-medium text-amber-900 whitespace-pre-wrap">
+               "{request.approval_remarks || request.remarks}"
              </p>
            </div>
         )}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\ManpowerRequest;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -44,6 +45,16 @@ class ManpowerRequestController extends Controller
 
         $req = ManpowerRequest::create($data);
         AuditLog::record('create', 'manpower_request', "Manpower request created for {$data['position_needed']}");
+
+        // Dispatch real-time in-app + email notifications to COO & SuperAdmin
+        $deptName = $req->department?->department_name ?? 'Department';
+        NotificationService::notifyRoles(
+            ['coo', 'super_admin'],
+            'New PRF Request Pending Approval',
+            "{$deptName} requested {$req->headcount}x {$req->position_needed} (Urgency: " . ucfirst($req->urgency) . ").",
+            '/coo/prf-approvals',
+            'request'
+        );
 
         return response()->json(['message' => 'Manpower request submitted.', 'request' => $req], 201);
     }
@@ -105,15 +116,18 @@ class ManpowerRequestController extends Controller
         $data = $request->validate([
             'status'           => ['required', 'in:approved,rejected'],
             'remarks'          => ['nullable', 'string'],
+            'approval_remarks' => ['nullable', 'string'],
             'qualifications'   => ['nullable', 'array'],
             'responsibilities' => ['nullable', 'array'],
         ]);
+
+        $remarks = $data['remarks'] ?? $data['approval_remarks'] ?? null;
 
         $updateData = [
             'status'           => $data['status'],
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
-            'approval_remarks' => $data['remarks'],
+            'approval_remarks' => $remarks,
         ];
 
         if (array_key_exists('qualifications', $data)) {
@@ -126,6 +140,43 @@ class ManpowerRequestController extends Controller
         $manpowerRequest->update($updateData);
 
         AuditLog::record('approve', 'manpower_request', "Request {$data['status']} ID {$manpowerRequest->id}");
+
+        // Dispatch real-time in-app + email notifications based on status
+        $statusText = strtoupper($data['status']);
+        $position = $manpowerRequest->position_needed;
+
+        if ($data['status'] === 'approved') {
+            // Notify requesting Department Head
+            if ($manpowerRequest->requester) {
+                NotificationService::notifyUser(
+                    $manpowerRequest->requester,
+                    "PRF Request Approved by COO",
+                    "Your manpower request for '{$position}' was APPROVED by COO. Ready for job posting.",
+                    '/department-head/request-history',
+                    'alert'
+                );
+            }
+            // Notify HR Admins
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "PRF Approved by COO",
+                "Requisition for '{$position}' was APPROVED by COO. You can now create a job posting.",
+                '/admin/job-posting',
+                'alert'
+            );
+        } else {
+            // Notify requesting Department Head on Rejection
+            if ($manpowerRequest->requester) {
+                $remarks = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
+                NotificationService::notifyUser(
+                    $manpowerRequest->requester,
+                    "PRF Request Rejected by COO",
+                    "Your manpower request for '{$position}' was REJECTED by COO.{$remarks}",
+                    '/department-head/request-history',
+                    'alert'
+                );
+            }
+        }
 
         return response()->json(['message' => "Request {$data['status']}.", 'request' => $manpowerRequest->fresh()]);
     }

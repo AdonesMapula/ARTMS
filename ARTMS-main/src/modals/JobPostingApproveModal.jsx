@@ -334,13 +334,13 @@ export default function JobPostingApproveModal({
         </div>
 
         {/* Existing Approval Remarks (for already-processed postings) */}
-        {posting.approval_remarks && posting.approval_status !== "pending" && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Approval Remarks
+        {(posting.approval_remarks || posting.remarks) && posting.approval_status !== "pending" && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+              COO / Executive Review Remarks & Comments
             </p>
-            <p className="text-sm text-slate-700 italic">
-              "{posting.approval_remarks}"
+            <p className="text-sm font-medium text-amber-900 whitespace-pre-wrap">
+              "{posting.approval_remarks || posting.remarks}"
             </p>
           </div>
         )}

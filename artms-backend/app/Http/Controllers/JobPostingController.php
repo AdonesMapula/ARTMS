@@ -153,17 +153,20 @@ class JobPostingController extends Controller
     public function approve(Request $request, JobPosting $jobPosting): JsonResponse
     {
         $data = $request->validate([
-            'status'  => ['required', 'in:approved,rejected'],
-            'remarks' => ['nullable', 'string'],
-            'qualifications' => ['nullable', 'array'],
+            'status'           => ['required', 'in:approved,rejected'],
+            'remarks'          => ['nullable', 'string'],
+            'approval_remarks' => ['nullable', 'string'],
+            'qualifications'   => ['nullable', 'array'],
             'responsibilities' => ['nullable', 'array'],
         ]);
+
+        $remarks = $data['remarks'] ?? $data['approval_remarks'] ?? null;
 
         $updateData = [
             'approval_status'  => $data['status'],
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
-            'approval_remarks' => $data['remarks'],
+            'approval_remarks' => $remarks,
             'status'           => $data['status'] === 'approved' ? 'published' : 'cancelled',
             'is_published'     => $data['status'] === 'approved',
             'posting_date'     => $data['status'] === 'approved' ? today() : null,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiEvaluation;
 use App\Models\Applicant;
+use App\Services\NotificationService;
 use App\Services\ResumeParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -256,6 +257,19 @@ EOT;
             'status'        => 'ai_screening',
         ]);
 
+        // ── 8. Trigger in-app notification & email to Admin on AI screening completion ──
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'Job Position';
+        $candidateName = "{$applicant->first_name} {$applicant->last_name}";
+        $fitUpper = strtoupper($fitLabel);
+
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
+            'AI Screening Completed',
+            "AI screening completed for {$candidateName} ({$jobTitle}) — Score: {$totalScore}/100 ({$fitUpper} FIT).",
+            '/admin/ai-screening',
+            'application'
+        );
+
         return response()->json([
             'message'    => 'AI screening completed.',
             'evaluation' => $evaluation->load('applicant'),
@@ -287,6 +301,18 @@ EOT;
 
         $newStatus = $data['hr_decision'] === 'qualified' ? 'screening_passed' : 'screening_failed';
         $applicant->update(['status' => $newStatus]);
+
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
+        $readableStatus = $data['hr_decision'] === 'qualified' ? 'Screening Passed' : 'Screening Not Passed';
+
+        // Instant email update to Candidate
+        NotificationService::notifyEmail(
+            $applicant->email,
+            "Application Status Update — {$readableStatus}",
+            "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
+            null,
+            'application'
+        );
 
         return response()->json([
             'message'    => 'HR review saved.',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\JobLibrary;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -59,6 +60,15 @@ class JobLibraryController extends Controller
         $job = JobLibrary::create($data);
         AuditLog::record('create', 'job_library', "Created job: {$job->job_title}");
 
+        // Dispatch notifications to COO & SuperAdmin
+        NotificationService::notifyRoles(
+            ['coo', 'super_admin'],
+            'Job Template Approval Needed',
+            "New job template '{$job->job_title}' is pending approval.",
+            '/coo/job-library-approvals',
+            'request'
+        );
+
         return response()->json(['message' => 'Job created. Awaiting COO approval.', 'job' => $job], 201);
     }
 
@@ -104,18 +114,30 @@ class JobLibraryController extends Controller
     public function approve(Request $request, JobLibrary $jobLibrary): JsonResponse
     {
         $data = $request->validate([
-            'status'  => ['required', 'in:approved,rejected'],
-            'remarks' => ['nullable', 'string'],
+            'status'           => ['required', 'in:approved,rejected'],
+            'remarks'          => ['nullable', 'string'],
+            'approval_remarks' => ['nullable', 'string'],
         ]);
+
+        $remarks = $data['remarks'] ?? $data['approval_remarks'] ?? null;
 
         $jobLibrary->update([
             'approval_status'  => $data['status'],
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
-            'approval_remarks' => $data['remarks'],
+            'approval_remarks' => $remarks,
         ]);
 
         AuditLog::record('approve', 'job_library', "Job {$data['status']}: {$jobLibrary->job_title}");
+
+        $statusText = strtoupper($data['status']);
+        $title = "Job Template {$statusText}";
+        $msg = "Job template '{$jobLibrary->job_title}' was {$statusText} by COO.";
+
+        if ($jobLibrary->creator) {
+            NotificationService::notifyUser($jobLibrary->creator, $title, $msg, '/admin/job-library', 'alert');
+        }
+        NotificationService::notifyRoles(['hr_admin', 'super_admin'], $title, $msg, '/admin/job-library', 'alert');
 
         return response()->json(['message' => "Job {$data['status']}.", 'job' => $jobLibrary->fresh()]);
     }

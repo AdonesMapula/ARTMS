@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreApplicantRequest;
 use App\Models\AuditLog;
 use App\Models\Applicant;
+use App\Services\NotificationService;
 use App\Models\ApplicantDocument;
 use App\Models\ApplicantNote;
 use Illuminate\Http\JsonResponse;
@@ -76,15 +77,25 @@ class ApplicantController extends Controller
             'status'               => 'applied',
         ]);
 
-        // Notify HR via email
-        try {
-            Mail::send('emails.new_application', ['applicant' => $applicant], function ($mail) {
-                $mail->to(config('mail.hr_email', config('mail.from.address')))
-                     ->subject("New Application Received — {$applicant->application_id}");
-            });
-        } catch (\Exception $e) {
-            // Non-fatal: log but don't fail the submission
-        }
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'Job Position';
+
+        // Notify HR Admins & SuperAdmin (In-App + Email)
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
+            'New Job Application Received',
+            "{$applicant->first_name} {$applicant->last_name} applied for '{$jobTitle}' (Ref: {$appId}).",
+            '/admin/applicants',
+            'application'
+        );
+
+        // Confirmation Email to Applicant
+        NotificationService::notifyEmail(
+            $applicant->email,
+            "Application Received — {$appId}",
+            "Hello {$applicant->first_name}, your job application for '{$jobTitle}' was successfully received. Application ID: {$appId}.",
+            null,
+            'application'
+        );
 
         return response()->json([
             'message'        => 'Application submitted successfully.',
@@ -108,6 +119,9 @@ class ApplicantController extends Controller
 
     public function update(Request $request, Applicant $applicant): JsonResponse
     {
+        $oldStatus       = $applicant->status;
+        $oldShortlisted  = $applicant->is_shortlisted;
+
         $data = $request->validate([
             'status'         => ['sometimes', 'string'],
             'is_shortlisted' => ['sometimes', 'boolean'],
@@ -115,6 +129,48 @@ class ApplicantController extends Controller
         ]);
 
         $applicant->update($data);
+
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
+
+        // 1. Trigger instant email & in-app notification on Status Change
+        if (isset($data['status']) && $data['status'] !== $oldStatus) {
+            $readableStatus = ucwords(str_replace('_', ' ', $data['status']));
+
+            NotificationService::notifyEmail(
+                $applicant->email,
+                "Application Status Update — {$readableStatus}",
+                "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
+                null,
+                'application'
+            );
+
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "Applicant Status Updated — {$readableStatus}",
+                "Applicant {$applicant->first_name} {$applicant->last_name} status was updated to {$readableStatus}.",
+                '/admin/applicants',
+                'application'
+            );
+        }
+
+        // 2. Trigger instant email & in-app notification on Shortlisting
+        if (isset($data['is_shortlisted']) && $data['is_shortlisted'] && !$oldShortlisted) {
+            NotificationService::notifyEmail(
+                $applicant->email,
+                "Application Status Update — Shortlisted",
+                "Hello {$applicant->first_name}, congratulations! You have been shortlisted for the {$jobTitle} position at ARTMS.",
+                null,
+                'application'
+            );
+
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "Applicant Shortlisted",
+                "Applicant {$applicant->first_name} {$applicant->last_name} has been shortlisted for '{$jobTitle}'.",
+                '/admin/applicants',
+                'application'
+            );
+        }
 
         return response()->json(['message' => 'Applicant updated.', 'applicant' => $applicant->fresh()]);
     }
@@ -129,23 +185,20 @@ class ApplicantController extends Controller
         ]);
 
         $applicant->update(['status' => 'ready_for_interview']);
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
+        $msg = $request->message ?? "Congratulations! You have been selected for an interview for the {$jobTitle} position.";
 
-        // Send email notification to applicant
-        try {
-            $message = $request->message ?? "Congratulations! You have been selected for an interview for the {$applicant->jobPosting->jobLibrary->job_title} position.";
-            
-            Mail::send('emails.ready_for_interview', [
-                'applicant' => $applicant,
-                'message' => $message,
-                'job_title' => $applicant->jobPosting->jobLibrary->job_title ?? 'the position',
-            ], function ($mail) use ($applicant) {
-                $mail->to($applicant->email)
-                     ->subject('Interview Invitation — ARTMS Recruitment');
-            });
-        } catch (\Exception $e) {
-            // Non-fatal: log but don't fail the status update
-            \Log::error('Failed to send ready-for-interview email: ' . $e->getMessage());
-        }
+        // Send email to applicant
+        NotificationService::notifyEmail($applicant->email, 'Interview Invitation — ARTMS Recruitment', $msg, null, 'interview');
+
+        // Notify HR Admins
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
+            'Applicant Ready for Interview',
+            "Applicant {$applicant->first_name} {$applicant->last_name} marked ready for interview ({$jobTitle}).",
+            '/admin/applicants',
+            'interview'
+        );
 
         AuditLog::record('ready_for_interview', 'applicant', "Applicant marked ready for interview: {$applicant->application_id}");
 
@@ -161,16 +214,25 @@ class ApplicantController extends Controller
     public function hire(Applicant $applicant): JsonResponse
     {
         $applicant->update(['status' => 'hired']);
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
 
         // Notify applicant
-        try {
-            Mail::send('emails.hired', ['applicant' => $applicant], function ($mail) use ($applicant) {
-                $mail->to($applicant->email)
-                     ->subject('Congratulations! Job Offer — ARTMS');
-            });
-        } catch (\Exception $e) {
-            // Non-fatal
-        }
+        NotificationService::notifyEmail(
+            $applicant->email,
+            'Congratulations! Job Offer — ARTMS',
+            "Hello {$applicant->first_name}, congratulations! We are pleased to extend a job offer for {$jobTitle}.",
+            null,
+            'alert'
+        );
+
+        // Notify HR & Admins
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'coo'],
+            'Applicant Hired',
+            "Applicant {$applicant->first_name} {$applicant->last_name} was officially HIRED for '{$jobTitle}'.",
+            '/admin/applicants',
+            'alert'
+        );
 
         AuditLog::record('hire', 'applicant', "Applicant hired: {$applicant->application_id}");
 
@@ -185,6 +247,16 @@ class ApplicantController extends Controller
         $request->validate(['remarks' => ['nullable', 'string']]);
 
         $applicant->update(['status' => 'rejected']);
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
+
+        // Notify applicant
+        NotificationService::notifyEmail(
+            $applicant->email,
+            'Application Status Update — ARTMS',
+            "Hello {$applicant->first_name}, thank you for applying for {$jobTitle}. We regret to inform you that we will not be moving forward with your application at this time.",
+            null,
+            'alert'
+        );
 
         AuditLog::record('reject', 'applicant', "Applicant rejected: {$applicant->application_id}");
 

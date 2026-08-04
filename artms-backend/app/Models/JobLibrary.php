@@ -29,6 +29,21 @@ class JobLibrary extends Model
         'is_active',
     ];
 
+    protected $appends = [
+        'remarks',
+        'approval_remarks',
+    ];
+
+    public function getRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
+    public function getApprovalRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
     protected $casts = [
         'approved_at'      => 'datetime',
         'is_active'        => 'boolean',

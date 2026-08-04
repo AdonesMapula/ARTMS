@@ -215,13 +215,13 @@ export default function ManpowerViewModal({ open, request, onClose }) {
         )}
 
         {/* Remarks / Review Notes */}
-        {request.remarks && (
+        {(request.approval_remarks || request.remarks) && (
           <div className="space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              COO / Executive Review Remarks
+              COO / Executive Review Remarks & Comments
             </h3>
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-900">
-              {request.remarks}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-900 font-medium whitespace-pre-wrap">
+              {request.approval_remarks || request.remarks}
             </div>
           </div>
         )}

@@ -132,6 +132,18 @@ export default function JobLibraryViewModal({ open, job, onClose }) {
               )}
             </div>
           </div>
+
+          {/* COO / Executive Review Remarks */}
+          {(job.approval_remarks || job.remarks) && (
+            <div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                COO / Executive Review Remarks & Comments
+              </h3>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-900 font-medium whitespace-pre-wrap">
+                {job.approval_remarks || job.remarks}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Modal>

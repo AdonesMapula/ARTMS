@@ -32,6 +32,21 @@ class JobPosting extends Model
         'is_modified_from_prf',
     ];
 
+    protected $appends = [
+        'remarks',
+        'approval_remarks',
+    ];
+
+    public function getRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['approved_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
+    public function getApprovalRemarksAttribute()
+    {
+        return $this->attributes['approval_remarks'] ?? $this->attributes['approved_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
     protected $casts = [
         'posting_date' => 'date',
         'closing_date' => 'date',

@@ -30,6 +30,8 @@ export default function AdminNotifications() {
 
   useEffect(() => {
     fetchNotifications();
+    const interval = setInterval(fetchNotifications, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleMarkAsRead = async (id) => {
