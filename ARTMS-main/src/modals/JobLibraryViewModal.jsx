@@ -111,7 +111,7 @@ export default function JobLibraryViewModal({ open, job, onClose }) {
                         <ul className="mt-2 space-y-1 pl-4 list-disc marker:text-slate-300">
                           {block.details.map((detail, dIdx) => (
                             <li key={dIdx} className="text-sm text-slate-600 pl-1 leading-relaxed">
-                              {detail.value}
+                              {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
                             </li>
                           ))}
                         </ul>
@@ -138,7 +138,7 @@ export default function JobLibraryViewModal({ open, job, onClose }) {
                         <ul className="mt-2 space-y-1 pl-4 list-disc marker:text-slate-300">
                           {block.details.map((detail, dIdx) => (
                             <li key={dIdx} className="text-sm text-slate-600 pl-1 leading-relaxed">
-                              {detail.value}
+                              {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
                             </li>
                           ))}
                         </ul>

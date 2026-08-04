@@ -10,7 +10,7 @@ import AlertModal from "../../components/ui/AlertModal";
 import { JobLibraryApproveModal, JobLibraryViewModal } from "../../modals";
 import api from "../../services/api";
 
-const APPROVAL_TONE = { approved: "success", pending: "warning", rejected: "danger" };
+const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
 const fmt = (d) =>
   d
@@ -27,6 +27,7 @@ const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
+  { value: "revised", label: "Needs Revision" },
   { value: "rejected", label: "Rejected" },
 ];
 const PAGE_SIZE = 10;
@@ -102,20 +103,29 @@ export default function JobLibraryApprovals() {
     });
   };
 
-  // ── Submit approve / reject ─────────────────────────────────────────────
+  // ── Submit approve / revise / reject ─────────────────────────────────────────────
   const handleDecision = async () => {
     if (!approveModal.job || !approveModal.status) return;
+    if (approveModal.status === "revised" && !approveModal.remarks.trim()) {
+      showAlert("error", "Remarks Required", "Please enter revision remarks explaining what HR needs to update.");
+      return;
+    }
     setSaving(true);
     try {
       await api.patch(`/job-library/${approveModal.job.id}/approve`, {
         status:  approveModal.status,
         remarks: approveModal.remarks.trim() || null,
       });
+      const act = approveModal.status;
+      const title = act === "approved" ? "Entry Approved" : act === "revised" ? "Marked for Revision" : "Entry Rejected";
+      const body = act === "revised"
+        ? `Job Library entry "${approveModal.job.job_title}" marked for revision and returned to HR.`
+        : `Job Library entry "${approveModal.job.job_title}" has been ${act}.`;
       setApproveModal({ open: false, job: null, status: "approved", remarks: "" });
       showAlert(
-        approveModal.status === "approved" ? "success" : "warning",
-        approveModal.status === "approved" ? "Entry Approved" : "Entry Rejected",
-        `Job Library entry "${approveModal.job.job_title}" has been ${approveModal.status}.`
+        act === "approved" ? "success" : act === "revised" ? "warning" : "error",
+        title,
+        body
       );
       fetchRows(page);
     } catch (err) {
@@ -283,116 +293,106 @@ export default function JobLibraryApprovals() {
                         setViewModal({ open: true, job: r });
                       }
                     }}
-                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
+                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer flex flex-col h-full"
                   >
-                    <CardContent className="p-5">
-                      {/* Header */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge tone="default" className="text-xs font-semibold">
-                              JL-{String(r.id).padStart(3, "0")}
-                            </Badge>
-                            <span className="text-xs text-slate-400">{fmt(r.created_at)}</span>
+                    <CardContent className="p-5 flex flex-col flex-1 justify-between">
+                      <div className="flex-1 space-y-4">
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge tone="default" className="text-xs font-semibold">
+                                JL-{String(r.id).padStart(3, "0")}
+                              </Badge>
+                              <span className="text-xs text-slate-400">{fmt(r.created_at)}</span>
+                            </div>
+                            <h3 className="text-lg font-extrabold text-[#111A62]">
+                              {r.job_title}
+                            </h3>
                           </div>
-                          <h3 className="text-lg font-extrabold text-[#111A62]">
-                            {r.job_title}
-                          </h3>
+                          <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
+                            {r.approval_status}
+                          </Badge>
                         </div>
-                        <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
-                          {r.approval_status}
-                        </Badge>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Briefcase size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Category</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.job_category || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <User size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Created By</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.creator?.name || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <DollarSign size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Salary Range</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.salary_min || r.salary_max
+                                  ? `${fmtMoney(r.salary_min)} – ${fmtMoney(r.salary_max)}`
+                                  : "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Calendar size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Submitted</p>
+                              <p className="text-sm font-semibold text-slate-900">{fmt(r.created_at)}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Employment Type */}
+                        <div>
+                          <Badge tone="accent">
+                            {r.employment_type?.replace(/_/g, " ") || "—"}
+                          </Badge>
+                        </div>
                       </div>
 
-                      {/* Details Grid */}
-                      <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Briefcase size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Category</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.job_category || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <User size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Created By</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.creator?.name || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <DollarSign size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Salary Range</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.salary_min || r.salary_max
-                                ? `${fmtMoney(r.salary_min)} – ${fmtMoney(r.salary_max)}`
-                                : "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Calendar size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Submitted</p>
-                            <p className="text-sm font-semibold text-slate-900">{fmt(r.created_at)}</p>
-                          </div>
-                        </div>
+                      {/* Actions Container - Pushed to Bottom */}
+                      <div className="mt-4 pt-3 border-t border-slate-100">
+                        {r.approval_status === "pending" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openReview(r, "approved");
+                            }}
+                            className="w-full gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-bold"
+                          >
+                            <Eye size={14} />
+                            Review Entry & Decide
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewModal({ open: true, job: r });
+                            }}
+                            className="w-full gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                          >
+                            <Eye size={14} />
+                            View Details
+                          </Button>
+                        )}
                       </div>
-
-                      {/* Employment Type */}
-                      <div className="mb-4">
-                        <Badge tone="accent">
-                          {r.employment_type?.replace(/_/g, " ") || "—"}
-                        </Badge>
-                      </div>
-
-                      {/* Actions */}
-                      {r.approval_status === "pending" ? (
-                        <div className="mt-4 border-t border-slate-100 pt-3">
-                          <div className="mb-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors group-hover:text-blue-500">
-                            <MousePointerClick size={14} />
-                            <span>Click anywhere on card to review details</span>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openReview(r, "approved");
-                              }}
-                              className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-600 hover:border-green-300 hover:bg-green-100"
-                            >
-                              <CheckCircle size={14} />
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openReview(r, "rejected");
-                              }}
-                              className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-600 hover:border-red-300 hover:bg-red-100"
-                            >
-                              <XCircle size={14} />
-                              Reject
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-4 border-t border-slate-100 pt-3">
-                          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors group-hover:text-blue-500">
-                            <MousePointerClick size={14} />
-                            <span>Click anywhere on card to view details</span>
-                          </div>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

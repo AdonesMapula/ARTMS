@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, FileText, Building2, User, Calendar, Plus, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Building2, User, Calendar, Plus, Trash2, RefreshCw, AlertTriangle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
@@ -12,7 +12,7 @@ const fmt = (d) =>
 const URGENCY_TONE = { low: "default", medium: "info", high: "warning", critical: "danger" };
 
 /**
- * ManpowerApproveModal - COO Review (Approve/Reject) Modal for PRFs
+ * ManpowerApproveModal - COO Review (Approve/Revise/Reject) Modal for PRFs
  */
 export default function ManpowerApproveModal({
   open,
@@ -23,6 +23,8 @@ export default function ManpowerApproveModal({
   onRemarksChange,
   onClose,
   onConfirm,
+  onUpdateQualifications,
+  onUpdateResponsibilities,
   saving = false,
 }) {
   if (!open || !request) return null;
@@ -168,14 +170,14 @@ export default function ManpowerApproveModal({
                       {isPending ? (
                         <textarea
                           rows={1}
-                          value={detail.value}
+                          value={typeof detail === "object" && detail !== null ? (detail.value ?? "") : String(detail ?? "")}
                           onChange={(e) => handleUpdateDetailValue(field, idx, dIdx, e.target.value)}
                           placeholder="Add detail..."
                           className="w-full resize-none rounded-md border border-transparent bg-slate-50 px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
                         />
                       ) : (
                         <span className="text-sm text-slate-600 leading-relaxed">
-                          {detail.value}
+                          {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
                         </span>
                       )}
                       {isPending && (
@@ -354,35 +356,44 @@ export default function ManpowerApproveModal({
                 <label className="mb-3 block text-sm font-semibold text-slate-700">
                   Select Action
                 </label>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <button
+                    type="button"
                     onClick={() => onStatusChange("approved")}
-                    className={`group relative flex items-center justify-center gap-3 rounded-xl border-2 px-6 py-4 text-sm font-bold capitalize transition-all overflow-hidden ${
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
                       status === "approved"
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:bg-emerald-50/50"
                     }`}
                   >
-                    {status === "approved" && (
-                      <div className="absolute inset-0 bg-emerald-500 opacity-5"></div>
-                    )}
-                    <CheckCircle size={20} className={status === "approved" ? "text-emerald-600" : "text-slate-400 group-hover:text-emerald-500 transition-colors"} />
-                    <span className="z-10">Approve Request</span>
+                    <CheckCircle size={18} className={status === "approved" ? "text-emerald-600" : "text-slate-400 group-hover:text-emerald-500"} />
+                    <span>Accept / Approve</span>
                   </button>
 
                   <button
-                    onClick={() => onStatusChange("rejected")}
-                    className={`group relative flex items-center justify-center gap-3 rounded-xl border-2 px-6 py-4 text-sm font-bold capitalize transition-all overflow-hidden ${
-                      status === "rejected"
-                        ? "border-red-500 bg-red-50 text-red-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-red-400 hover:bg-red-50 hover:text-red-600"
+                    type="button"
+                    onClick={() => onStatusChange("revised")}
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
+                      status === "revised"
+                        ? "border-amber-500 bg-amber-50 text-amber-900 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-amber-400 hover:bg-amber-50/50"
                     }`}
                   >
-                    {status === "rejected" && (
-                      <div className="absolute inset-0 bg-red-500 opacity-5"></div>
-                    )}
-                    <XCircle size={20} className={status === "rejected" ? "text-red-600" : "text-slate-400 group-hover:text-red-500 transition-colors"} />
-                    <span className="z-10">Reject Request</span>
+                    <RefreshCw size={18} className={status === "revised" ? "text-amber-600" : "text-slate-400 group-hover:text-amber-500"} />
+                    <span>Mark for Revision</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange("rejected")}
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
+                      status === "rejected"
+                        ? "border-red-500 bg-red-50 text-red-800 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-red-400 hover:bg-red-50/50"
+                    }`}
+                  >
+                    <XCircle size={18} className={status === "rejected" ? "text-red-600" : "text-slate-400 group-hover:text-red-500"} />
+                    <span>Decline / Reject</span>
                   </button>
                 </div>
               </div>
@@ -390,13 +401,19 @@ export default function ManpowerApproveModal({
               {/* Remarks */}
               <div>
                 <label className="mb-2 flex justify-between text-sm font-semibold text-slate-700">
-                  Remarks
-                  <span className="text-xs font-normal text-slate-400">(Optional)</span>
+                  <span>
+                    Remarks & Instructions {status === "revised" && <span className="text-red-500">* (Required for Revision)</span>}
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">{status === "revised" ? "Describe required edits" : "(Optional)"}</span>
                 </label>
                 <textarea
                   rows={3}
                   className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-                  placeholder="Leave a note for HR regarding your decision..."
+                  placeholder={
+                    status === "revised"
+                      ? "Specify what changes or corrections HR needs to make before resubmission..."
+                      : "Leave a note for HR regarding your decision..."
+                  }
                   value={remarks}
                   onChange={(e) => onRemarksChange(e.target.value)}
                 />
@@ -412,8 +429,9 @@ export default function ManpowerApproveModal({
                       Review Guidelines
                     </p>
                     <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-blue-700">
-                      <li>• <span className="font-medium text-blue-800">Approved</span> requests will notify HR to create a Job Posting.</li>
-                      <li>• <span className="font-medium text-blue-800">Rejected</span> requests will notify the Department Head.</li>
+                      <li>• <span className="font-semibold text-emerald-800">Approved</span> requests will notify HR to create a Job Posting.</li>
+                      <li>• <span className="font-semibold text-amber-800">Mark for Revision</span> sends feedback to HR to make edits and resubmit.</li>
+                      <li>• <span className="font-semibold text-red-800">Rejected</span> requests will notify the requesting department.</li>
                     </ul>
                  </div>
               </div>

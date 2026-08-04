@@ -91,15 +91,16 @@ class JobLibraryController extends Controller
         ]);
 
         $old = $jobLibrary->toArray();
-        $wasRejected = $jobLibrary->approval_status === 'rejected';
+        $wasNeedsRevision = in_array($jobLibrary->approval_status, ['revised', 'needs_revision', 'rejected']);
 
-        if ($wasRejected) {
+        if ($wasNeedsRevision) {
             $data['approval_status'] = 'pending';
+            $data['approval_remarks'] = null;
         }
 
         $jobLibrary->update($data);
 
-        if ($wasRejected) {
+        if ($wasNeedsRevision) {
             NotificationService::notifyRoles(
                 ['coo', 'super_admin'],
                 'Revised Job Template Resubmitted',
@@ -109,9 +110,9 @@ class JobLibraryController extends Controller
             );
         }
 
-        AuditLog::record('update', 'job_library', "Updated job: {$jobLibrary->job_title}" . ($wasRejected ? " (Resubmitted for COO approval)" : ""), $old, $jobLibrary->fresh()->toArray());
+        AuditLog::record('update', 'job_library', "Updated job: {$jobLibrary->job_title}" . ($wasNeedsRevision ? " (Resubmitted for COO approval)" : ""), $old, $jobLibrary->fresh()->toArray());
 
-        $msg = $wasRejected ? 'Job entry updated and resubmitted to COO for approval.' : 'Job updated.';
+        $msg = $wasNeedsRevision ? 'Job entry updated and resubmitted to COO for approval.' : 'Job updated.';
 
         return response()->json(['message' => $msg, 'job' => $jobLibrary->fresh()]);
     }
@@ -134,31 +135,35 @@ class JobLibraryController extends Controller
     public function approve(Request $request, JobLibrary $jobLibrary): JsonResponse
     {
         $data = $request->validate([
-            'status'           => ['required', 'in:approved,rejected'],
+            'status'           => ['required', 'in:approved,rejected,revised,needs_revision'],
             'remarks'          => ['nullable', 'string'],
             'approval_remarks' => ['nullable', 'string'],
         ]);
 
         $remarks = $data['remarks'] ?? $data['approval_remarks'] ?? null;
+        $finalStatus = in_array($data['status'], ['revised', 'needs_revision']) ? 'revised' : $data['status'];
 
         $jobLibrary->update([
-            'approval_status'  => $data['status'],
+            'approval_status'  => $finalStatus,
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
             'approval_remarks' => $remarks,
         ]);
 
-        AuditLog::record('approve', 'job_library', "Job {$data['status']}: {$jobLibrary->job_title}");
+        AuditLog::record('approve', 'job_library', "Job {$finalStatus}: {$jobLibrary->job_title}");
 
-        $statusText = strtoupper($data['status']);
-        $title = "Job Template {$statusText}";
-        $msg = "Job template '{$jobLibrary->job_title}' was {$statusText} by COO.";
+        $statusText = strtoupper($finalStatus);
+        $title = $finalStatus === 'revised' ? "Job Template Marked for Revision" : "Job Template {$statusText}";
+        $remarksMsg = $remarks ? " Remarks: {$remarks}" : "";
+        $msg = $finalStatus === 'revised' 
+            ? "Job template '{$jobLibrary->job_title}' requires REVISION per COO comments.{$remarksMsg}"
+            : "Job template '{$jobLibrary->job_title}' was {$statusText} by COO.";
 
         if ($jobLibrary->creator) {
             NotificationService::notifyUser($jobLibrary->creator, $title, $msg, '/admin/job-library', 'alert');
         }
         NotificationService::notifyRoles(['hr_admin', 'super_admin'], $title, $msg, '/admin/job-library', 'alert');
 
-        return response()->json(['message' => "Job {$data['status']}.", 'job' => $jobLibrary->fresh()]);
+        return response()->json(['message' => "Job entry marked as {$finalStatus}.", 'job' => $jobLibrary->fresh()]);
     }
 }

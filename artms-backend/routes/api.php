@@ -205,6 +205,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Manpower Requests ────────────────────────────────────────────────────
+    Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
+        Route::delete('manpower-requests/clean-rejected', [ManpowerRequestController::class, 'cleanRejected']);
+    });
     Route::apiResource('manpower-requests', ManpowerRequestController::class);
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::patch('manpower-requests/{manpowerRequest}/approve', [ManpowerRequestController::class, 'approve']);

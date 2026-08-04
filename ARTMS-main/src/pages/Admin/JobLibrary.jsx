@@ -52,6 +52,7 @@ const fmtMoney = (v) =>
 const APPROVAL_TONE = {
   approved: "success",
   pending: "warning",
+  revised: "warning",
   rejected: "danger",
 };
 
@@ -59,7 +60,8 @@ const APPROVAL_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "approved", label: "Approved" },
   { value: "pending", label: "Pending" },
-  { value: "rejected", label: "Needs Revision (Rejected)" },
+  { value: "revised", label: "Needs Revision" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 const EMPTY_FORM = {
@@ -168,12 +170,28 @@ export default function JobLibrary() {
     setFormModal({ open: true, mode: "create", data: null });
   };
 
+  const normalizeBlocks = (blocks) => {
+    if (!Array.isArray(blocks)) return [];
+    return blocks.map((b, i) => ({
+      id: b.id || Date.now() + i,
+      title: typeof b === "string" ? b : (b.title || ""),
+      details: Array.isArray(b.details)
+        ? b.details.map((d, j) => ({
+            id: typeof d === "object" && d !== null && d.id ? d.id : Date.now() + i * 100 + j,
+            value: typeof d === "object" && d !== null ? (d.value ?? d.title ?? "") : String(d ?? ""),
+          }))
+        : typeof b.details === "string" && b.details
+        ? [{ id: Date.now() + i * 100, value: b.details }]
+        : [],
+    }));
+  };
+
   const openEdit = (job) => {
     setForm({
       job_title: job.job_title ?? "",
       job_description: job.job_description ?? "",
-      qualifications: Array.isArray(job.qualifications) ? job.qualifications : [],
-      responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+      qualifications: normalizeBlocks(job.qualifications),
+      responsibilities: normalizeBlocks(job.responsibilities),
       job_category: job.job_category ?? "",
       employment_type: job.employment_type ?? "full_time",
       salary_type: job.salary_type ?? "exact",

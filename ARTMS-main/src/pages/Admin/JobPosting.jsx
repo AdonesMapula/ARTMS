@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Briefcase, Eye, EyeOff, CheckCircle, Clock, XCircle,
-  Plus, X, AlertCircle, FileText, Edit, Trash2, Filter, RefreshCw,
+  Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { FiAward, FiBriefcase } from "react-icons/fi";
@@ -25,12 +25,13 @@ const STATUS_TONE = {
   closed: "default",
   cancelled: "danger",
 };
-const APPROVAL_TONE = { approved: "success", pending: "warning", rejected: "danger" };
+const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "published", label: "Published" },
   { value: "pending_approval", label: "Pending" },
+  { value: "revised", label: "Needs Revision" },
   { value: "closed", label: "Closed" },
 ];
 
@@ -305,12 +306,19 @@ export default function JobPosting() {
       const matchesSearch =
         p.job_library?.job_title?.toLowerCase().includes(s) ||
         p.department?.name?.toLowerCase().includes(s) ||
-        p.status?.toLowerCase().includes(s);
+        p.status?.toLowerCase().includes(s) ||
+        p.approval_status?.toLowerCase().includes(s);
       if (!matchesSearch) return false;
     }
 
     // Status filter
-    if (statusFilter !== "all" && p.status !== statusFilter) return false;
+    if (statusFilter !== "all") {
+      if (statusFilter === "revised") {
+        if (p.approval_status !== "revised" && p.approval_status !== "needs_revision") return false;
+      } else if (p.status !== statusFilter) {
+        return false;
+      }
+    }
 
     return true;
   });
@@ -324,7 +332,8 @@ export default function JobPosting() {
   // Statistics
   const stats = {
     published: postings.filter((p) => p.status === "published").length,
-    pending: postings.filter((p) => p.status === "pending_approval").length,
+    pending: postings.filter((p) => p.status === "pending_approval" && p.approval_status !== "revised").length,
+    revised: postings.filter((p) => p.approval_status === "revised" || p.approval_status === "needs_revision").length,
     closed: postings.filter((p) => p.status === "closed").length,
     totalApps: postings.reduce((s, p) => s + (p.applicants_count || 0), 0),
   };
@@ -441,9 +450,39 @@ export default function JobPosting() {
         </Button>
       </div>
 
+      {/* Needs Revision Alert Banner */}
+      {stats.revised > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-700">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-amber-900">
+                {stats.revised} Job Posting(s) Marked for Revision by COO
+              </h3>
+              <p className="text-xs text-amber-800 mt-0.5">
+                The COO requested edits before live publication. Click "Review Revised Postings" to inspect feedback, make adjustments, and resubmit.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStatusFilter("revised")}
+            className="self-start sm:self-center border-amber-400 bg-white text-amber-900 hover:bg-amber-100 font-bold whitespace-nowrap"
+          >
+            Review Revised Postings ({stats.revised})
+          </Button>
+        </div>
+      )}
+
       {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card
+          onClick={() => setStatusFilter("published")}
+          className={`cursor-pointer transition-all hover:border-emerald-400 ${statusFilter === "published" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
               <Eye size={24} className="text-emerald-600" />
@@ -455,7 +494,10 @@ export default function JobPosting() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => setStatusFilter("pending_approval")}
+          className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "pending_approval" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
               <Clock size={24} className="text-amber-600" />
@@ -467,7 +509,25 @@ export default function JobPosting() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => setStatusFilter("revised")}
+          className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "revised" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
+        >
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+              <RefreshCw size={24} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
+              <p className="text-2xl font-extrabold text-amber-600">{stats.revised}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          onClick={() => setStatusFilter("closed")}
+          className={`cursor-pointer transition-all hover:border-slate-400 ${statusFilter === "closed" ? "border-slate-500 ring-2 ring-slate-500/20 bg-slate-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
               <EyeOff size={24} className="text-slate-600" />
@@ -479,7 +539,10 @@ export default function JobPosting() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => setStatusFilter("all")}
+          className={`cursor-pointer transition-all hover:border-blue-400 ${statusFilter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
               <Briefcase size={24} className="text-blue-600" />

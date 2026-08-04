@@ -8,6 +8,7 @@ export { default as JobLibraryViewModal } from './JobLibraryViewModal';
 // Manpower Approvals
 export { default as ManpowerApproveModal } from './ManpowerApproveModal';
 export { default as ManpowerViewModal } from './ManpowerViewModal';
+export { default as ManpowerEditModal } from './ManpowerEditModal';
 
 // Job Posting Approvals
 export { default as JobPostingApproveModal } from './JobPostingApproveModal';

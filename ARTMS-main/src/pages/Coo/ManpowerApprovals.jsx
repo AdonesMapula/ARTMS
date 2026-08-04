@@ -11,7 +11,7 @@ import AlertModal from "../../components/ui/AlertModal";
 import manpowerService from "../../services/manpowerService";
 
 const URGENCY_TONE = { low: "default", medium: "info", high: "warning", critical: "danger" };
-const STATUS_TONE = { pending: "warning", approved: "success", rejected: "danger" };
+const STATUS_TONE = { pending: "warning", approved: "success", revised: "warning", rejected: "danger" };
 
 const cap  = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
 const fmt  = (d) =>
@@ -23,6 +23,7 @@ const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
+  { value: "revised", label: "Needs Revision" },
   { value: "rejected", label: "Rejected" },
 ];
 
@@ -105,9 +106,13 @@ export default function ManpowerApprovals() {
     setViewOpen(true);
   };
 
-  // ── Submit approve / reject ──────────────────────────────────────────────
+  // ── Submit approve / revise / reject ──────────────────────────────────────────────
   const handleDecision = async (updatedData = null) => {
     if (!selected || !action) return;
+    if (action === "revised" && !remarks.trim()) {
+      showAlert("error", "Remarks Required", "Please enter revision remarks explaining what HR needs to update.");
+      return;
+    }
     setSaving(true);
     try {
       await manpowerService.approve(selected.id, {
@@ -117,10 +122,14 @@ export default function ManpowerApprovals() {
         responsibilities: updatedData?.responsibilities,
       });
       setViewOpen(false);
+      const title = action === "approved" ? "Request Approved" : action === "revised" ? "Marked for Revision" : "Request Rejected";
+      const body = action === "revised" 
+        ? `PRF #${selected.id} — "${selected.position_needed}" marked for revision and returned to HR.`
+        : `PRF #${selected.id} — "${selected.position_needed}" has been ${action}.`;
       showAlert(
-        action === "approved" ? "success" : "warning",
-        action === "approved" ? "Request Approved" : "Request Rejected",
-        `PRF #${selected.id} — "${selected.position_needed}" has been ${action}.`
+        action === "approved" ? "success" : action === "revised" ? "warning" : "error",
+        title,
+        body
       );
       fetchRows(page);
     } catch (err) {
@@ -276,108 +285,111 @@ export default function ManpowerApprovals() {
                   <Card
                     key={r.id}
                     onClick={() => openReview(r, null)}
-                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300 flex flex-col h-full"
                   >
-                    <CardContent className="p-5">
-                      <div className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="flex items-center gap-1.5">
-                          <Eye size={12} />
-                          Click to review details
-                        </span>
-                      </div>
-                      {/* Header */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge tone="default" className="text-xs font-semibold">
-                              PRF-{String(r.id).padStart(3, "0")}
-                            </Badge>
-                            {r.created_at && (
-                              <span className="text-xs text-slate-400">
-                                {fmt(r.created_at)}
-                              </span>
+                    <CardContent className="p-5 flex flex-col flex-1 justify-between">
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
+                          <span className="flex items-center gap-1.5">
+                            <Eye size={12} />
+                            Click to review details
+                          </span>
+                        </div>
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge tone="default" className="text-xs font-semibold">
+                                PRF-{String(r.id).padStart(3, "0")}
+                              </Badge>
+                              {r.created_at && (
+                                <span className="text-xs text-slate-400">
+                                  {fmt(r.created_at)}
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-lg font-extrabold text-[#111A62]">
+                              {r.position_needed}
+                            </h3>
+                            {r.jobLibrary?.job_title && (
+                              <p className="mt-1 text-xs text-slate-500 truncate">
+                                {r.jobLibrary.job_title}
+                              </p>
                             )}
                           </div>
-                          <h3 className="text-lg font-extrabold text-[#111A62]">
-                            {r.position_needed}
-                          </h3>
-                          {r.jobLibrary?.job_title && (
-                            <p className="mt-1 text-xs text-slate-500 truncate">
-                              {r.jobLibrary.job_title}
-                            </p>
-                          )}
+                          <Badge tone={STATUS_TONE[r.status] ?? "default"} className="text-xs capitalize">
+                            {r.status}
+                          </Badge>
                         </div>
-                        <Badge tone={STATUS_TONE[r.status] ?? "default"} className="text-xs capitalize">
-                          {r.status}
-                        </Badge>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Building2 size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Department</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.department?.name || r.department?.department_name || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <User size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Requested By</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.requester?.name ?? "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <FileText size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Headcount</p>
+                              <p className="text-sm font-extrabold text-slate-900">{r.headcount}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Calendar size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Needed By</p>
+                              <p className="text-sm font-semibold text-slate-900">{fmt(r.needed_by)}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Urgency Badge */}
+                        <div>
+                          <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
+                            {r.urgency} Priority
+                          </Badge>
+                        </div>
                       </div>
 
-                      {/* Details Grid */}
-                      <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Building2 size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Department</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.department?.name || r.department?.department_name || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <User size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Requested By</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.requester?.name ?? "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <FileText size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Headcount</p>
-                            <p className="text-sm font-extrabold text-slate-900">{r.headcount}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Calendar size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Needed By</p>
-                            <p className="text-sm font-semibold text-slate-900">{fmt(r.needed_by)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Urgency Badge */}
-                      <div className="mb-4">
-                        <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
-                          {r.urgency} Priority
-                        </Badge>
-                      </div>
-
-                      {/* Actions */}
-                      {r.status === "pending" && (
-                        <div className="flex gap-2">
+                      {/* Actions Container - Pushed to Bottom */}
+                      <div className="mt-4 pt-3 border-t border-slate-100/80">
+                        {r.status === "pending" ? (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); openReview(r, "approved"); }}
-                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
+                            className="w-full gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-bold"
                           >
-                            <CheckCircle size={14} />
-                            Approve
+                            <Eye size={14} />
+                            Review Request & Decide
                           </Button>
+                        ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={(e) => { e.stopPropagation(); openReview(r, "rejected"); }}
-                            className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, r.status); }}
+                            className="w-full gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                           >
-                            <XCircle size={14} />
-                            Reject
+                            <Eye size={14} />
+                            View Details
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

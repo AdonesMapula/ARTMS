@@ -10,7 +10,7 @@ import { JobPostingApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import api from "../../services/api";
 
-const APPROVAL_TONE = { approved: "success", pending: "warning", rejected: "danger" };
+const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 const STATUS_TONE   = { published: "success", pending_approval: "warning", cancelled: "danger", closed: "default" };
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ") : "—");
@@ -23,6 +23,7 @@ const STATUS_FILTERS = [
   { value: "all",      label: "All Status" },
   { value: "pending",  label: "Pending" },
   { value: "approved", label: "Approved" },
+  { value: "revised",  label: "Needs Revision" },
   { value: "rejected", label: "Rejected" },
 ];
 
@@ -102,9 +103,13 @@ export default function JobPostingApprovals() {
     setViewOpen(true);
   };
 
-  // ── Submit approve / reject ─────────────────────────────────────────────
+  // ── Submit approve / revise / reject ─────────────────────────────────────────────
   const handleDecision = async (updatedData = null) => {
     if (!selected || !action) return;
+    if (action === "revised" && !remarks.trim()) {
+      showAlert("error", "Remarks Required", "Please enter revision remarks explaining what HR needs to update.");
+      return;
+    }
     setSaving(true);
     try {
       await api.patch(`/job-postings/${selected.id}/approve`, {
@@ -114,12 +119,16 @@ export default function JobPostingApprovals() {
         responsibilities: updatedData?.responsibilities,
       });
       setViewOpen(false);
+      const title = action === "approved" ? "Job Posting Approved" : action === "revised" ? "Marked for Revision" : "Job Posting Rejected";
+      const body = action === "revised"
+        ? `JP-${String(selected.id).padStart(3, "0")} — "${selected.job_library?.job_title}" marked for revision and sent back to HR.`
+        : `JP-${String(selected.id).padStart(3, "0")} — "${selected.job_library?.job_title}" has been ${action}.${
+            action === "approved" ? " It is now live on the public Jobs page." : ""
+          }`;
       showAlert(
-        action === "approved" ? "success" : "warning",
-        action === "approved" ? "Job Posting Approved" : "Job Posting Rejected",
-        `JP-${String(selected.id).padStart(3, "0")} — "${selected.job_library?.job_title}" has been ${action}.${
-          action === "approved" ? " It is now live on the public Jobs page." : ""
-        }`
+        action === "approved" ? "success" : action === "revised" ? "warning" : "error",
+        title,
+        body
       );
       fetchRows(page);
     } catch (err) {
@@ -275,112 +284,115 @@ export default function JobPostingApprovals() {
                   <Card
                     key={r.id}
                     onClick={() => openReview(r, null)}
-                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
+                    className="group cursor-pointer border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300 flex flex-col h-full"
                   >
-                    <CardContent className="p-5">
-                      {/* Hover hint */}
-                      <div className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="flex items-center gap-1.5">
-                          <Eye size={12} />
-                          Click to review details
-                        </span>
-                      </div>
+                    <CardContent className="p-5 flex flex-col flex-1 justify-between">
+                      <div className="flex-1 space-y-4">
+                        {/* Hover hint */}
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
+                          <span className="flex items-center gap-1.5">
+                            <Eye size={12} />
+                            Click to review details
+                          </span>
+                        </div>
 
-                      {/* Header */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge tone="default" className="text-xs font-semibold">
-                              JP-{String(r.id).padStart(3, "0")}
-                            </Badge>
-                            {r.created_at && (
-                              <span className="text-xs text-slate-400">
-                                {fmt(r.created_at)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-1 items-start">
-                            <h3 className="text-lg font-extrabold text-[#111A62]">
-                              {r.job_library?.job_title || "Untitled Position"}
-                            </h3>
-                            {r.is_modified_from_prf && (
-                              <Badge tone="warning" className="text-[10px] uppercase tracking-wider">
-                                Modified by HR
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge tone="default" className="text-xs font-semibold">
+                                JP-{String(r.id).padStart(3, "0")}
                               </Badge>
-                            )}
+                              {r.created_at && (
+                                <span className="text-xs text-slate-400">
+                                  {fmt(r.created_at)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1 items-start">
+                              <h3 className="text-lg font-extrabold text-[#111A62]">
+                                {r.job_library?.job_title || "Untitled Position"}
+                              </h3>
+                              {r.is_modified_from_prf && (
+                                <Badge tone="warning" className="text-[10px] uppercase tracking-wider">
+                                  Modified by HR
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
+                            {r.approval_status}
+                          </Badge>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Building2 size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Department</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.department?.name || r.department?.department_name || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <MapPin size={16} className="text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-slate-500">Location</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {r.location || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <User size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Vacancies</p>
+                              <p className="text-sm font-extrabold text-slate-900">{r.vacancies_count}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Calendar size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Deadline</p>
+                              <p className="text-sm font-semibold text-slate-900">{fmt(r.closing_date)}</p>
+                            </div>
                           </div>
                         </div>
-                        <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
-                          {r.approval_status}
-                        </Badge>
+
+                        {/* Status Badge */}
+                        <div>
+                          <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
+                            {cap(r.status)}
+                          </Badge>
+                        </div>
                       </div>
 
-                      {/* Details Grid */}
-                      <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Building2 size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Department</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.department?.name || r.department?.department_name || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <MapPin size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Location</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {r.location || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <User size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Vacancies</p>
-                            <p className="text-sm font-extrabold text-slate-900">{r.vacancies_count}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Calendar size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Deadline</p>
-                            <p className="text-sm font-semibold text-slate-900">{fmt(r.closing_date)}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="mb-4">
-                        <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
-                          {cap(r.status)}
-                        </Badge>
-                      </div>
-
-                      {/* Actions */}
-                      {r.approval_status === "pending" && (
-                        <div className="flex gap-2">
+                      {/* Actions Container - Pushed to Bottom */}
+                      <div className="mt-4 pt-3 border-t border-slate-100/80">
+                        {r.approval_status === "pending" ? (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); openReview(r, "approved"); }}
-                            className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
+                            className="w-full gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-bold"
                           >
-                            <CheckCircle size={14} />
-                            Approve
+                            <Eye size={14} />
+                            Review Posting & Decide
                           </Button>
+                        ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={(e) => { e.stopPropagation(); openReview(r, "rejected"); }}
-                            className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
+                            onClick={(e) => { e.stopPropagation(); openReview(r, r.approval_status); }}
+                            className="w-full gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                           >
-                            <XCircle size={14} />
-                            Reject
+                            <Eye size={14} />
+                            View Details
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

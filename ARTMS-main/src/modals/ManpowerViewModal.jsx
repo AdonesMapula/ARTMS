@@ -171,7 +171,9 @@ export default function ManpowerViewModal({ open, request, onClose }) {
                   {Array.isArray(qGroup.details) && qGroup.details.length > 0 ? (
                     <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-600">
                       {qGroup.details.map((detail, dIdx) => (
-                        <li key={dIdx}>{detail}</li>
+                        <li key={dIdx}>
+                          {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
+                        </li>
                       ))}
                     </ul>
                   ) : typeof qGroup.details === "string" ? (
@@ -200,7 +202,9 @@ export default function ManpowerViewModal({ open, request, onClose }) {
                   {Array.isArray(rGroup.details) && rGroup.details.length > 0 ? (
                     <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-600">
                       {rGroup.details.map((detail, dIdx) => (
-                        <li key={dIdx}>{detail}</li>
+                        <li key={dIdx}>
+                          {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
+                        </li>
                       ))}
                     </ul>
                   ) : typeof rGroup.details === "string" ? (

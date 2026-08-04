@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Briefcase, Building2, MapPin, Calendar, User, Plus, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Briefcase, Building2, MapPin, Calendar, User, Plus, Trash2, RefreshCw } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
@@ -9,14 +9,13 @@ const fmt = (d) =>
     ? new Date(d).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
     : "—";
 
-const APPROVAL_TONE = { approved: "success", pending: "warning", rejected: "danger" };
+const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 const STATUS_TONE   = { published: "success", pending_approval: "warning", cancelled: "danger", closed: "default" };
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ") : "—");
 
 /**
- * JobPostingApproveModal — COO Review (Approve/Reject) Modal for Job Postings
- * Mirrors the design and structure of ManpowerApproveModal.
+ * JobPostingApproveModal — COO Review (Approve/Revise/Reject) Modal for Job Postings
  */
 export default function JobPostingApproveModal({
   open,
@@ -29,136 +28,126 @@ export default function JobPostingApproveModal({
   onConfirm,
   saving = false,
 }) {
-  if (!open || !posting) return null;
-
-  const [form, setForm] = useState({
-    qualifications: [],
-    responsibilities: [],
-  });
+  const [form, setForm] = useState({ qualifications: [], responsibilities: [] });
 
   useEffect(() => {
-    if (open && posting) {
+    if (posting) {
+      const normalizeBlocks = (blocks) => {
+        if (!Array.isArray(blocks)) return [];
+        return blocks.map((b, i) => ({
+          id: b.id || Date.now() + i,
+          title: typeof b === "string" ? b : (b.title || ""),
+          details: Array.isArray(b.details)
+            ? b.details.map((d, j) => ({
+                id: typeof d === "object" && d !== null && d.id ? d.id : Date.now() + i * 100 + j,
+                value: typeof d === "object" && d !== null ? (d.value ?? d.title ?? "") : String(d ?? ""),
+              }))
+            : typeof b.details === "string" && b.details
+            ? [{ id: Date.now() + i * 100, value: b.details }]
+            : [],
+        }));
+      };
+
       setForm({
-        qualifications: posting.qualifications || posting.job_library?.qualifications || [],
-        responsibilities: posting.responsibilities || posting.job_library?.responsibilities || [],
+        qualifications: normalizeBlocks(posting.qualifications),
+        responsibilities: normalizeBlocks(posting.responsibilities),
       });
     }
-  }, [open, posting]);
+  }, [posting]);
 
-  // ── Array editor helpers ────────────────────────────────────────────────
-  const handleAddBlock = (field) => {
+  if (!open || !posting) return null;
+
+  const isPending = posting.approval_status === "pending";
+
+  const handleTitleChange = (field, index, value) => {
+    setForm((prev) => {
+      const updated = [...prev[field]];
+      updated[index] = { ...updated[index], title: value };
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const handleDetailChange = (field, groupIdx, detailIdx, value) => {
+    setForm((prev) => {
+      const updated = [...prev[field]];
+      const details = [...updated[groupIdx].details];
+      details[detailIdx] = typeof details[detailIdx] === "object" ? { ...details[detailIdx], value } : value;
+      updated[groupIdx] = { ...updated[groupIdx], details };
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const handleAddDetail = (field, groupIdx) => {
+    setForm((prev) => {
+      const updated = [...prev[field]];
+      const details = [...(updated[groupIdx].details || []), { id: Date.now(), value: "" }];
+      updated[groupIdx] = { ...updated[groupIdx], details };
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const handleRemoveDetail = (field, groupIdx, detailIdx) => {
+    setForm((prev) => {
+      const updated = [...prev[field]];
+      const details = updated[groupIdx].details.filter((_, i) => i !== detailIdx);
+      updated[groupIdx] = { ...updated[groupIdx], details };
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const handleAddGroup = (field) => {
     setForm((prev) => ({
       ...prev,
-      [field]: [
-        ...(prev[field] || []),
-        { id: crypto.randomUUID(), title: "", details: [] },
-      ],
+      [field]: [...prev[field], { id: Date.now(), title: "New Group", details: [{ id: Date.now() + 1, value: "" }] }],
     }));
   };
 
-  const handleRemoveBlock = (field, idx) => {
+  const handleRemoveGroup = (field, groupIdx) => {
     setForm((prev) => ({
       ...prev,
-      [field]: prev[field].filter((_, i) => i !== idx),
+      [field]: prev[field].filter((_, i) => i !== groupIdx),
     }));
   };
 
-  const handleUpdateBlockTitle = (field, idx, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === idx ? { ...b, title: value } : b
-      ),
-    }));
-  };
-
-  const handleAddDetail = (field, blockIdx) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: [
-                ...(b.details || []),
-                { id: crypto.randomUUID(), value: "" },
-              ],
-            }
-          : b
-      ),
-    }));
-  };
-
-  const handleRemoveDetail = (field, blockIdx, detailIdx) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: b.details.filter((_, j) => j !== detailIdx),
-            }
-          : b
-      ),
-    }));
-  };
-
-  const handleUpdateDetailValue = (field, blockIdx, detailIdx, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: b.details.map((d, j) =>
-                j === detailIdx ? { ...d, value } : d
-              ),
-            }
-          : b
-      ),
-    }));
-  };
-
-  const renderArrayEditor = (field, label) => {
-    const isPending = posting.approval_status === "pending";
-
+  const renderSection = (title, field, label) => {
+    const groups = form[field] || [];
     return (
-      <div className="flex flex-col h-full pt-2">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            {label}
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-extrabold uppercase tracking-wider text-slate-700">
+            {title}
+          </h4>
           {isPending && (
             <button
               type="button"
-              onClick={() => handleAddBlock(field)}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300 cursor-pointer"
+              onClick={() => handleAddGroup(field)}
+              className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
             >
-              <Plus size={12} /> Add Group
+              <Plus size={14} /> Add Category Group
             </button>
           )}
         </div>
 
-        {form[field] && Array.isArray(form[field]) && form[field].length > 0 ? (
+        {groups.length > 0 ? (
           <div className="space-y-3">
-            {form[field].map((block, idx) => (
-              <div key={block.id || idx} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-200">
-                <div className="mb-2 flex items-center justify-between gap-3">
+            {groups.map((group, idx) => (
+              <div key={group.id || idx} className="rounded-xl border border-slate-200 bg-white p-4 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                   {isPending ? (
                     <input
                       type="text"
-                      value={block.title}
-                      onChange={(e) => handleUpdateBlockTitle(field, idx, e.target.value)}
-                      placeholder="Group Title..."
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
+                      className="font-bold text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 flex-1"
+                      value={group.title}
+                      onChange={(e) => handleTitleChange(field, idx, e.target.value)}
+                      placeholder="Category Title"
                     />
                   ) : (
-                    <h4 className="text-sm font-bold text-slate-800">{block.title}</h4>
+                    <h5 className="font-bold text-sm text-slate-800">{group.title}</h5>
                   )}
                   {isPending && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveBlock(field, idx)}
+                      onClick={() => handleRemoveGroup(field, idx)}
                       className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
                     >
                       <Trash2 size={14} />
@@ -166,28 +155,28 @@ export default function JobPostingApproveModal({
                   )}
                 </div>
 
-                <div className="space-y-1.5 mt-2">
-                  {(block.details || []).map((detail, dIdx) => (
-                    <div key={detail.id || dIdx} className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400 pl-1"></span>
+                <div className="space-y-1.5 pl-2">
+                  {group.details?.map((detail, dIdx) => (
+                    <div key={dIdx} className="flex items-start gap-2">
+                      <span className="mt-1 text-xs text-slate-400">•</span>
                       {isPending ? (
-                        <textarea
-                          rows={1}
-                          value={detail.value}
-                          onChange={(e) => handleUpdateDetailValue(field, idx, dIdx, e.target.value)}
-                          placeholder="Add detail..."
-                          className="w-full resize-none rounded-md border border-transparent bg-slate-50 px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                        <input
+                          type="text"
+                          className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500"
+                          value={typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
+                          onChange={(e) => handleDetailChange(field, idx, dIdx, e.target.value)}
+                          placeholder="Requirement detail..."
                         />
                       ) : (
                         <span className="text-sm text-slate-600 leading-relaxed">
-                          {detail.value}
+                          {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
                         </span>
                       )}
                       {isPending && (
                         <button
                           type="button"
                           onClick={() => handleRemoveDetail(field, idx, dIdx)}
-                          className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
+                          className="text-slate-400 hover:text-red-500 cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -198,9 +187,9 @@ export default function JobPostingApproveModal({
                     <button
                       type="button"
                       onClick={() => handleAddDetail(field, idx)}
-                      className="ml-3 mt-1 flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                      className="ml-4 text-[10px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
                     >
-                      <Plus size={12} /> Add Detail
+                      + Add Detail
                     </button>
                   )}
                 </div>
@@ -208,7 +197,7 @@ export default function JobPostingApproveModal({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-500 italic">No specific {label.toLowerCase()} provided.</p>
+          <p className="text-sm text-slate-500 italic">No {label.toLowerCase()} provided.</p>
         )}
       </div>
     );
@@ -227,116 +216,73 @@ export default function JobPostingApproveModal({
             Cancel
           </Button>
           <Button
-            variant={status === "approved" ? "primary" : "danger"}
+            variant="primary"
             onClick={() => onConfirm(form)}
             disabled={saving || !status}
+            className={
+              status === "approved"
+                ? "bg-emerald-600 hover:bg-emerald-700 font-bold"
+                : status === "revised"
+                ? "bg-amber-600 hover:bg-amber-700 font-bold"
+                : "bg-red-600 hover:bg-red-700 font-bold"
+            }
           >
             {saving
               ? "Saving..."
               : status === "approved"
               ? "Approve & Publish"
-              : status === "rejected"
-              ? "Reject Posting"
-              : "Confirm Action"}
+              : status === "revised"
+              ? "Request Revision"
+              : "Reject Posting"}
           </Button>
         </div>
       }
     >
       <div className="space-y-5">
-        {/* Posting Details Card */}
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
           <div className="mb-4 flex items-start justify-between">
-            <div className="flex-1">
+            <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge tone="default" className="text-xs font-semibold">
-                  JP-{String(posting.id).padStart(3, "0")}
-                </Badge>
-                {posting.created_at && (
-                  <span className="text-xs text-slate-400">
-                    {fmt(posting.created_at)}
-                  </span>
-                )}
+                <Badge tone="default" className="text-[10px]">JP-{String(posting.id).padStart(3, "0")}</Badge>
+                {posting.created_at && <span className="text-xs text-slate-400">{fmt(posting.created_at)}</span>}
               </div>
               <h3 className="text-lg font-extrabold text-[#111A62]">
                 {posting.job_library?.job_title || "Untitled Position"}
               </h3>
-              {posting.is_modified_from_prf && (
-                <Badge tone="warning" className="mt-1 text-[10px] uppercase tracking-wider">
-                  Modified by HR
-                </Badge>
-              )}
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <Badge tone={APPROVAL_TONE[posting.approval_status] ?? "default"} className="capitalize">
-                {posting.approval_status}
-              </Badge>
-              <Badge tone={STATUS_TONE[posting.status] ?? "default"} className="capitalize text-xs">
-                {cap(posting.status)}
-              </Badge>
-            </div>
+            <Badge tone={APPROVAL_TONE[posting.approval_status] ?? "default"} className="capitalize">
+              {posting.approval_status === "revised" ? "Needs Revision" : posting.approval_status}
+            </Badge>
           </div>
 
-          {/* Basic Info Grid */}
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-2 rounded-lg bg-white p-3 border border-slate-200 shadow-sm">
-              <Building2 size={16} className="text-slate-400" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-500">Department</p>
-                <p className="text-sm font-medium text-slate-900 truncate">
-                  {posting.department?.name || posting.department?.department_name || "—"}
-                </p>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-white p-3 border border-slate-200/60">
+              <span className="text-xs text-slate-400 block mb-0.5">Department</span>
+              <span className="text-sm font-semibold text-slate-800">
+                {posting.department?.name || posting.department?.department_name || "—"}
+              </span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg bg-white p-3 border border-slate-200 shadow-sm">
-              <MapPin size={16} className="text-slate-400" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-500">Location</p>
-                <p className="text-sm font-medium text-slate-900 truncate">
-                  {posting.location || "—"}
-                </p>
-              </div>
+            <div className="rounded-lg bg-white p-3 border border-slate-200/60">
+              <span className="text-xs text-slate-400 block mb-0.5">Location</span>
+              <span className="text-sm font-semibold text-slate-800">{posting.location || "—"}</span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg bg-white p-3 border border-slate-200 shadow-sm">
-              <User size={16} className="text-slate-400" />
-              <div>
-                <p className="text-xs font-semibold text-slate-500">Vacancies</p>
-                <p className="text-sm font-extrabold text-slate-900">{posting.vacancies_count}</p>
-              </div>
+            <div className="rounded-lg bg-white p-3 border border-slate-200/60">
+              <span className="text-xs text-slate-400 block mb-0.5">Vacancies</span>
+              <span className="text-sm font-extrabold text-slate-800">{posting.vacancies_count}</span>
             </div>
-            <div className="flex items-center gap-2 rounded-lg bg-white p-3 border border-slate-200 shadow-sm">
-              <Calendar size={16} className="text-slate-400" />
-              <div>
-                <p className="text-xs font-semibold text-slate-500">Deadline</p>
-                <p className="text-sm font-medium text-slate-900">{fmt(posting.closing_date)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {posting.description && (
-            <div className="mb-4 rounded-lg bg-white p-4 border border-slate-200 shadow-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Job Description
-              </p>
-              <p className="text-sm leading-relaxed text-slate-600">
-                {posting.description}
-              </p>
-            </div>
-          )}
-
-          {/* Qualifications & Responsibilities Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 pt-2 border-t border-slate-200">
-            {renderArrayEditor("qualifications", "Qualifications")}
-            <div className="sm:border-l sm:border-slate-200 sm:pl-6 max-sm:border-t max-sm:border-slate-200 max-sm:pt-6">
-              {renderArrayEditor("responsibilities", "Responsibilities")}
+            <div className="rounded-lg bg-white p-3 border border-slate-200/60">
+              <span className="text-xs text-slate-400 block mb-0.5">Closing Date</span>
+              <span className="text-sm font-semibold text-slate-800">{fmt(posting.closing_date)}</span>
             </div>
           </div>
         </div>
 
-        {/* Existing Approval Remarks (for already-processed postings) */}
-        {(posting.approval_remarks || posting.remarks) && posting.approval_status !== "pending" && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+        {renderSection("Qualifications & Requirements", "qualifications", "Qualifications")}
+        {renderSection("Key Responsibilities", "responsibilities", "Responsibilities")}
+
+        {(posting.approval_remarks || posting.remarks) && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+            <p className="text-xs font-bold text-amber-900 mb-1">
               COO / Executive Review Remarks & Comments
             </p>
             <p className="text-sm font-medium text-amber-900 whitespace-pre-wrap">
@@ -345,8 +291,7 @@ export default function JobPostingApproveModal({
           </div>
         )}
 
-        {/* COO Review Action Panel (Only show if posting is pending) */}
-        {posting.approval_status === "pending" && (
+        {isPending && (
           <div className="rounded-xl border-2 border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="bg-slate-100 px-5 py-4 border-b border-slate-200">
               <h4 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
@@ -354,62 +299,73 @@ export default function JobPostingApproveModal({
                 COO Decision Panel
               </h4>
             </div>
-
             <div className="p-5 space-y-6">
-              {/* Decision Selection */}
               <div>
                 <label className="mb-3 block text-sm font-semibold text-slate-700">
                   Select Action
                 </label>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <button
+                    type="button"
                     onClick={() => onStatusChange("approved")}
-                    className={`group relative flex items-center justify-center gap-3 rounded-xl border-2 px-6 py-4 text-sm font-bold capitalize transition-all overflow-hidden ${
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
                       status === "approved"
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:bg-emerald-50/50"
                     }`}
                   >
-                    {status === "approved" && (
-                      <div className="absolute inset-0 bg-emerald-500 opacity-5"></div>
-                    )}
-                    <CheckCircle size={20} className={status === "approved" ? "text-emerald-600" : "text-slate-400 group-hover:text-emerald-500 transition-colors"} />
-                    <span className="z-10">Approve & Publish</span>
+                    <CheckCircle size={18} className={status === "approved" ? "text-emerald-600" : "text-slate-400 group-hover:text-emerald-500"} />
+                    <span>Approve & Publish</span>
                   </button>
 
                   <button
-                    onClick={() => onStatusChange("rejected")}
-                    className={`group relative flex items-center justify-center gap-3 rounded-xl border-2 px-6 py-4 text-sm font-bold capitalize transition-all overflow-hidden ${
-                      status === "rejected"
-                        ? "border-red-500 bg-red-50 text-red-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-red-400 hover:bg-red-50 hover:text-red-600"
+                    type="button"
+                    onClick={() => onStatusChange("revised")}
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
+                      status === "revised"
+                        ? "border-amber-500 bg-amber-50 text-amber-900 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-amber-400 hover:bg-amber-50/50"
                     }`}
                   >
-                    {status === "rejected" && (
-                      <div className="absolute inset-0 bg-red-500 opacity-5"></div>
-                    )}
-                    <XCircle size={20} className={status === "rejected" ? "text-red-600" : "text-slate-400 group-hover:text-red-500 transition-colors"} />
-                    <span className="z-10">Reject Posting</span>
+                    <RefreshCw size={18} className={status === "revised" ? "text-amber-600" : "text-slate-400 group-hover:text-amber-500"} />
+                    <span>Mark for Revision</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange("rejected")}
+                    className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold capitalize transition-all overflow-hidden cursor-pointer ${
+                      status === "rejected"
+                        ? "border-red-500 bg-red-50 text-red-800 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-red-400 hover:bg-red-50/50"
+                    }`}
+                  >
+                    <XCircle size={18} className={status === "rejected" ? "text-red-600" : "text-slate-400 group-hover:text-red-500"} />
+                    <span>Decline / Reject</span>
                   </button>
                 </div>
               </div>
 
-              {/* Remarks */}
               <div>
                 <label className="mb-2 flex justify-between text-sm font-semibold text-slate-700">
-                  Remarks
-                  <span className="text-xs font-normal text-slate-400">(Optional)</span>
+                  <span>
+                    Remarks & Instructions {status === "revised" && <span className="text-red-500">* (Required for Revision)</span>}
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">{status === "revised" ? "Describe required edits" : "(Optional)"}</span>
                 </label>
                 <textarea
                   rows={3}
                   className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-                  placeholder="Leave a note for HR regarding your decision..."
+                  placeholder={
+                    status === "revised"
+                      ? "Specify what changes or corrections HR needs to make before resubmission..."
+                      : "Leave a note for HR regarding your decision..."
+                  }
                   value={remarks}
                   onChange={(e) => onRemarksChange(e.target.value)}
                 />
               </div>
 
-              {/* Info Box */}
               <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
                 <div className="mt-0.5 rounded-full bg-blue-100 p-1 text-blue-600">
                   <Briefcase size={14} />
@@ -419,8 +375,9 @@ export default function JobPostingApproveModal({
                     Review Guidelines
                   </p>
                   <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-blue-700">
-                    <li>• <span className="font-medium text-blue-800">Approved</span> postings will go live immediately on the public Jobs page for applicants.</li>
-                    <li>• <span className="font-medium text-blue-800">Rejected</span> postings will notify HR to revise and resubmit.</li>
+                    <li>• <span className="font-semibold text-emerald-800">Approved</span> postings will publish live to the public portal immediately.</li>
+                    <li>• <span className="font-semibold text-amber-800">Mark for Revision</span> sends feedback to HR to make edits and resubmit.</li>
+                    <li>• <span className="font-semibold text-red-800">Rejected</span> postings will be cancelled and archived.</li>
                   </ul>
                 </div>
               </div>

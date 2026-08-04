@@ -119,16 +119,28 @@ class JobPostingController extends Controller
         ]);
 
         $isModified = $request->input('is_modified_from_prf', false);
+        $wasNeedsRevision = in_array($jobPosting->approval_status, ['revised', 'needs_revision']);
 
-        if ($isModified) {
-            $data['approval_status'] = 'pending';
-            $data['status']          = 'pending_approval';
-            $data['is_published']    = false;
+        if ($isModified || $wasNeedsRevision) {
+            $data['approval_status']  = 'pending';
+            $data['status']           = 'pending_approval';
+            $data['is_published']     = false;
+            $data['approval_remarks'] = null;
         }
 
         $jobPosting->update($data);
 
-        $message = $isModified 
+        if ($wasNeedsRevision) {
+            NotificationService::notifyRoles(
+                ['coo', 'super_admin'],
+                'Revised Job Posting Resubmitted',
+                "Job posting for '{$jobPosting->job_title}' was revised by HR and resubmitted for COO approval.",
+                '/coo/job-posting-approvals',
+                'request'
+            );
+        }
+
+        $message = ($wasNeedsRevision || $isModified)
             ? 'Job posting updated and submitted for COO approval.' 
             : 'Job posting updated.';
 
@@ -153,7 +165,7 @@ class JobPostingController extends Controller
     public function approve(Request $request, JobPosting $jobPosting): JsonResponse
     {
         $data = $request->validate([
-            'status'           => ['required', 'in:approved,rejected'],
+            'status'           => ['required', 'in:approved,rejected,revised,needs_revision'],
             'remarks'          => ['nullable', 'string'],
             'approval_remarks' => ['nullable', 'string'],
             'qualifications'   => ['nullable', 'array'],
@@ -161,15 +173,16 @@ class JobPostingController extends Controller
         ]);
 
         $remarks = $data['remarks'] ?? $data['approval_remarks'] ?? null;
+        $finalStatus = in_array($data['status'], ['revised', 'needs_revision']) ? 'revised' : $data['status'];
 
         $updateData = [
-            'approval_status'  => $data['status'],
+            'approval_status'  => $finalStatus,
             'approved_by'      => auth()->id(),
             'approved_at'      => now(),
             'approval_remarks' => $remarks,
-            'status'           => $data['status'] === 'approved' ? 'published' : 'cancelled',
-            'is_published'     => $data['status'] === 'approved',
-            'posting_date'     => $data['status'] === 'approved' ? today() : null,
+            'status'           => $finalStatus === 'approved' ? 'published' : ($finalStatus === 'revised' ? 'pending_approval' : 'cancelled'),
+            'is_published'     => $finalStatus === 'approved',
+            'posting_date'     => $finalStatus === 'approved' ? today() : null,
         ];
 
         if ($request->has('qualifications')) {
@@ -181,9 +194,30 @@ class JobPostingController extends Controller
 
         $jobPosting->update($updateData);
 
-        AuditLog::record('approve', 'job_posting', "Job posting {$data['status']} ID {$jobPosting->id}");
+        AuditLog::record('approve', 'job_posting', "Job posting {$finalStatus} ID {$jobPosting->id}");
 
-        return response()->json(['message' => "Job posting {$data['status']}.", 'posting' => $jobPosting->fresh()]);
+        $position = $jobPosting->job_title;
+        $remarksMsg = $remarks ? " Remarks: {$remarks}" : "";
+
+        if ($finalStatus === 'revised') {
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "Job Posting Marked for Revision",
+                "Job posting for '{$position}' requires REVISION per COO comments.{$remarksMsg} Please edit and resubmit.",
+                '/admin/job-posting',
+                'alert'
+            );
+        } elseif ($finalStatus === 'approved') {
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "Job Posting Approved by COO",
+                "Job posting for '{$position}' was APPROVED by COO and is now live.",
+                '/admin/job-posting',
+                'alert'
+            );
+        }
+
+        return response()->json(['message' => "Job posting marked as {$finalStatus}.", 'posting' => $jobPosting->fresh()]);
     }
 
     /**
