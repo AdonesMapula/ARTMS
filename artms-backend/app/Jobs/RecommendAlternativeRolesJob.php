@@ -63,6 +63,28 @@ class RecommendAlternativeRolesJob implements ShouldQueue
             $resumeText = "Applicant Name: {$applicant->first_name} {$applicant->last_name}\nEmail: {$applicant->email}";
         }
 
+        // Redact Applicant's Name for Privacy Concerns
+        $first = $applicant->first_name;
+        $last = $applicant->last_name;
+        $middle = $applicant->middle_name;
+        if (!empty($first)) {
+            $resumeText = str_ireplace($first, '[REDACTED NAME]', $resumeText);
+        }
+        if (!empty($last)) {
+            $resumeText = str_ireplace($last, '[REDACTED NAME]', $resumeText);
+        }
+        if (!empty($middle)) {
+            $resumeText = str_ireplace($middle, '[REDACTED NAME]', $resumeText);
+        }
+        $fullName = trim("{$first} {$middle} {$last}");
+        if (!empty($fullName)) {
+            $resumeText = str_ireplace($fullName, '[REDACTED NAME]', $resumeText);
+        }
+        $shortName = trim("{$first} {$last}");
+        if (!empty($shortName)) {
+            $resumeText = str_ireplace($shortName, '[REDACTED NAME]', $resumeText);
+        }
+
         if (strlen($resumeText) > 8000) {
             $resumeText = substr($resumeText, 0, 8000) . "\n[Truncated]";
         }
@@ -77,7 +99,6 @@ class RecommendAlternativeRolesJob implements ShouldQueue
             $jobsSummary[] = [
                 'id' => $job->id,
                 'title' => $jobTitle,
-                // FIX: Let json_encode handle the arrays naturally instead of using implode()
                 'qualifications' => $qualifications,
                 'experience' => $experience,
             ];
@@ -85,7 +106,7 @@ class RecommendAlternativeRolesJob implements ShouldQueue
 
         $jobsJson = json_encode($jobsSummary, JSON_PRETTY_PRINT);
 
-        // 4. Prompt Gemini
+        // 4. Prompt AI
         $prompt = <<<EOT
 You are an expert HR AI for ARTMS. 
 An applicant failed the screening for their chosen job. We want to see if they are a strong fit for ANY of our OTHER open roles.
@@ -110,38 +131,42 @@ Example Output:
 ]
 EOT;
 
-        $apiKey = env('GEMINI_API_KEY') ?? config('services.gemini.api_key');
+        $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
         if (!$apiKey) {
-            Log::warning('No Gemini API key found. Falling back to standard rejection.');
+            Log::warning('No xAI/Groq API key found. Falling back to standard rejection.');
             NotificationService::sendScreeningRejectionEmail($applicant, $this->remarks);
             return;
         }
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
+            $isGroq = str_starts_with($apiKey, 'gsk_');
+            $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
+            $model = $isGroq ? 'llama-3.3-70b-versatile' : 'grok-4.5';
+
+            $response = Http::withToken($apiKey)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($baseUri, [
+                    'model' => $model,
+                    'messages' => [
+                        [
+                            'role' => 'system',
+                            'content' => 'You are a precise HR evaluator. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => $prompt
                         ]
-                    ]
-                ],
-                'generationConfig' => [
+                    ],
                     'temperature' => 0.2,
-                    'topK' => 1,
-                    'topP' => 1,
-                    'maxOutputTokens' => 1024,
-                ]
-            ]);
+                    'max_tokens' => 1024,
+                ]);
 
             if ($response->successful()) {
-                $responseData = $response->json();
-                $aiText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '[]';
+                $aiText = $response->json('choices.0.message.content') ?? '[]';
                 
                 // Clean markdown if AI ignored instruction
-                $aiText = preg_replace('/```json\s*/', '', $aiText);$aiText = preg_replace('/```\s*/', '', $aiText);
+                $aiText = preg_replace('/```json\s*/i', '', $aiText);
+                $aiText = preg_replace('/```\s*/', '', $aiText);
                 $aiText = trim($aiText);
 
                 $recommendations = json_decode($aiText, true);

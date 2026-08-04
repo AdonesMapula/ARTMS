@@ -47,6 +47,12 @@ class ResumeParserService
 
             return trim($text);
         } catch (\Throwable $e) {
+            \Log::error("PDF Parser Error", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             return '';
         }
     }
@@ -67,6 +73,12 @@ class ResumeParserService
 
             return trim(implode("\n", array_filter($lines)));
         } catch (\Throwable $e) {
+            \Log::error("DOCX Parser Error", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             return '';
         }
     }
@@ -89,6 +101,12 @@ class ResumeParserService
 
             return trim($content);
         } catch (\Throwable $e) {
+            \Log::error("DOC Parser Error", [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             return '';
         }
     }
