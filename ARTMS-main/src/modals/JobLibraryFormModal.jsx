@@ -149,7 +149,8 @@ export default function JobLibraryFormModal({
   if (!open) return null;
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       onClose={onClose}
       className="max-w-4xl"
@@ -545,10 +546,12 @@ export default function JobLibraryFormModal({
           </ul>
         </div>
       </form>
+    </Modal>
 
-      {/* Qualification / Responsibility Block Sub-Modal */}
-      <Modal
-        open={blockModal.open}
+    {/* Qualification / Responsibility Block Sub-Modal */}
+    <Modal
+      open={blockModal.open}
+      containerClassName="z-[110]"
         onClose={() => setBlockModal({ open: false, field: "qualifications", editingId: null })}
         className="max-w-xl"
         title={
@@ -668,6 +671,7 @@ export default function JobLibraryFormModal({
       {/* Add Job Category Sub-Modal */}
       <Modal
         open={showCategoryModal}
+        containerClassName="z-[110]"
         onClose={() => {
           if (!savingCategory) {
             setShowCategoryModal(false);
@@ -731,6 +735,6 @@ export default function JobLibraryFormModal({
           </div>
         </div>
       </Modal>
-    </Modal>
+    </>
   );
 }
