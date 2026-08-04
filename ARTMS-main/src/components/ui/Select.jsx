@@ -67,7 +67,7 @@ export default function Select({
         </label>
       ) : null}
 
-      <div className="relative">
+      <div className={cn("relative", isOpen ? "z-40" : "z-10")}>
         {/* Trigger Button */}
         <button
           type="button"
