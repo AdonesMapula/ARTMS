@@ -20,6 +20,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ResumeParserController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\JobCategoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -130,6 +131,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('job-library', JobLibraryController::class);
+        Route::get('job-categories', [JobCategoryController::class, 'index']);
+        Route::post('job-categories', [JobCategoryController::class, 'store']);
     });
     Route::middleware('role:coo,super_admin')->group(function () {
         Route::patch('job-library/{jobLibrary}/approve', [JobLibraryController::class, 'approve']);

@@ -50,6 +50,7 @@ class JobLibraryController extends Controller
             'responsibilities' => ['required', 'array'],
             'job_category'     => ['nullable', 'string'],
             'employment_type'  => ['nullable', 'string'],
+            'salary_type'      => ['nullable', 'in:exact,range'],
             'salary_min'       => ['nullable', 'numeric', 'min:0'],
             'salary_max'       => ['nullable', 'numeric', 'gte:salary_min'],
         ]);
@@ -84,6 +85,7 @@ class JobLibraryController extends Controller
             'job_description'  => ['sometimes', 'string'],
             'qualifications'   => ['sometimes', 'array'],
             'responsibilities' => ['sometimes', 'array'],
+            'salary_type'      => ['sometimes', 'in:exact,range'],
             'salary_min'       => ['nullable', 'numeric'],
             'salary_max'       => ['nullable', 'numeric'],
         ]);

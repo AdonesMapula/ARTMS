@@ -6,6 +6,7 @@ import {
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import { calculateSalaryBreakdown } from "../utils/salaryUtils";
 
 /**
  * JobDetailsModal - Displays detailed job information
@@ -111,6 +112,39 @@ export default function JobDetailsModal({ open, job, onClose, onApply }) {
 
         {/* Content Grid */}
         <div className="space-y-4">
+          {/* Compensation Breakdown */}
+          {(() => {
+            const bd = calculateSalaryBreakdown(jobLibrary.salary_min, jobLibrary.salary_max, jobLibrary.salary_type);
+            if (!bd) return null;
+            return (
+              <div className="rounded-xl border border-slate-200 bg-[#111A62]/5 p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="font-bold text-[#111A62]">Compensation & Estimated Rates</h3>
+                  <span className="text-[11px] font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                    Standard 5-day / 8-hr work week
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <p className="text-xs font-semibold text-slate-500">Monthly Salary</p>
+                    <p className="text-base font-extrabold text-[#111A62] mt-0.5">{bd.formatted.monthly}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <p className="text-xs font-semibold text-slate-500">Weekly Rate</p>
+                    <p className="text-sm font-bold text-slate-800 mt-0.5">{bd.formatted.weekly}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <p className="text-xs font-semibold text-slate-500">Daily Rate</p>
+                    <p className="text-sm font-bold text-slate-800 mt-0.5">{bd.formatted.daily}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <p className="text-xs font-semibold text-slate-500">Hourly Rate</p>
+                    <p className="text-base font-extrabold text-[#F97316] mt-0.5">{bd.formatted.hourly}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           {/* Job Description */}
           {(job.description || jobLibrary.job_description) && (
             <div className="rounded-xl border border-slate-200 bg-white p-5">

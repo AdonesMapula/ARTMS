@@ -11,12 +11,16 @@ const EXPLORE_LINKS = [
 ];
 
 export default function Footer() {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  };
+
   return (
     <footer className="bg-[#060F5A] text-white/80">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:px-10">
         {/* Brand */}
         <div>
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" onClick={scrollToTop} className="flex items-center gap-3">
             <img src={artmsLogoWhite} alt="Accel4U logo" className="h-10 w-auto" />
             <div className="leading-tight">
             <p className="font-logo text-[2rem] font-extrabold tracking-[-0.03em] leading-none text-white">
@@ -44,6 +48,7 @@ export default function Footer() {
             {EXPLORE_LINKS.map((link) => (
               <li key={link.to}>
                 <Link
+                  onClick={scrollToTop}
                   className="transition-colors duration-200 hover:text-[var(--artms-accent)]"
                   to={link.to}
                 >
@@ -62,6 +67,7 @@ export default function Footer() {
           <ul className="mt-4 space-y-3 text-sm text-white/70">
             <li>
               <Link
+                onClick={scrollToTop}
                 className="transition-colors duration-200 hover:text-[var(--artms-accent)]"
                 to="/login"
               >

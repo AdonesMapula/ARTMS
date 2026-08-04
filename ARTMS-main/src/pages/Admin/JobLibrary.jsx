@@ -33,6 +33,7 @@ import {
 } from "../../modals";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
+import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 
 const fmt = (d) =>
   d
@@ -68,6 +69,7 @@ const EMPTY_FORM = {
   responsibilities: [],
   job_category: "",
   employment_type: "full_time",
+  salary_type: "exact",
   salary_min: "",
   salary_max: "",
 };
@@ -174,6 +176,7 @@ export default function JobLibrary() {
       responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
       job_category: job.job_category ?? "",
       employment_type: job.employment_type ?? "full_time",
+      salary_type: job.salary_type ?? "exact",
       salary_min: job.salary_min ?? "",
       salary_max: job.salary_max ?? "",
     });
@@ -535,14 +538,23 @@ export default function JobLibrary() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <DollarSign size={16} className="text-slate-400" />
+                          <DollarSign size={16} className="text-slate-400 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Salary</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {j.salary_min || j.salary_max
-                                ? `${fmtMoney(j.salary_min)} – ${fmtMoney(j.salary_max)}`
-                                : "—"}
-                            </p>
+                            <p className="text-xs text-slate-500">Monthly Salary</p>
+                            {(() => {
+                              const bd = calculateSalaryBreakdown(j.salary_min, j.salary_max, j.salary_type);
+                              if (!bd) return <p className="text-sm font-semibold text-slate-900 truncate">—</p>;
+                              return (
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900 truncate">
+                                    {bd.formatted.monthly}
+                                  </p>
+                                  <p className="text-[10px] text-blue-700 font-medium truncate">
+                                    ~{bd.formatted.daily}/day ({bd.formatted.hourly}/hr)
+                                  </p>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">

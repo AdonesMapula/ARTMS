@@ -2,6 +2,7 @@ import { FileText } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import { calculateSalaryBreakdown } from "../utils/salaryUtils";
 
 export default function JobLibraryViewModal({ open, job, onClose }) {
   if (!open || !job) return null;
@@ -51,17 +52,35 @@ export default function JobLibraryViewModal({ open, job, onClose }) {
                 {job.employment_type?.replace(/_/g, " ") || "—"}
               </Badge>
             </div>
-            {(job.salary_min || job.salary_max) && (
-              <div className="sm:col-span-2">
-                <p className="text-xs font-semibold text-slate-500">
-                  Salary Range
-                </p>
-                <p className="text-sm font-medium text-slate-900">
-                  ₱{job.salary_min ? Number(job.salary_min).toLocaleString() : "—"}{" "}
-                  - ₱{job.salary_max ? Number(job.salary_max).toLocaleString() : "—"}
-                </p>
-              </div>
-            )}
+            {(() => {
+              const bd = calculateSalaryBreakdown(job.salary_min, job.salary_max, job.salary_type);
+              if (!bd) return null;
+              return (
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Compensation & Rate Breakdown
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                      <p className="text-[11px] font-semibold text-slate-500">Monthly Salary</p>
+                      <p className="text-sm font-extrabold text-[#111A62] mt-0.5">{bd.formatted.monthly}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                      <p className="text-[11px] font-semibold text-slate-500">Weekly Rate</p>
+                      <p className="text-sm font-bold text-slate-800 mt-0.5">{bd.formatted.weekly}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                      <p className="text-[11px] font-semibold text-slate-500">Daily Rate</p>
+                      <p className="text-sm font-bold text-slate-800 mt-0.5">{bd.formatted.daily}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                      <p className="text-[11px] font-semibold text-slate-500">Hourly Rate</p>
+                      <p className="text-sm font-bold text-[#111A62] mt-0.5">{bd.formatted.hourly}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Description */}

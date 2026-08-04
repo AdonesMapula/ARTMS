@@ -19,6 +19,7 @@ class JobLibrary extends Model
         'responsibilities',
         'job_category',
         'employment_type',
+        'salary_type',
         'salary_min',
         'salary_max',
         'approval_status',
@@ -32,6 +33,7 @@ class JobLibrary extends Model
     protected $appends = [
         'remarks',
         'approval_remarks',
+        'salary_breakdown',
     ];
 
     public function getRemarksAttribute()
@@ -42,6 +44,15 @@ class JobLibrary extends Model
     public function getApprovalRemarksAttribute()
     {
         return $this->attributes['approval_remarks'] ?? $this->attributes['remarks'] ?? null;
+    }
+
+    public function getSalaryBreakdownAttribute()
+    {
+        return \App\Helpers\SalaryHelper::compute(
+            $this->salary_min,
+            $this->salary_max,
+            $this->salary_type ?? 'exact'
+        );
     }
 
     protected $casts = [

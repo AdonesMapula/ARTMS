@@ -398,51 +398,55 @@ export default function UserModal({
 
           {/* Role */}
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Shield size={14} className="text-slate-400" />
-                Role
-              </label>
+            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Shield size={14} className="text-slate-400" />
+              Role
+            </label>
+            <div className="flex items-start gap-2">
+              <Select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                options={roleOptions}
+                error={errors.role?.[0]}
+              />
               {onCreateRole && (
                 <button
+                  type="button"
                   onClick={onCreateRole}
-                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[#111A62] transition hover:bg-blue-50"
+                  className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#111A62] bg-transparent px-3 text-sm font-semibold text-[#111A62] transition-all duration-200 hover:bg-[#111A62]/5 active:scale-95"
+                  title="Add new role"
                 >
-                  <Plus size={12} />
-                  Add Role
+                  <Plus size={16} />
+                  Add
                 </button>
               )}
             </div>
-            <Select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              options={roleOptions}
-              error={errors.role?.[0]}
-            />
           </div>
 
           {/* Department */}
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Building2 size={14} className="text-slate-400" />
-                Department
-              </label>
+            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Building2 size={14} className="text-slate-400" />
+              Department
+            </label>
+            <div className="flex items-start gap-2">
+              <Select
+                value={String(form.department_id)}
+                onChange={(e) => setForm({ ...form, department_id: e.target.value })}
+                options={departmentOptions}
+              />
               {onCreateDepartment && (
                 <button
+                  type="button"
                   onClick={onCreateDepartment}
-                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[#111A62] transition hover:bg-blue-50"
+                  className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#111A62] bg-transparent px-3 text-sm font-semibold text-[#111A62] transition-all duration-200 hover:bg-[#111A62]/5 active:scale-95"
+                  title="Add new department"
                 >
-                  <Plus size={12} />
-                  Add Department
+                  <Plus size={16} />
+                  Add
                 </button>
               )}
             </div>
-            <Select
-              value={String(form.department_id)}
-              onChange={(e) => setForm({ ...form, department_id: e.target.value })}
-              options={departmentOptions}
-            />
             <p className="mt-1.5 text-xs text-slate-500">
               Optional - Assign user to a specific department
             </p>

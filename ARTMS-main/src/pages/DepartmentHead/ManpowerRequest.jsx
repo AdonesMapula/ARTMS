@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import manpowerService from "../../services/manpowerService";
+import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 import AlertModal from "../../components/ui/AlertModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
@@ -403,12 +404,16 @@ export default function ManpowerRequest() {
                         {selectedJob.employment_type?.replace(/_/g, " ")}
                       </span>
                     )}
-                    {selectedJob.salary_min && selectedJob.salary_max && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 shadow-sm">
-                        <FiAward size={12} />
-                        ₱{Number(selectedJob.salary_min).toLocaleString()} – ₱{Number(selectedJob.salary_max).toLocaleString()}
-                      </span>
-                    )}
+                    {(() => {
+                      const bd = calculateSalaryBreakdown(selectedJob.salary_min, selectedJob.salary_max, selectedJob.salary_type);
+                      if (!bd) return null;
+                      return (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 shadow-xs text-xs">
+                          <FiAward size={12} />
+                          {bd.formatted.monthly} ({bd.formatted.daily}/day, {bd.formatted.hourly}/hr)
+                        </span>
+                      );
+                    })()}
                   </div>
                   
                   {selectedJob.job_description && (

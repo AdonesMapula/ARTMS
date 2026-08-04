@@ -16,6 +16,7 @@ import AlertModal from "../../components/ui/AlertModal";
 import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
+import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 
 const STATUS_TONE = {
   published: "success",
@@ -679,6 +680,16 @@ export default function JobPosting() {
                             <p className="text-xs text-slate-400">
                               JP-{String(p.id).padStart(3, "0")}
                             </p>
+                            {(() => {
+                              const jl = p.job_library || {};
+                              const bd = calculateSalaryBreakdown(jl.salary_min, jl.salary_max, jl.salary_type);
+                              if (!bd) return null;
+                              return (
+                                <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                                  {bd.formatted.monthly} <span className="text-[10px] font-normal text-slate-500">({bd.formatted.daily}/day, {bd.formatted.hourly}/hr)</span>
+                                </p>
+                              );
+                            })()}
                           </div>
                         </div>
                       </TD>
@@ -792,14 +803,26 @@ export default function JobPosting() {
                 </p>
 
                 {/* Job Library linkage — read-only */}
-                <div className="mt-2.5">
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
                   {selectedPRF.job_library_id ? (
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      <FileText size={11} />
-                      Job Library:{" "}
-                      {selectedPRF.jobLibrary?.job_title ||
-                        `JL-${String(selectedPRF.job_library_id).padStart(3, "0")}`}
-                    </div>
+                    <>
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <FileText size={11} />
+                        Job Library:{" "}
+                        {selectedPRF.jobLibrary?.job_title ||
+                          `JL-${String(selectedPRF.job_library_id).padStart(3, "0")}`}
+                      </div>
+                      {(() => {
+                        const jl = selectedPRF.jobLibrary || {};
+                        const bd = calculateSalaryBreakdown(jl.salary_min, jl.salary_max, jl.salary_type);
+                        if (!bd) return null;
+                        return (
+                          <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                            ₱ Salary: {bd.formatted.monthly} ({bd.formatted.daily}/day, {bd.formatted.hourly}/hr)
+                          </div>
+                        );
+                      })()}
+                    </>
                   ) : (
                     <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
                       <AlertCircle size={11} />

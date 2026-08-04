@@ -19,6 +19,7 @@ export default function Login() {
   const navigate   = useNavigate();
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     const t = requestAnimationFrame(() => setLoaded(true));
     return () => cancelAnimationFrame(t);
   }, []);

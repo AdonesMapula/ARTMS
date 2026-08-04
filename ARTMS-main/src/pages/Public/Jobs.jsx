@@ -13,6 +13,7 @@ import ApplyModal from "../../modals/ApplyModal";
 import Reveal from "../../components/ui/Reavel";
 import GeometricBackground from "../../components/ui/GeometricBackground";
 import axios from "axios";
+import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -394,6 +395,24 @@ export default function Jobs() {
                             </span>
                           )}
                         </div>
+                        {(() => {
+                          const jl = job.job_library || {};
+                          const bd = calculateSalaryBreakdown(jl.salary_min, jl.salary_max, jl.salary_type);
+                          if (!bd) return null;
+                          return (
+                            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-extrabold text-emerald-700 border border-emerald-200/60">
+                                ₱ Monthly: {bd.formatted.monthly}
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                {bd.formatted.daily}/day
+                              </span>
+                              <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                                {bd.formatted.hourly}/hr
+                              </span>
+                            </div>
+                          );
+                        })()}
                         {!isExpanded && (
                           <p className="mt-2 text-xs leading-relaxed text-slate-500 line-clamp-2">
                             {job.description || job.job_library?.job_description || "No description available."}

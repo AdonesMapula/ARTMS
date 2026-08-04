@@ -58,8 +58,8 @@ function NavItem({ it }) {
           className={cn(
             "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
             anyChildActive
-              ? "bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
-              : "text-slate-700 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E]"
+              ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
+              : "border-l-[3px] border-l-transparent text-slate-700 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
           )}
         >
           {it.icon && (
@@ -88,8 +88,8 @@ function NavItem({ it }) {
                     cn(
                       "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition group",
                       isActive
-                        ? "bg-[#111A62] text-white [&_.nav-icon]:text-white"
-                        : "text-slate-600 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E]"
+                        ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
+                        : "border-l-[3px] border-l-transparent text-slate-600 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
                     )
                   }
                 >
@@ -121,8 +121,8 @@ function NavItem({ it }) {
           cn(
             "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition group",
             isActive
-              ? "bg-[#111A62] text-white [&_.nav-icon]:text-white"
-              : "text-slate-700 hover:bg-[#E2E8F0] hover:text-slate-900 [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#4D569E]"
+              ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
+              : "border-l-[3px] border-l-transparent text-slate-700 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
           )
         }
       >
