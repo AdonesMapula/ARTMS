@@ -20,7 +20,7 @@ class StoreUserRequest extends FormRequest
             'middle_name'   => ['nullable', 'string', 'max:255'],
             'last_name'     => ['required', 'string', 'max:255'],
             'email'         => ['required', 'email', 'unique:users,email'],
-            'password'      => ['required', 'string', 'min:8', 'confirmed'],
+            'password'      => ['nullable', 'string', 'min:8'],
             'role'          => ['required', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
             'department_id' => ['nullable', 'exists:departments,id'],
         ];

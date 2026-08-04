@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, Mail, Lock, Shield, Building2, Plus, Check } from "lucide-react";
+import { User, Mail, Lock, Shield, Building2, Plus, Check, KeyRound, Copy, Eye, EyeOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -34,9 +34,18 @@ export default function UserModal({
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  
+  // Post-creation temporary password display state for HR
+  const [createdPasswordData, setCreatedPasswordData] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setCreatedPasswordData(null);
+      setShowPassword(false);
+      setCopied(false);
+      
       if (editUser) {
         // Split name into parts if it exists
         const nameParts = (editUser.name || "").trim().split(/\s+/);
@@ -70,19 +79,33 @@ export default function UserModal({
     }
   }, [open, editUser]);
 
+  const handleClose = () => {
+    setCreatedPasswordData(null);
+    onClose();
+  };
+
+  const handleCopyPassword = () => {
+    if (createdPasswordData?.password) {
+      navigator.clipboard.writeText(createdPasswordData.password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
   const handleSubmit = async () => {
     // Client-side validation
     const validationErrors = {};
     if (!form.first_name.trim()) validationErrors.first_name = ["First name is required."];
     if (!form.last_name.trim())  validationErrors.last_name  = ["Last name is required."];
     if (!form.email.trim())      validationErrors.email       = ["Email address is required."];
-    if (!editUser) {
-      if (!form.password)        validationErrors.password    = ["Password is required."];
-      else if (form.password.length < 8)
-                                 validationErrors.password    = ["Password must be at least 8 characters."];
-    }
-    if (form.password && form.password !== form.password_confirmation) {
-      validationErrors.password_confirmation = ["Passwords do not match."];
+    
+    if (editUser) {
+      if (form.password && form.password.length < 8) {
+        validationErrors.password = ["Password must be at least 8 characters."];
+      }
+      if (form.password && form.password !== form.password_confirmation) {
+        validationErrors.password_confirmation = ["Passwords do not match."];
+      }
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -93,8 +116,20 @@ export default function UserModal({
     setSaving(true);
     setErrors({});
     try {
-      await onSave(form);
-      onClose();
+      const res = await onSave(form);
+      const data = res?.data || res;
+      
+      if (!editUser && data?.temporary_password) {
+        setCreatedPasswordData({
+          password: data.temporary_password,
+          emailSent: data.email_sent ?? true,
+          emailError: data.email_error,
+          email: form.email,
+          name: [form.first_name, form.middle_name, form.last_name].filter(Boolean).join(" "),
+        });
+      } else {
+        handleClose();
+      }
     } catch (err) {
       console.error('Save error:', err);
       const backendErrors = err.response?.data?.errors;
@@ -125,10 +160,108 @@ export default function UserModal({
 
   if (!open) return null;
 
+  // Render Post-Creation Success / Password Display Screen
+  if (createdPasswordData) {
+    return (
+      <Modal
+        open={open}
+        onClose={handleClose}
+        className="max-w-lg"
+        title="User Created Successfully"
+        description="The new account has been generated and credentials sent."
+        footer={
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={handleClose}>
+              Done & Close
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-5 py-1">
+          {/* Header Badge */}
+          <div className="flex items-center gap-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/20">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <p className="font-bold text-emerald-950 text-base">{createdPasswordData.name}</p>
+              <p className="text-xs text-emerald-700 font-medium">{createdPasswordData.email}</p>
+            </div>
+          </div>
+
+          {/* Temporary Password Box */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <label className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+              <span>Autogenerated Temporary Password</span>
+              <span className="text-[11px] font-medium text-slate-400">Share with user if needed</span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex flex-1 items-center rounded-xl border border-slate-300 bg-white px-3.5 py-3 shadow-inner">
+                <span className="font-mono text-base font-bold tracking-wider text-slate-900 select-all">
+                  {showPassword ? createdPasswordData.password : "•".repeat(createdPasswordData.password.length || 10)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+
+              <Button
+                variant={copied ? "success" : "outline"}
+                onClick={handleCopyPassword}
+                className="h-12 px-4 whitespace-nowrap gap-1.5"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Email Delivery Status Notice */}
+          <div className={`rounded-xl border p-4 text-xs ${
+            createdPasswordData.emailSent
+              ? "border-blue-200 bg-blue-50/80 text-blue-900"
+              : "border-amber-200 bg-amber-50/80 text-amber-900"
+          }`}>
+            <div className="flex items-start gap-2.5">
+              {createdPasswordData.emailSent ? (
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+              ) : (
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              )}
+              <div className="leading-relaxed">
+                {createdPasswordData.emailSent ? (
+                  <>
+                    <p className="font-bold text-blue-950">Email Link Delivered Successfully</p>
+                    <p className="mt-0.5 text-blue-800">
+                      An activation email containing this password and a secure link has been sent to <strong>{createdPasswordData.email}</strong>. The user can click the link to set up their custom password.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-amber-950">Email Delivery Warning</p>
+                    <p className="mt-0.5 text-amber-800">
+                      Account created, but the welcome email could not be delivered directly ({createdPasswordData.emailError || "SMTP issue"}). Please provide the password above directly to the user.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       className="max-w-2xl"
       title={editUser ? "Edit User" : "Create New User"}
       description={
@@ -138,7 +271,7 @@ export default function UserModal({
       }
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSubmit} disabled={saving}>
@@ -216,37 +349,52 @@ export default function UserModal({
             />
           </div>
 
-          {/* Password Section */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Lock size={14} className="text-slate-400" />
-                {editUser ? "New Password" : "Password"}
-              </label>
-              <Input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder={editUser ? "Leave blank to keep current" : "••••••••"}
-                error={errors.password?.[0]}
-              />
+          {/* Password Notice / Section */}
+          {!editUser ? (
+            <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-4 text-blue-950">
+              <div className="flex items-start gap-3">
+                <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[#111A62]" />
+                <div className="text-xs sm:text-sm">
+                  <p className="font-bold text-[#111A62]">Autogenerated Password & Email Notice</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">
+                    The password will be automatically generated and emailed directly to{" "}
+                    <strong className="text-slate-800">{form.email || "the registered email address"}</strong> along with a link to access the website and set up their custom password. You will also be able to view and copy the generated password once created.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Check size={14} className="text-slate-400" />
-                Confirm Password
-              </label>
-              <Input
-                type="password"
-                value={form.password_confirmation}
-                onChange={(e) =>
-                  setForm({ ...form, password_confirmation: e.target.value })
-                }
-                placeholder="••••••••"
-                error={errors.password_confirmation?.[0]}
-              />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Lock size={14} className="text-slate-400" />
+                  New Password (Optional)
+                </label>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Leave blank to keep current"
+                  error={errors.password?.[0]}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Check size={14} className="text-slate-400" />
+                  Confirm Password
+                </label>
+                <Input
+                  type="password"
+                  value={form.password_confirmation}
+                  onChange={(e) =>
+                    setForm({ ...form, password_confirmation: e.target.value })
+                  }
+                  placeholder="••••••••"
+                  error={errors.password_confirmation?.[0]}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Role */}
           <div>

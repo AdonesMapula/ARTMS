@@ -111,22 +111,21 @@ export default function Users() {
         payload.password = formData.password;
         payload.password_confirmation = formData.password_confirmation;
       }
-      await userService.update(editUser.id, payload);
+      result = await userService.update(editUser.id, payload);
     } else {
       // Build combined name for backends that expect a flat name field
       const combinedName = [formData.first_name, formData.middle_name, formData.last_name]
         .filter(Boolean)
         .join(" ");
 
-      await userService.create({
+      result = await userService.create({
         ...formData,
         name: combinedName,
         department_id: formData.department_id || null,
-        // Ensure password_confirmation is present
-        password_confirmation: formData.password_confirmation || formData.password,
       });
     }
     load();
+    return result;
   };
 
   const handleToggle = async (id) => {

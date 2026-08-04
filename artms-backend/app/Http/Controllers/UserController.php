@@ -45,13 +45,16 @@ class UserController extends Controller
         // Combine name fields for backward compatibility
         $fullName = trim($request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name);
         
+        // Auto-generate a temporary password if not explicitly supplied
+        $plainPassword = $request->filled('password') ? $request->password : Str::random(10);
+
         $user = User::create([
             'first_name'    => $request->first_name,
             'middle_name'   => $request->middle_name,
             'last_name'     => $request->last_name,
             'name'          => $fullName,
             'email'         => $request->email,
-            'password'      => Hash::make($request->password),
+            'password'      => Hash::make($plainPassword),
             'role'          => $request->role,
             'department_id' => $request->department_id,
         ]);
@@ -67,11 +70,22 @@ class UserController extends Controller
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $setupUrl = $frontendUrl . '/setup-account?token=' . $token . '&email=' . urlencode($user->email);
 
-        Mail::to($user->email)->send(new UserCreatedMail($user, $request->password, $setupUrl));
+        $emailSent = false;
+        $emailError = null;
+        try {
+            Mail::to($user->email)->send(new UserCreatedMail($user, $plainPassword, $setupUrl));
+            $emailSent = true;
+        } catch (\Throwable $e) {
+            \Log::error("Failed to send welcome email to {$user->email}: " . $e->getMessage());
+            $emailError = $e->getMessage();
+        }
 
         return response()->json([
-            'message' => 'User created successfully and email sent.',
-            'user'    => $user->load('department'),
+            'message'            => $emailSent ? 'User created successfully and welcome email sent.' : 'User created successfully, but email delivery failed.',
+            'user'               => $user->load('department'),
+            'temporary_password' => $plainPassword,
+            'email_sent'         => $emailSent,
+            'email_error'        => $emailError,
         ], 201);
     }
 
