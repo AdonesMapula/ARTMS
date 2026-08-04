@@ -89,11 +89,29 @@ class JobLibraryController extends Controller
         ]);
 
         $old = $jobLibrary->toArray();
+        $wasRejected = $jobLibrary->approval_status === 'rejected';
+
+        if ($wasRejected) {
+            $data['approval_status'] = 'pending';
+        }
+
         $jobLibrary->update($data);
 
-        AuditLog::record('update', 'job_library', "Updated job: {$jobLibrary->job_title}", $old, $jobLibrary->fresh()->toArray());
+        if ($wasRejected) {
+            NotificationService::notifyRoles(
+                ['coo', 'super_admin'],
+                'Revised Job Template Resubmitted',
+                "Job template '{$jobLibrary->job_title}' was revised by HR and resubmitted for COO approval.",
+                '/coo/job-library-approvals',
+                'request'
+            );
+        }
 
-        return response()->json(['message' => 'Job updated.', 'job' => $jobLibrary->fresh()]);
+        AuditLog::record('update', 'job_library', "Updated job: {$jobLibrary->job_title}" . ($wasRejected ? " (Resubmitted for COO approval)" : ""), $old, $jobLibrary->fresh()->toArray());
+
+        $msg = $wasRejected ? 'Job entry updated and resubmitted to COO for approval.' : 'Job updated.';
+
+        return response()->json(['message' => $msg, 'job' => $jobLibrary->fresh()]);
     }
 
     public function destroy(JobLibrary $jobLibrary): JsonResponse

@@ -1,4 +1,4 @@
-import { FileText, Hash, DollarSign, Briefcase, List, FileCheck, Plus, Trash2, GraduationCap, X } from "lucide-react";
+import { FileText, Hash, DollarSign, Briefcase, List, FileCheck, Plus, Trash2, GraduationCap, X, AlertTriangle, XCircle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -17,6 +17,9 @@ export default function JobLibraryFormModal({
   onSave,
   saving = false,
 }) {
+  const isRejected = mode === "edit" && data?.approval_status === "rejected";
+  const remarksText = data?.approval_remarks || data?.remarks;
+
   const qualBlocks = Array.isArray(form.qualifications) ? form.qualifications : [];
   const respBlocks = Array.isArray(form.responsibilities) ? form.responsibilities : [];
 
@@ -90,20 +93,24 @@ export default function JobLibraryFormModal({
       open={open}
       onClose={onClose}
       className="max-w-4xl"
-      title={mode === "create" ? "Add Job Entry" : "Edit Job Entry"}
+      title={mode === "create" ? "Add Job Entry" : (isRejected ? "Revise Rejected Job Entry" : "Edit Job Entry")}
       description={
         mode === "create"
           ? "New entries require COO approval before appearing in PRF dropdowns"
-          : `Editing JL-${String(data?.id ?? 0).padStart(3, "0")}`
+          : (isRejected
+              ? `Review COO feedback below and resubmit JL-${String(data?.id ?? 0).padStart(3, "0")}`
+              : `Editing JL-${String(data?.id ?? 0).padStart(3, "0")}`)
       }
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={onSave} disabled={saving}>
+          <Button variant={isRejected ? "primary" : "primary"} onClick={onSave} disabled={saving} className={isRejected ? "bg-red-600 hover:bg-red-700 font-bold" : ""}>
             {saving
               ? "Saving..."
+              : isRejected
+              ? "Revise & Resubmit to COO"
               : mode === "create"
               ? "Submit for Approval"
               : "Save Changes"}
@@ -112,6 +119,27 @@ export default function JobLibraryFormModal({
       }
     >
       <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-6">
+          {/* COO Feedback Banner for Rejected Entries */}
+          {isRejected && remarksText && (
+            <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-amber-50/60 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+                  <XCircle size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-red-900">
+                    COO Rejection Feedback & Revision Instructions
+                  </h4>
+                  <p className="mt-1 text-sm font-medium text-red-800 whitespace-pre-wrap">
+                    "{remarksText}"
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-red-700">
+                    💡 Modify the qualifications, responsibilities, or details below to address the COO's feedback, then click "Revise & Resubmit to COO".
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Basic Information */}
           <div>
             <div className="mb-3 flex items-center gap-2">

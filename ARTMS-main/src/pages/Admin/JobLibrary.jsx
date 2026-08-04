@@ -16,6 +16,7 @@ import {
   DollarSign,
   Calendar,
   MousePointerClick,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -57,7 +58,7 @@ const APPROVAL_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "approved", label: "Approved" },
   { value: "pending", label: "Pending" },
-  { value: "rejected", label: "Rejected" },
+  { value: "rejected", label: "Needs Revision (Rejected)" },
 ];
 
 const EMPTY_FORM = {
@@ -305,9 +306,39 @@ export default function JobLibrary() {
         </div>
       </div>
 
+      {/* Needs Revision Banner for Rejected Entries */}
+      {stats.rejected > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-red-900">
+                {stats.rejected} Job {stats.rejected === 1 ? "Entry Needs" : "Entries Need"} Revision & Resubmission
+              </h3>
+              <p className="text-xs text-red-700 mt-0.5">
+                The COO has reviewed and returned job template(s) with feedback remarks. Click below to view COO comments and edit to resubmit.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setFilter("rejected"); setPage(1); }}
+            className="self-start sm:self-center border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 font-bold whitespace-nowrap"
+          >
+            Review Rejected Entries ({stats.rejected})
+          </Button>
+        </div>
+      )}
+
       {/* Statistics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card
+          onClick={() => { setFilter("approved"); setPage(1); }}
+          className={`cursor-pointer transition-all hover:border-emerald-400 ${filter === "approved" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
               <CheckCircle size={24} className="text-emerald-600" />
@@ -321,7 +352,10 @@ export default function JobLibrary() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => { setFilter("pending"); setPage(1); }}
+          className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
               <Clock size={24} className="text-amber-600" />
@@ -335,27 +369,33 @@ export default function JobLibrary() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => { setFilter("rejected"); setPage(1); }}
+          className={`cursor-pointer transition-all hover:border-red-400 ${filter === "rejected" ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/30" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
               <XCircle size={24} className="text-red-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-500">Rejected</p>
-              <p className="text-2xl font-extrabold text-slate-900">
+              <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
+              <p className="text-2xl font-extrabold text-red-600">
                 {stats.rejected}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          onClick={() => { setFilter("all"); setPage(1); }}
+          className={`cursor-pointer transition-all hover:border-blue-400 ${filter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
+        >
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
               <BookOpen size={24} className="text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-500">Total</p>
+              <p className="text-sm font-semibold text-slate-500">Total Templates</p>
               <p className="text-2xl font-extrabold text-slate-900">
                 {stats.total}
               </p>
@@ -461,6 +501,19 @@ export default function JobLibrary() {
                         </Badge>
                       </div>
 
+                      {/* COO Rejection Feedback Box */}
+                      {j.approval_status === "rejected" && (j.approval_remarks || j.remarks) && (
+                        <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs">
+                          <p className="font-bold text-red-900 flex items-center gap-1.5 mb-1">
+                            <XCircle size={14} className="text-red-600 shrink-0" />
+                            COO Rejection Remarks:
+                          </p>
+                          <p className="text-red-800 line-clamp-2 italic leading-relaxed">
+                            "{j.approval_remarks || j.remarks}"
+                          </p>
+                        </div>
+                      )}
+
                       {/* Details Grid */}
                       <div className="mb-4 grid grid-cols-2 gap-3">
                         <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
@@ -532,13 +585,17 @@ export default function JobLibrary() {
                         {canEdit && (
                           <>
                             <Button
-                              variant="outline"
+                              variant={j.approval_status === "rejected" ? "primary" : "outline"}
                               size="sm"
                               onClick={(e) => { e.stopPropagation(); openEdit(j); }}
-                              className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                              className={`flex-1 gap-1.5 ${
+                                j.approval_status === "rejected"
+                                  ? "bg-red-600 hover:bg-red-700 text-white font-bold"
+                                  : "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                              }`}
                             >
                               <Edit size={14} />
-                              Edit
+                              {j.approval_status === "rejected" ? "Revise & Resubmit" : "Edit"}
                             </Button>
                             <Button
                               variant="outline"
