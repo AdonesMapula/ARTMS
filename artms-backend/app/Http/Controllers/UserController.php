@@ -138,7 +138,13 @@ class UserController extends Controller
         }
 
         AuditLog::record('delete', 'user', "Deleted user: {$user->email}", $user->toArray(), null, User::class, $user->id);
-        $user->delete();
+
+        // Clean up reset tokens & Sanctum tokens
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+        $user->tokens()->delete();
+
+        // Permanently delete user from database
+        $user->forceDelete();
 
         return response()->json(['message' => 'User deleted successfully.']);
     }
