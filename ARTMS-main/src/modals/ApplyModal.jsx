@@ -16,7 +16,7 @@ const EMPTY_FORM = {
   address: "", coverLetter: "",
 };
 
-const GENDERS = ["", "Male", "Female", "Non-binary", "Prefer not to say"];
+const GENDERS = ["", "Male", "Female"];
 const CIVIL_STATUSES = ["", "Single", "Married", "Divorced", "Widowed", "Separated", "Annulled"];
 
 /**
@@ -296,11 +296,10 @@ export default function ApplyModal({ open, job, onClose }) {
                   </div>
                 )}
                 {!parsing && parseMsg && (
-                  <div className={`mt-3 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm ${
-                    parseMsg.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : parseMsg.type === "warn"  ? "border-amber-200 bg-amber-50 text-amber-700"
-                    : "border-red-200 bg-red-50 text-red-600"
-                  }`}>
+                  <div className={`mt-3 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm ${parseMsg.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : parseMsg.type === "warn" ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-red-200 bg-red-50 text-red-600"
+                    }`}>
                     {parseMsg.type === "success"
                       ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}

@@ -117,6 +117,7 @@ export default function ManpowerRequest() {
   const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
+  const [confirmSubmitPayload, setConfirmSubmitPayload] = useState(null);
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
 
   // Job Library approved entries for the position dropdown
