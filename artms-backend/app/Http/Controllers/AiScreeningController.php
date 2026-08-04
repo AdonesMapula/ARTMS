@@ -307,7 +307,7 @@ EOT;
 
         // Instant email update to Candidate
         if ($newStatus === 'screening_failed') {
-            NotificationService::sendScreeningRejectionEmail($applicant, $data['hr_interpretation'] ?? null);
+            \App\Jobs\RecommendAlternativeRolesJob::dispatch($applicant, $data['hr_interpretation'] ?? null);
         } else {
             NotificationService::notifyEmail(
                 $applicant->email,

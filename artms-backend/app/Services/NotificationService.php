@@ -102,4 +102,30 @@ class NotificationService
             \Log::error("Failed to send screening rejection email to {$applicant->email}: " . $e->getMessage());
         }
     }
+
+    /**
+     * Send an AI-recommended alternative role email to an applicant who failed screening.
+     */
+    public static function sendAlternativeRoleRecommendationEmail(\App\Models\Applicant $applicant, \Illuminate\Support\Collection $recommendedJobs, ?string $remarks = null): void
+    {
+        if (! $applicant->email) return;
+
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title
+            ?? $applicant->jobPosting?->description
+            ?? 'Job Position';
+
+        try {
+            \Illuminate\Support\Facades\Mail::send('emails.alternative_role_recommendation', [
+                'applicant' => $applicant,
+                'job_title' => $jobTitle,
+                'remarks'   => $remarks,
+                'recommendedJobs' => $recommendedJobs
+            ], function ($mail) use ($applicant) {
+                $mail->to($applicant->email)
+                     ->subject('Application Status Update — ARTMS Recruitment');
+            });
+        } catch (\Throwable $e) {
+            \Log::error("Failed to send alternative role recommendation email to {$applicant->email}: " . $e->getMessage());
+        }
+    }
 }
