@@ -77,4 +77,29 @@ class NotificationService
             \Log::error("Failed to send candidate email to {$email}: " . $e->getMessage());
         }
     }
+
+    /**
+     * Send a polite automated screening rejection email to an applicant.
+     */
+    public static function sendScreeningRejectionEmail(\App\Models\Applicant $applicant, ?string $remarks = null): void
+    {
+        if (! $applicant->email) return;
+
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title
+            ?? $applicant->jobPosting?->description
+            ?? 'Job Position';
+
+        try {
+            Mail::send('emails.screening_rejection', [
+                'applicant' => $applicant,
+                'job_title' => $jobTitle,
+                'remarks'   => $remarks,
+            ], function ($mail) use ($applicant) {
+                $mail->to($applicant->email)
+                     ->subject('Application Status Update — ARTMS Recruitment');
+            });
+        } catch (\Throwable $e) {
+            \Log::error("Failed to send screening rejection email to {$applicant->email}: " . $e->getMessage());
+        }
+    }
 }

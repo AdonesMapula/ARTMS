@@ -306,13 +306,17 @@ EOT;
         $readableStatus = $data['hr_decision'] === 'qualified' ? 'Screening Passed' : 'Screening Not Passed';
 
         // Instant email update to Candidate
-        NotificationService::notifyEmail(
-            $applicant->email,
-            "Application Status Update — {$readableStatus}",
-            "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
-            null,
-            'application'
-        );
+        if ($newStatus === 'screening_failed') {
+            NotificationService::sendScreeningRejectionEmail($applicant, $data['hr_interpretation'] ?? null);
+        } else {
+            NotificationService::notifyEmail(
+                $applicant->email,
+                "Application Status Update — {$readableStatus}",
+                "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
+                null,
+                'application'
+            );
+        }
 
         return response()->json([
             'message'    => 'HR review saved.',

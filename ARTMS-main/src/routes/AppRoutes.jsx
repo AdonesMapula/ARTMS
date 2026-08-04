@@ -331,20 +331,41 @@ export default function AppRoutes() {
             
             <Route path="settings" element={<SuperAdminSettings />} />
             <Route path="audit-logs" element={<AuditLogs />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="profile" element={<Profile />} />
             
             {/* Debug Page (temporary) */}
             <Route path="debug-permissions" element={<DebugPermissions />} />
             
-            {/* HR Admin Access within SuperAdmin Layout */}
+            {/* HR Admin Access within SuperAdmin Layout (Direct & Prefixed routes) */}
+            <Route path="manpower-requests" element={<HrManpowerRequests />} />
             <Route path="hr-manpower-requests" element={<HrManpowerRequests />} />
+
+            <Route path="job-library" element={<HrJobLibrary />} />
             <Route path="hr-job-library" element={<HrJobLibrary />} />
+
+            <Route path="job-posting" element={<HrJobPosting />} />
             <Route path="hr-job-posting" element={<HrJobPosting />} />
+
+            <Route path="applicants" element={<HrApplicants />} />
             <Route path="hr-applicants" element={<HrApplicants />} />
+
+            <Route path="ai-screening" element={<HrAiScreening />} />
             <Route path="hr-ai-screening" element={<HrAiScreening />} />
+
+            <Route path="interviews" element={<HrInterviews />} />
             <Route path="hr-interviews" element={<HrInterviews />} />
+
+            <Route path="pipeline" element={<HrPipeline />} />
             <Route path="hr-pipeline" element={<HrPipeline />} />
+
+            <Route path="employees" element={<HrEmployees />} />
             <Route path="hr-employees" element={<HrEmployees />} />
+
+            <Route path="reports" element={<HrReports />} />
             <Route path="hr-reports" element={<HrReports />} />
+
+            <Route path="attendance" element={<HrAttendance />} />
             <Route path="hr-attendance" element={<HrAttendance />} />
           </Route>
         </Route>

@@ -136,13 +136,17 @@ class ApplicantController extends Controller
         if (isset($data['status']) && $data['status'] !== $oldStatus) {
             $readableStatus = ucwords(str_replace('_', ' ', $data['status']));
 
-            NotificationService::notifyEmail(
-                $applicant->email,
-                "Application Status Update — {$readableStatus}",
-                "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
-                null,
-                'application'
-            );
+            if (in_array($data['status'], ['rejected', 'screening_failed'])) {
+                NotificationService::sendScreeningRejectionEmail($applicant);
+            } else {
+                NotificationService::notifyEmail(
+                    $applicant->email,
+                    "Application Status Update — {$readableStatus}",
+                    "Hello {$applicant->first_name}, your application status for {$jobTitle} has been updated to: {$readableStatus}.",
+                    null,
+                    'application'
+                );
+            }
 
             NotificationService::notifyRoles(
                 ['hr_admin', 'super_admin'],
@@ -247,20 +251,13 @@ class ApplicantController extends Controller
         $request->validate(['remarks' => ['nullable', 'string']]);
 
         $applicant->update(['status' => 'rejected']);
-        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
 
-        // Notify applicant
-        NotificationService::notifyEmail(
-            $applicant->email,
-            'Application Status Update — ARTMS',
-            "Hello {$applicant->first_name}, thank you for applying for {$jobTitle}. We regret to inform you that we will not be moving forward with your application at this time.",
-            null,
-            'alert'
-        );
+        // Send polite automated rejection email using dedicated template
+        NotificationService::sendScreeningRejectionEmail($applicant, $request->input('remarks'));
 
         AuditLog::record('reject', 'applicant', "Applicant rejected: {$applicant->application_id}");
 
-        return response()->json(['message' => 'Applicant rejected.']);
+        return response()->json(['message' => 'Applicant rejected and notification email sent.']);
     }
 
     /**
