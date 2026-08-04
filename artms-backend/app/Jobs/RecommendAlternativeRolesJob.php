@@ -77,8 +77,9 @@ class RecommendAlternativeRolesJob implements ShouldQueue
             $jobsSummary[] = [
                 'id' => $job->id,
                 'title' => $jobTitle,
-                'qualifications' => is_array($qualifications) ? implode(', ', $qualifications) : $qualifications,
-                'experience' => is_array($experience) ? implode(', ', $experience) : $experience,
+                // FIX: Let json_encode handle the arrays naturally instead of using implode()
+                'qualifications' => $qualifications,
+                'experience' => $experience,
             ];
         }
 
@@ -140,8 +141,7 @@ EOT;
                 $aiText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '[]';
                 
                 // Clean markdown if AI ignored instruction
-                $aiText = preg_replace('/```json\s*/', '', $aiText);
-                $aiText = preg_replace('/```\s*/', '', $aiText);
+                $aiText = preg_replace('/```json\s*/', '', $aiText);$aiText = preg_replace('/```\s*/', '', $aiText);
                 $aiText = trim($aiText);
 
                 $recommendations = json_decode($aiText, true);

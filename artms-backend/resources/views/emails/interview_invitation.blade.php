@@ -119,7 +119,7 @@
     </p>
   </div>
 
-  {{-- ── Footer ───────────────────────────────────────── --}}
+  {}
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
     <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:0.05em;">
       ARTMS — AI Recruitment and Talent Management System
