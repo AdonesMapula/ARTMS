@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, X, ChevronDown } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -31,8 +32,10 @@ function formatDisplay(str) {
   });
 }
 
+const THIS_YEAR = new Date().getFullYear();
+
 /**
- * DatePicker — Clean interactive calendar popover.
+ * DatePicker — Clean interactive calendar popover with fast Month & Year navigation.
  *
  * Props:
  *   value       — ISO date string "YYYY-MM-DD"
@@ -65,8 +68,10 @@ export default function DatePicker({
   );
   const [animating, setAnimating] = useState(false);
   const [slideDir, setSlideDir] = useState(null);
+  const [panel, setPanel] = useState("calendar"); // "calendar" | "year-month"
 
   const containerRef = useRef(null);
+  const yearListRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -85,6 +90,14 @@ export default function DatePicker({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, []);
+
+  // Scroll active year into view when year-month panel opens
+  useEffect(() => {
+    if (panel === "year-month" && yearListRef.current) {
+      const active = yearListRef.current.querySelector("[data-active='true']");
+      if (active) active.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [panel]);
 
   const navigate = (dir) => {
     if (animating) return;
@@ -129,7 +142,6 @@ export default function DatePicker({
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  // Pad to complete last row
   while (cells.length % 7 !== 0) cells.push(null);
 
   const isToday = (day) => {
@@ -157,12 +169,21 @@ export default function DatePicker({
     return false;
   };
 
+  // Generate range of years (from 10 years back to 15 years in future)
+  const startYear = THIS_YEAR - 10;
+  const endYear = THIS_YEAR + 15;
+  const years = [];
+  for (let y = endYear; y >= startYear; y--) years.push(y);
+
   return (
     <div className={cn("relative w-full", className)} ref={containerRef}>
       {/* Trigger Button */}
       <button
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          setOpen((p) => !p);
+          setPanel("calendar");
+        }}
         className={cn(
           "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 text-sm shadow-2xs transition-all duration-200 outline-none cursor-pointer select-none",
           "hover:border-[#111A62] hover:bg-slate-50/60",
@@ -215,114 +236,207 @@ export default function DatePicker({
           className="absolute left-0 top-[calc(100%+8px)] z-50 w-[304px] select-none rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10 ring-1 ring-slate-900/5 overflow-hidden"
           style={{ animation: "dpFadeIn 150ms cubic-bezier(0.16,1,0.3,1) forwards" }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
-            <button
-              type="button"
-              onClick={() => navigate("prev")}
-              disabled={animating}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-30"
-            >
-              <ChevronLeft size={16} />
-            </button>
+          {/* ── Main Calendar Panel ── */}
+          {panel === "calendar" && (
+            <>
+              {/* Header with Quick Month/Year Navigation Trigger */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => navigate("prev")}
+                  disabled={animating}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-30"
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-            <div className="text-center leading-tight">
-              <p className="text-sm font-extrabold text-slate-900 tracking-tight">
-                {MONTHS[viewMonth]}
-              </p>
-              <p className="text-xs font-semibold text-slate-400 mt-0.5">{viewYear}</p>
-            </div>
+                {/* Clickable Header for Easy Year/Month Navigation */}
+                <button
+                  type="button"
+                  onClick={() => setPanel("year-month")}
+                  className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-colors hover:bg-slate-100 cursor-pointer"
+                  title="Click to jump to any Year or Month"
+                >
+                  <div className="text-center leading-tight">
+                    <p className="text-sm font-extrabold text-slate-900 tracking-tight">
+                      {MONTHS[viewMonth]}
+                    </p>
+                    <p className="text-xs font-semibold text-slate-400 mt-0.5">{viewYear}</p>
+                  </div>
+                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#111A62] transition-colors mt-0.5" />
+                </button>
 
-            <button
-              type="button"
-              onClick={() => navigate("next")}
-              disabled={animating}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-30"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* Weekday labels */}
-          <div className="grid grid-cols-7 px-3 pt-3">
-            {DAYS_OF_WEEK.map((d) => (
-              <div key={d} className="flex items-center justify-center pb-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {d}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate("next")}
+                  disabled={animating}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-30"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-            ))}
-          </div>
 
-          {/* Day grid */}
-          <div
-            className="grid grid-cols-7 px-3 pb-3 gap-y-0.5"
-            style={{
-              opacity: animating ? 0 : 1,
-              transform: animating
-                ? `translateX(${slideDir === "prev" ? "-6px" : "6px"})`
-                : "translateX(0)",
-              transition: "opacity 140ms ease, transform 140ms ease",
-            }}
-          >
-            {cells.map((day, i) => {
-              const sel = isSelected(day);
-              const tod = isToday(day);
-              const dis = isDisabled(day);
+              {/* Weekday labels */}
+              <div className="grid grid-cols-7 px-3 pt-3">
+                {DAYS_OF_WEEK.map((d) => (
+                  <div key={d} className="flex items-center justify-center pb-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      {d}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-              return (
-                <div key={i} className="flex items-center justify-center">
-                  {day !== null ? (
-                    <button
-                      type="button"
-                      onClick={() => !dis && handleDayClick(day)}
-                      disabled={dis}
-                      className={cn(
-                        "relative h-9 w-9 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
-                        sel
-                          ? "bg-[#111A62] text-white font-bold shadow-md"
-                          : tod
-                          ? "text-[#111A62] font-bold bg-[#111A62]/8 hover:bg-[#111A62]/15"
-                          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
-                        dis
-                          ? "opacity-25 cursor-not-allowed hover:bg-transparent hover:text-slate-700"
-                          : "",
-                        !sel && !dis ? "active:scale-95" : ""
+              {/* Day grid */}
+              <div
+                className="grid grid-cols-7 px-3 pb-3 gap-y-0.5"
+                style={{
+                  opacity: animating ? 0 : 1,
+                  transform: animating
+                    ? `translateX(${slideDir === "prev" ? "-6px" : "6px"})`
+                    : "translateX(0)",
+                  transition: "opacity 140ms ease, transform 140ms ease",
+                }}
+              >
+                {cells.map((day, i) => {
+                  const sel = isSelected(day);
+                  const tod = isToday(day);
+                  const dis = isDisabled(day);
+
+                  return (
+                    <div key={i} className="flex items-center justify-center">
+                      {day !== null ? (
+                        <button
+                          type="button"
+                          onClick={() => !dis && handleDayClick(day)}
+                          disabled={dis}
+                          className={cn(
+                            "relative h-9 w-9 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer",
+                            sel
+                              ? "bg-[#111A62] text-white font-bold shadow-md"
+                              : tod
+                              ? "text-[#111A62] font-bold bg-[#111A62]/8 hover:bg-[#111A62]/15"
+                              : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                            dis
+                              ? "opacity-25 cursor-not-allowed hover:bg-transparent hover:text-slate-700"
+                              : "",
+                            !sel && !dis ? "active:scale-95" : ""
+                          )}
+                        >
+                          {day}
+                          {tod && !sel && (
+                            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-[#111A62]" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="h-9 w-9" />
                       )}
-                    >
-                      {day}
-                      {tod && !sel && (
-                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-[#111A62]" />
-                      )}
-                    </button>
-                  ) : (
-                    <span className="h-9 w-9" />
-                  )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange?.(toLocalIso(today));
+                    setOpen(false);
+                  }}
+                  className="text-xs font-semibold text-[#111A62] hover:text-[#0d1449] transition-colors cursor-pointer"
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Year & Month Easy Selection Panel ── */}
+          {panel === "year-month" && (
+            <div style={{ animation: "dpFadeIn 120ms ease forwards" }}>
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
+                <p className="text-sm font-extrabold text-slate-900 tracking-tight">Select Year & Month</p>
+                <button
+                  type="button"
+                  onClick={() => setPanel("calendar")}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="flex" style={{ height: 268 }}>
+                {/* Year Selection Column */}
+                <div
+                  ref={yearListRef}
+                  className="w-1/2 overflow-y-auto border-r border-slate-100 py-2 scrollbar-thin scrollbar-thumb-slate-200"
+                  style={{ scrollbarWidth: "thin" }}
+                >
+                  {years.map((y) => {
+                    const active = y === viewYear;
+                    return (
+                      <button
+                        key={y}
+                        type="button"
+                        data-active={active}
+                        onClick={() => setViewYear(y)}
+                        className={cn(
+                          "flex w-full items-center justify-center py-2 text-sm font-semibold transition-colors cursor-pointer",
+                          active
+                            ? "bg-[#111A62] text-white font-extrabold"
+                            : "text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        {y}
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-            <button
-              type="button"
-              onClick={() => {
-                onChange?.(toLocalIso(today));
-                setOpen(false);
-              }}
-              className="text-xs font-semibold text-[#111A62] hover:text-[#0d1449] transition-colors cursor-pointer"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
+                {/* Month Selection Column */}
+                <div className="w-1/2 overflow-y-auto py-2" style={{ scrollbarWidth: "thin" }}>
+                  {MONTHS_SHORT.map((m, idx) => {
+                    const active = idx === viewMonth;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setViewMonth(idx)}
+                        className={cn(
+                          "flex w-full items-center justify-center py-2 text-sm font-semibold transition-colors cursor-pointer",
+                          active
+                            ? "bg-[#111A62] text-white font-extrabold"
+                            : "text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Confirm / Return Button */}
+              <div className="border-t border-slate-100 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setPanel("calendar")}
+                  className="w-full rounded-xl bg-[#111A62] py-2 text-sm font-bold text-white shadow-sm hover:bg-[#0d1449] transition-colors cursor-pointer"
+                >
+                  Done — {MONTHS[viewMonth]} {viewYear}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
