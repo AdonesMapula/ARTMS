@@ -594,65 +594,47 @@ export default function Applicants() {
           ) : (
             /* ── FULL TABLE DIRECTORY (When no candidate is open) ───── */
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedApplicantId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
-              <CardHeader className="space-y-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+              <CardHeader className="py-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2 shrink-0">
                     <Users className="text-[#111A62]" size={18} /> Applicants Directory ({processedApplicants.length})
                   </CardTitle>
+
+                  {/* Searchbar & Filters Inline Side-by-Side Toolbar */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {isScrolled && !selectedApplicantId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer mr-2"
-                        title="Scroll to top"
-                      >
-                        ↑ Show Header & Stats
-                      </button>
-                    )}
-                    <div className="w-60">
+                    <div className="w-52 sm:w-56 shrink-0">
                       <SearchBar
                         value={q}
                         onChange={handleSearch}
-                        placeholder="Search name, position, email..."
+                        placeholder="Search candidate..."
                       />
                     </div>
-                  </div>
-                </div>
 
-                {/* ── Filters & Sort Toolbar ────────────────────────────── */}
-                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#111A62] bg-[#111A62]/5 px-2.5 py-1.5 rounded-xl border border-[#111A62]/10">
-                    <Filter size={13} /> Filters:
-                  </div>
-
-                  {/* Position Applied Dropdown */}
-                  <div className="relative">
+                    {/* Position Applied Dropdown */}
                     <select
                       value={selectedPosition}
                       onChange={(e) => {
                         setSelectedPosition(e.target.value);
                         setPage(1);
                       }}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
                     >
-                      <option value="all">💼 All Positions Applied ({positionsList.length})</option>
+                      <option value="all">💼 All Positions ({positionsList.length})</option>
                       {positionsList.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.title}
                         </option>
                       ))}
                     </select>
-                  </div>
 
-                  {/* Fit Level Dropdown */}
-                  <div className="relative">
+                    {/* Fit Level Dropdown */}
                     <select
                       value={selectedFit}
                       onChange={(e) => {
                         setSelectedFit(e.target.value);
                         setPage(1);
                       }}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
                     >
                       <option value="all">🎯 All Fit Levels</option>
                       <option value="high">🟢 High Fit</option>
@@ -660,14 +642,12 @@ export default function Applicants() {
                       <option value="low">🔴 Low Fit</option>
                       <option value="unscreened">⚪ Unscreened</option>
                     </select>
-                  </div>
 
-                  {/* Status Dropdown */}
-                  <div className="relative">
+                    {/* Status Dropdown */}
                     <select
                       value={status}
                       onChange={(e) => handleStatusChange(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
                     >
                       {STATUSES.map((s) => (
                         <option key={s.value} value={s.value}>
@@ -675,31 +655,40 @@ export default function Applicants() {
                         </option>
                       ))}
                     </select>
-                  </div>
 
-                  {/* Sort By Dropdown */}
-                  <div className="relative">
+                    {/* Sort By Dropdown */}
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
                     >
                       <option value="score_desc">⚡ AI Score: High to Low</option>
                       <option value="score_asc">⚡ AI Score: Low to High</option>
                       <option value="newest">📅 Applied: Newest First</option>
                       <option value="oldest">📅 Applied: Oldest First</option>
                     </select>
-                  </div>
 
-                  {/* Reset Filters */}
-                  {isFiltered && (
-                    <button
-                      onClick={resetFilters}
-                      className="flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer"
-                    >
-                      <X size={13} /> Reset
-                    </button>
-                  )}
+                    {/* Reset Filters */}
+                    {isFiltered && (
+                      <button
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer shrink-0"
+                        title="Reset Filters"
+                      >
+                        <X size={13} /> Reset
+                      </button>
+                    )}
+
+                    {isScrolled && !selectedApplicantId && (
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer shrink-0"
+                        title="Scroll to top"
+                      >
+                        ↑ Stats
+                      </button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
