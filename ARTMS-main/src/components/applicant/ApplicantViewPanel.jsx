@@ -124,9 +124,16 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
   const app = data || {};
   const jobTitle = app.job_posting?.job_library?.job_title || app.job_posting?.title || "Position Unspecified";
-  const screening = app.latest_screening || app.screenings?.[0] || {};
-  const score = screening.composite_score != null ? Math.round(Number(screening.composite_score)) : null;
+  const screening = app.ai_evaluation || app.aiEvaluation || app.latest_screening || app.screenings?.[0] || {};
+  const score = screening.ai_score != null
+    ? Math.round(Number(screening.ai_score))
+    : (screening.composite_score != null ? Math.round(Number(screening.composite_score)) : null);
+  const fitClass = screening.fit_label || app.fit_category || screening.fit_level || "Standard";
   const breakdown = screening.score_breakdown || {};
+  const parsedCv = breakdown.parsed_cv || null;
+  const skillsMatched = Array.isArray(screening.skills_matched) ? screening.skills_matched : [];
+  const skillsMissing = Array.isArray(screening.skills_missing) ? screening.skills_missing : [];
+  const summary = screening.ai_summary || screening.summary || screening.ai_feedback || null;
   const isReady = app.status === "ready_for_interview";
   const isHired = app.status === "hired";
 
@@ -282,20 +289,67 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 <div>
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">AI Screening Fit Evaluation</h3>
                   <p className="text-sm font-extrabold text-slate-900 mt-0.5">
-                    Match Class: <span className="text-[#111A62] capitalize">{app.fit_category || screening.fit_level || "Standard"}</span>
+                    Match Class: <span className="text-[#111A62] capitalize font-black">{fitClass} Fit</span>
                   </p>
                 </div>
                 {score != null && (
-                  <span className="text-2xl font-black text-[#111A62] bg-[#111A62]/5 px-3 py-1 rounded-xl border border-[#111A62]/20">
+                  <span className="text-2xl font-black text-[#111A62] bg-[#111A62]/5 px-3.5 py-1 rounded-xl border border-[#111A62]/20">
                     {score}%
                   </span>
                 )}
               </div>
 
+              {/* Parsed Resume Details */}
+              {parsedCv && (parsedCv.email || parsedCv.phone || parsedCv.education || parsedCv.experience || parsedCv.skills?.length > 0) && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2 text-xs">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Parsed Resume Information</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {parsedCv.email && (
+                      <div>
+                        <span className="font-bold text-slate-500">Email: </span>
+                        <span className="font-semibold text-slate-900">{parsedCv.email}</span>
+                      </div>
+                    )}
+                    {parsedCv.phone && (
+                      <div>
+                        <span className="font-bold text-slate-500">Phone: </span>
+                        <span className="font-semibold text-slate-900">{parsedCv.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  {parsedCv.education && (
+                    <div>
+                      <span className="font-bold text-slate-500">Education: </span>
+                      <span className="font-medium text-slate-800">{parsedCv.education}</span>
+                    </div>
+                  )}
+                  {parsedCv.experience && (
+                    <div>
+                      <span className="font-bold text-slate-500">Experience: </span>
+                      <span className="font-medium text-slate-800">{parsedCv.experience}</span>
+                    </div>
+                  )}
+                  {parsedCv.skills?.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-[10px] font-semibold uppercase text-slate-400">Extracted Skills</p>
+                      <div className="flex flex-wrap gap-1">
+                        {parsedCv.skills.map((s) => (
+                          <span key={s} className="rounded-full bg-[#111A62]/10 px-2 py-0.5 text-[11px] font-semibold text-[#111A62]">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Score Breakdown Bars with Remarks */}
               <div className="grid gap-3 sm:grid-cols-2">
                 {BREAKDOWN_FIELDS.map((f) => {
-                  const val = breakdown[f.key] ?? 0;
-                  const pct = Math.round((val / f.max) * 100);
+                  const val = breakdown[f.key] ?? breakdown[`${f.key}_score`] ?? 0;
+                  const remark = breakdown[`${f.key}_remark`] || null;
+                  const pct = Math.min(100, Math.round((val / f.max) * 100));
                   return (
                     <div key={f.key} className="space-y-1">
                       <div className="flex justify-between text-xs font-bold">
@@ -305,14 +359,42 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                       <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div className={`h-full ${scoreColor(pct)}`} style={{ width: `${pct}%` }} />
                       </div>
+                      {remark && (
+                        <p className="text-[11px] text-slate-500 font-normal leading-snug">{remark}</p>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {screening.summary && (
+              {/* Skills Matched & Missing */}
+              {(skillsMatched.length > 0 || skillsMissing.length > 0) && (
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Requirement Fit</p>
+                  {skillsMatched.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {skillsMatched.map((s) => (
+                        <span key={s} className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                          ✓ {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {skillsMissing.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {skillsMissing.map((s) => (
+                        <span key={s} className="rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-semibold text-red-600">
+                          ✗ {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {summary && (
                 <div className="mt-3 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-700 leading-relaxed font-medium">
-                  <strong>AI Analysis Summary:</strong> {screening.summary}
+                  <strong>AI Analysis Summary:</strong> {summary}
                 </div>
               )}
             </div>

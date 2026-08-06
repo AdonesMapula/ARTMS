@@ -332,9 +332,9 @@ export default function Applicants() {
 
                         <div className="mt-2 flex items-center justify-between gap-1">
                           <StatusChip status={a.status} className="text-[9px]" />
-                          {a.fit_category && (
-                            <Badge tone={FIT_TONE[a.fit_category] || "default"} className="text-[9px] px-1.5 py-0.2">
-                              {FIT_LABEL[a.fit_category] || a.fit_category}
+                          {(a.ai_evaluation?.fit_label || a.fit_category) && (
+                            <Badge tone={FIT_TONE[a.ai_evaluation?.fit_label || a.fit_category] || "default"} className="text-[9px] px-1.5 py-0.2 capitalize">
+                              {FIT_LABEL[a.ai_evaluation?.fit_label || a.fit_category] || (a.ai_evaluation?.fit_label || a.fit_category)}
                             </Badge>
                           )}
                         </div>
@@ -427,18 +427,22 @@ export default function Applicants() {
                                 <StatusChip status={a.status} />
                               </TD>
                               <TD>
-                                {eval_?.composite_score != null ? (
+                                {eval_?.ai_score != null ? (
                                   <span className="font-mono text-xs font-bold text-slate-900">
-                                    {Math.round(eval_.composite_score)}%
+                                    {Math.round(Number(eval_.ai_score))}%
+                                  </span>
+                                ) : eval_?.composite_score != null ? (
+                                  <span className="font-mono text-xs font-bold text-slate-900">
+                                    {Math.round(Number(eval_.composite_score))}%
                                   </span>
                                 ) : (
                                   <span className="text-xs text-slate-400">—</span>
                                 )}
                               </TD>
                               <TD>
-                                {a.fit_category ? (
-                                  <Badge tone={FIT_TONE[a.fit_category] || "default"}>
-                                    {FIT_LABEL[a.fit_category] || a.fit_category}
+                                {(eval_?.fit_label || a.fit_category) ? (
+                                  <Badge tone={FIT_TONE[eval_?.fit_label || a.fit_category] || "default"} className="capitalize">
+                                    {FIT_LABEL[eval_?.fit_label || a.fit_category] || (eval_?.fit_label || a.fit_category)}
                                   </Badge>
                                 ) : (
                                   <span className="text-xs text-slate-400">—</span>
