@@ -461,7 +461,7 @@ export default function Pipeline() {
         </CardContent>
       </Card>
 
-      {/* Kanban Board Container */}
+      {/* Kanban Board Container (All 8 Stages fit in 1 line) */}
       {loading ? (
         <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
           <div className="flex flex-col items-center gap-3 text-slate-500">
@@ -470,131 +470,125 @@ export default function Pipeline() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3.5">
-          {STAGES.map((stage) => {
-            const stageItems = stageMap[stage.key] || [];
+        <div className="w-full overflow-x-auto pb-4 pt-1 scrollbar-thin">
+          <div className="grid grid-cols-8 gap-2.5 min-w-[1360px] w-full">
+            {STAGES.map((stage) => {
+              const stageItems = stageMap[stage.key] || [];
 
-            return (
-              <div
-                key={stage.key}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, stage.key)}
-                className={cn(
-                  "flex flex-col rounded-2xl border p-3 transition-colors min-h-[500px]",
-                  stage.color
-                )}
-              >
-                {/* Stage Header */}
-                <div className={cn("flex items-center justify-between rounded-xl px-3 py-2 mb-3 shadow-xs font-bold text-xs", stage.headerBg)}>
-                  <span>{stage.title}</span>
-                  <Badge tone={stage.badgeTone}>{stageItems.length}</Badge>
-                </div>
+              return (
+                <div
+                  key={stage.key}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, stage.key)}
+                  className={cn(
+                    "flex flex-col rounded-2xl border p-2.5 transition-colors min-h-[520px] max-h-[calc(100vh-250px)]",
+                    stage.color
+                  )}
+                >
+                  {/* Stage Header */}
+                  <div className={cn("flex items-center justify-between rounded-xl px-2.5 py-1.5 mb-2.5 shadow-2xs font-extrabold text-xs", stage.headerBg)}>
+                    <span className="truncate pr-1">{stage.title}</span>
+                    <Badge tone={stage.badgeTone} className="px-1.5 py-0.2 text-[10px] shrink-0 font-extrabold">
+                      {stageItems.length}
+                    </Badge>
+                  </div>
 
-                {/* Candidate Cards Column */}
-                <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] pr-0.5">
-                  {stageItems.length === 0 ? (
-                    <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-300/60 p-3 text-center">
-                      <p className="text-[11px] font-medium text-slate-400">
-                        Drop candidates here
-                      </p>
-                    </div>
-                  ) : (
-                    stageItems.map((applicant) => {
-                      const jobTitle =
-                        applicant.job_posting?.job_library?.job_title ??
-                        applicant.jobPosting?.jobLibrary?.job_title ??
-                        applicant.job_posting?.title ??
-                        "General";
+                  {/* Candidate Cards Column */}
+                  <div className="flex-1 space-y-2 overflow-y-auto pr-0.5 scrollbar-thin">
+                    {stageItems.length === 0 ? (
+                      <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-300/60 p-2 text-center">
+                        <p className="text-[10px] font-semibold text-slate-400">
+                          Drop candidates here
+                        </p>
+                      </div>
+                    ) : (
+                      stageItems.map((applicant) => {
+                        const jobTitle =
+                          applicant.job_posting?.job_library?.job_title ??
+                          applicant.jobPosting?.jobLibrary?.job_title ??
+                          applicant.job_posting?.title ??
+                          "General";
 
-                      const score =
-                        applicant.ai_evaluation?.ai_score ??
-                        applicant.overall_score ??
-                        null;
+                        const score =
+                          applicant.ai_evaluation?.ai_score ??
+                          applicant.overall_score ??
+                          null;
 
-                      const isUpdating = updatingId === applicant.id;
+                        const isUpdating = updatingId === applicant.id;
 
-                      return (
-                        <div
-                          key={applicant.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, applicant.id)}
-                          className={cn(
-                            "group relative rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing",
-                            isUpdating && "opacity-50 pointer-events-none"
-                          )}
-                        >
-                          {/* Candidate Initials + Name */}
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-extrabold text-[11px]">
-                                {applicant.first_name?.[0]}{applicant.last_name?.[0]}
-                              </span>
-                              <div>
-                                <h4 className="text-xs font-bold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">
-                                  {applicant.first_name} {applicant.last_name}
-                                </h4>
-                                <p className="text-[10px] text-slate-400">
-                                  {applicant.application_id}
-                                </p>
+                        return (
+                          <div
+                            key={applicant.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, applicant.id)}
+                            className={cn(
+                              "group relative rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing space-y-2",
+                              isUpdating && "opacity-50 pointer-events-none"
+                            )}
+                          >
+                            {/* Candidate Initials + Name */}
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px]">
+                                  {applicant.first_name?.[0]}{applicant.last_name?.[0]}
+                                </span>
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-extrabold text-slate-900 leading-tight group-hover:text-blue-600 transition-colors truncate">
+                                    {applicant.first_name} {applicant.last_name}
+                                  </h4>
+                                  <p className="text-[9px] text-slate-400 font-medium truncate">
+                                    {applicant.application_id}
+                                  </p>
+                                </div>
                               </div>
+
+                              {/* AI Score Badge if present */}
+                              {score !== null && (
+                                <span className="shrink-0 rounded-md bg-blue-50 px-1 py-0.5 text-[9px] font-black text-blue-700 border border-blue-100">
+                                  {Math.round(Number(score))}%
+                                </span>
+                              )}
                             </div>
 
-                            {/* AI Score Badge if present */}
-                            {score !== null && (
-                              <span className="shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-extrabold text-blue-700 border border-blue-100">
-                                {score} pt
-                              </span>
-                            )}
-                          </div>
+                            {/* Position applied */}
+                            <p className="text-[10px] font-bold text-slate-500 truncate">
+                              {jobTitle}
+                            </p>
 
-                          {/* Position applied */}
-                          <p className="text-[11px] font-medium text-slate-500 truncate mb-2.5">
-                            {jobTitle}
-                          </p>
-
-                          {/* Controls & Actions */}
-                          <div className="flex items-center justify-between gap-1 pt-2 border-t border-slate-100 text-[10px]">
-                            
-                            {/* Details Button */}
-                            <button
-                              onClick={() => setSelectedApplicant(applicant)}
-                              className="font-bold text-slate-500 hover:text-blue-600 transition"
-                            >
-                              👁️ Details
-                            </button>
-
-                            {/* Schedule Interview (if in stage) */}
-                            {(stage.key === "shortlisted" || stage.key === "ready_for_interview" || stage.key === "applied") && (
+                            {/* Controls & Actions */}
+                            <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-100 text-[10px]">
+                              {/* Details Button */}
                               <button
-                                onClick={() => openScheduleModal(applicant.id)}
-                                className="font-bold text-blue-600 hover:text-blue-800 transition"
+                                onClick={() => setSelectedApplicant(applicant)}
+                                className="font-bold text-slate-500 hover:text-blue-600 transition text-[10px] cursor-pointer"
+                                title="View Candidate Details"
                               >
-                                📅 Sched
+                                👁️ View
                               </button>
-                            )}
 
-                            {/* Quick Stage Move Dropdown */}
-                            <select
-                              value={applicant.status || "applied"}
-                              onChange={(e) => moveApplicantStage(applicant.id, e.target.value)}
-                              className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 text-[10px] font-medium text-slate-600 focus:outline-none"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {STAGES.map((s) => (
-                                <option key={s.key} value={s.key}>
-                                  {s.title}
-                                </option>
-                              ))}
-                            </select>
+                              {/* Quick Stage Move Dropdown */}
+                              <select
+                                value={applicant.status || "applied"}
+                                onChange={(e) => moveApplicantStage(applicant.id, e.target.value)}
+                                className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 text-[9px] font-bold text-slate-700 focus:outline-none cursor-pointer max-w-[85px] truncate"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {STAGES.map((s) => (
+                                  <option key={s.key} value={s.key}>
+                                    {s.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
