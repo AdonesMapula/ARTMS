@@ -23,7 +23,6 @@ const STATUSES = [
   { value: "ready_for_interview", label: "Ready for Interview" },
   { value: "interview_1", label: "Interview 1" },
   { value: "interview_2", label: "Interview 2" },
-  { value: "hired", label: "Hired" },
   { value: "rejected", label: "Rejected" },
 ];
 
@@ -86,6 +85,7 @@ export default function Applicants() {
       const params = {
         page,
         per_page: pageSize,
+        exclude_hired: true,
       };
       if (q) params.search = q;
       if (status && status !== "all") params.status = status;
@@ -94,8 +94,10 @@ export default function Applicants() {
       }
 
       const res = await applicantService.getAll(params);
-      setApplicants(res.data.data || []);
-      setTotal(res.data.total || 0);
+      const rawList = res.data.data || res.data || [];
+      const nonHiredList = rawList.filter((a) => a.status !== "hired");
+      setApplicants(nonHiredList);
+      setTotal(res.data.total ? nonHiredList.length : nonHiredList.length);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load applicants.");
     } finally {
@@ -158,15 +160,16 @@ export default function Applicants() {
     }
   };
 
-  // Statistics
+  // Statistics (excluding hired applicants transferred to 201 records)
   const stats = useMemo(() => {
+    const active = applicants.filter((a) => a.status !== "hired");
     return {
-      total: total,
-      screening: applicants.filter(a => ["applied", "ai_screening", "screening_passed"].includes(a.status)).length,
-      interview: applicants.filter(a => ["ready_for_interview", "interview_1", "interview_2"].includes(a.status)).length,
-      hired: applicants.filter(a => a.status === "hired").length,
+      total: active.length,
+      screening: active.filter((a) => ["applied", "ai_screening", "screening_passed"].includes(a.status)).length,
+      interview: active.filter((a) => ["ready_for_interview", "interview_1", "interview_2"].includes(a.status)).length,
+      rejected: active.filter((a) => a.status === "rejected").length,
     };
-  }, [total, applicants]);
+  }, [applicants]);
 
   // Unique position list for filter dropdown
   const positionsList = useMemo(() => {
@@ -185,10 +188,11 @@ export default function Applicants() {
     return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
   }, [jobPostings, applicants]);
 
-  // Screened Candidates Ranked by AI Score & Fit Level
+  // Screened Candidates Ranked by AI Score & Fit Level (excluding hired)
   const rankedCandidates = useMemo(() => {
     return applicants
       .filter((a) => {
+        if (a.status === "hired") return false;
         const score = a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score;
         if (score == null) return false;
 
@@ -206,9 +210,9 @@ export default function Applicants() {
       });
   }, [applicants, selectedPosition]);
 
-  // Client-side Filtered and Sorted Applicants List
+  // Client-side Filtered and Sorted Applicants List (hired applicants excluded)
   const processedApplicants = useMemo(() => {
-    let list = [...applicants];
+    let list = applicants.filter((a) => a.status !== "hired");
 
     // Filter by search (case-insensitive across name, email, position, app ID)
     if (q) {
@@ -342,12 +346,12 @@ export default function Applicants() {
             </Card>
 
             <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
-                <CheckCircle size={22} className="text-emerald-600" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                <XCircle size={22} className="text-red-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-500 truncate">Hired</p>
-                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.hired}</p>
+                <p className="text-xs font-bold text-slate-500 truncate">Rejected</p>
+                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.rejected}</p>
               </div>
             </Card>
           </div>
