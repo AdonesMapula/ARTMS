@@ -257,13 +257,11 @@ export default function DatePicker({
                   className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-colors hover:bg-slate-100 cursor-pointer"
                   title="Click to jump to any Year or Month"
                 >
-                  <div className="text-center leading-tight">
-                    <p className="text-sm font-extrabold text-slate-900 tracking-tight">
-                      {MONTHS[viewMonth]}
-                    </p>
-                    <p className="text-xs font-semibold text-slate-400 mt-0.5">{viewYear}</p>
+                  <div className="flex items-center gap-1.5 text-sm font-extrabold text-slate-900 tracking-tight">
+                    <span>{MONTHS[viewMonth]}</span>
+                    <span>{viewYear}</span>
                   </div>
-                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#111A62] transition-colors mt-0.5" />
+                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#111A62] transition-colors" />
                 </button>
 
                 <button

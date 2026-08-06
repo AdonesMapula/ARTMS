@@ -219,13 +219,13 @@ export default function BirthDatePicker({
                 <button
                   type="button"
                   onClick={() => setPanel("year-month")}
-                  className="group flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:bg-slate-100 cursor-pointer"
+                  className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-colors hover:bg-slate-100 cursor-pointer"
                 >
-                  <div className="text-center leading-tight">
-                    <p className="text-sm font-extrabold text-slate-900 tracking-tight">{MONTHS_FULL[viewMonth]}</p>
-                    <p className="text-xs font-semibold text-slate-400 mt-0.5">{viewYear}</p>
+                  <div className="flex items-center gap-1.5 text-sm font-extrabold text-slate-900 tracking-tight">
+                    <span>{MONTHS_FULL[viewMonth]}</span>
+                    <span>{viewYear}</span>
                   </div>
-                  <ChevronDown size={13} className="text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5" />
+                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#111A62] transition-colors" />
                 </button>
 
                 <button
