@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Ca
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import EmptyState from "../../components/ui/EmptyState";
+import BirthDatePicker from "../../components/ui/BirthDatePicker";
 import axios from "axios";
 import applicantService from "../../services/applicantService";
 
@@ -301,7 +302,11 @@ export default function Apply() {
                   <input value={form.phone} onChange={set("phone")} placeholder="09xxxxxxxxx" className={inputCls(fieldErrors.phone)} />
                 </Field>
                 <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
-                  <input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} className={inputCls(fieldErrors.dateOfBirth)} />
+                  <BirthDatePicker
+                    value={form.dateOfBirth}
+                    onChange={(val) => setForm((f) => ({ ...f, dateOfBirth: val }))}
+                    placeholder="Select date of birth"
+                  />
                 </Field>
                 <Field label="Gender" error={fieldErrors.gender}>
                   <select value={form.gender} onChange={set("gender")} className={inputCls(fieldErrors.gender)}>
