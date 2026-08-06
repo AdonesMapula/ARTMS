@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Users, UserCheck, Clock, XCircle, Eye, CheckCircle, Trash2, Filter, RefreshCw, ChevronRight, X } from "lucide-react";
+import { Users, UserCheck, Clock, XCircle, Eye, CheckCircle, Trash2, Filter, RefreshCw, ChevronRight, X, Trophy, Award, Sparkles, SlidersHorizontal, ArrowUpDown, Briefcase, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import StatusChip from "../../components/ui/StatusChip";
@@ -11,6 +11,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ApplicantViewPanel from "../../components/applicant/ApplicantViewPanel";
 import applicantService from "../../services/applicantService";
+import jobService from "../../services/jobService";
 import { useToast } from "../../context/ToastContext";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 
@@ -32,10 +33,17 @@ const FIT_LABEL = { high: "High Fit", medium: "Medium Fit", low: "Low Fit" };
 export default function Applicants() {
   const toast = useToast();
   const [applicants, setApplicants] = useState([]);
+  const [jobPostings, setJobPostings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Search & Filters
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
+  const [selectedPosition, setSelectedPosition] = useState("all");
+  const [selectedFit, setSelectedFit] = useState("all");
+  const [sortBy, setSortBy] = useState("score_desc");
+
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
@@ -46,7 +54,7 @@ export default function Applicants() {
   const [actionLoading, setActionLoading] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [interviewConfirm, setInterviewConfirm] = useState(null);
-  const pageSize = 10;
+  const pageSize = 50;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,6 +69,16 @@ export default function Applicants() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Fetch Job Postings for Position Filter Dropdown
+  useEffect(() => {
+    jobService.postings.getAll({ per_page: 100 })
+      .then((res) => {
+        const list = res.data?.data || res.data || [];
+        setJobPostings(list);
+      })
+      .catch(() => {});
+  }, []);
+
   const loadApplicants = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -71,6 +89,9 @@ export default function Applicants() {
       };
       if (q) params.search = q;
       if (status && status !== "all") params.status = status;
+      if (selectedPosition && selectedPosition !== "all" && !isNaN(selectedPosition)) {
+        params.job_posting_id = selectedPosition;
+      }
 
       const res = await applicantService.getAll(params);
       setApplicants(res.data.data || []);
@@ -80,7 +101,7 @@ export default function Applicants() {
     } finally {
       setLoading(false);
     }
-  }, [page, q, status, pageSize]);
+  }, [page, q, status, selectedPosition, pageSize]);
 
   useEffect(() => {
     loadApplicants();
@@ -146,6 +167,117 @@ export default function Applicants() {
       hired: applicants.filter(a => a.status === "hired").length,
     };
   }, [total, applicants]);
+
+  // Unique position list for filter dropdown
+  const positionsList = useMemo(() => {
+    const map = new Map();
+    jobPostings.forEach((p) => {
+      const title = p.job_library?.job_title || p.title;
+      if (title && p.id) map.set(String(p.id), title);
+    });
+    applicants.forEach((a) => {
+      const title = a.job_posting?.job_library?.job_title || a.job_posting?.title;
+      const id = a.job_posting_id || a.job_posting?.id || title;
+      if (title && id && !map.has(String(id))) {
+        map.set(String(id), title);
+      }
+    });
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+  }, [jobPostings, applicants]);
+
+  // Screened Candidates Ranked by AI Score & Fit Level
+  const rankedCandidates = useMemo(() => {
+    return applicants
+      .filter((a) => {
+        const score = a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score;
+        if (score == null) return false;
+
+        if (selectedPosition !== "all") {
+          const posTitle = a.job_posting?.job_library?.job_title || a.job_posting?.title;
+          const posId = String(a.job_posting_id || a.job_posting?.id);
+          return posId === String(selectedPosition) || posTitle === selectedPosition;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const scoreA = Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0);
+        const scoreB = Number(b.ai_evaluation?.ai_score ?? b.ai_evaluation?.composite_score ?? 0);
+        return scoreB - scoreA;
+      });
+  }, [applicants, selectedPosition]);
+
+  // Client-side Filtered and Sorted Applicants List
+  const processedApplicants = useMemo(() => {
+    let list = [...applicants];
+
+    // Filter by search (case-insensitive across name, email, position, app ID)
+    if (q) {
+      const term = q.toLowerCase();
+      list = list.filter((a) => {
+        const name = `${a.first_name || ""} ${a.last_name || ""}`.toLowerCase();
+        const email = (a.email || "").toLowerCase();
+        const pos = (a.job_posting?.job_library?.job_title || a.job_posting?.title || "").toLowerCase();
+        const id = (a.application_id || "").toLowerCase();
+        return name.includes(term) || email.includes(term) || pos.includes(term) || id.includes(term);
+      });
+    }
+
+    // Filter by position applied
+    if (selectedPosition !== "all") {
+      list = list.filter((a) => {
+        const posTitle = a.job_posting?.job_library?.job_title || a.job_posting?.title;
+        const posId = String(a.job_posting_id || a.job_posting?.id);
+        return posId === String(selectedPosition) || posTitle === selectedPosition;
+      });
+    }
+
+    // Filter by fit level
+    if (selectedFit !== "all") {
+      list = list.filter((a) => {
+        const fit = (a.ai_evaluation?.fit_label || a.fit_category || "").toLowerCase();
+        if (selectedFit === "unscreened") {
+          return !a.ai_evaluation && !a.fit_category;
+        }
+        return fit === selectedFit;
+      });
+    }
+
+    // Filter by status
+    if (status !== "all") {
+      list = list.filter((a) => {
+        if (status === "interview_1") return ["interview_1", "interview_1_scheduled", "interview_1_done"].includes(a.status);
+        if (status === "interview_2") return ["interview_2", "interview_2_scheduled", "interview_2_done"].includes(a.status);
+        if (status === "ai_screening") return ["ai_screening", "under_review"].includes(a.status);
+        if (status === "screening_passed") return ["screening_passed", "shortlisted"].includes(a.status);
+        return a.status === status;
+      });
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      const scoreA = Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? -1);
+      const scoreB = Number(b.ai_evaluation?.ai_score ?? b.ai_evaluation?.composite_score ?? -1);
+
+      if (sortBy === "score_desc") return scoreB - scoreA;
+      if (sortBy === "score_asc") return scoreA - scoreB;
+      if (sortBy === "newest") return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      if (sortBy === "oldest") return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      return 0;
+    });
+
+    return list;
+  }, [applicants, q, selectedPosition, selectedFit, status, sortBy]);
+
+  const isFiltered = q || status !== "all" || selectedPosition !== "all" || selectedFit !== "all" || sortBy !== "score_desc";
+
+  const resetFilters = () => {
+    setQ("");
+    setStatus("all");
+    setSelectedPosition("all");
+    setSelectedFit("all");
+    setSortBy("score_desc");
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6">
@@ -225,6 +357,89 @@ export default function Applicants() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Top AI-Ranked Candidates Leaderboard Card ────────────────────────── */}
+        {rankedCandidates.length > 0 && (
+          <Card className="border-indigo-100 bg-gradient-to-r from-slate-900 via-[#111A62] to-[#1a257c] text-white shadow-xl overflow-hidden relative">
+            <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+            <CardHeader className="pb-3 border-b border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30">
+                    <Trophy size={18} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-black text-white flex items-center gap-2">
+                      Top AI-Ranked Candidates <Sparkles size={14} className="text-amber-400" />
+                    </CardTitle>
+                    <p className="text-xs text-slate-300">
+                      Screened applicants auto-ranked by AI match score & fit classification
+                      {selectedPosition !== "all" && ` • ${positionsList.find(p => String(p.id) === String(selectedPosition))?.title || selectedPosition}`}
+                    </p>
+                  </div>
+                </div>
+                <Badge tone="accent" className="bg-amber-400/20 text-amber-300 border-amber-400/30 px-3 py-1 font-bold text-xs shrink-0">
+                  {rankedCandidates.length} Screened Matches
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {rankedCandidates.slice(0, 3).map((a, index) => {
+                  const scoreVal = Math.round(Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0));
+                  const fitLabel = a.ai_evaluation?.fit_label || a.fit_category || "high";
+                  const name = `${a.first_name || ""} ${a.last_name || ""}`;
+                  const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
+                  const rankText = index === 0 ? "🥇 #1 Top Rank" : index === 1 ? "🥈 #2 High Rank" : "🥉 #3 Ranked";
+                  const rankStyle = index === 0 
+                    ? "bg-amber-400/20 text-amber-300 border-amber-400/30" 
+                    : index === 1 
+                    ? "bg-slate-200/20 text-slate-200 border-slate-300/30" 
+                    : "bg-amber-700/20 text-amber-400 border-amber-600/30";
+
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => setSelectedApplicantId(a.id)}
+                      className="group rounded-2xl bg-white/10 p-3.5 border border-white/10 hover:border-amber-400/50 hover:bg-white/15 transition duration-200 cursor-pointer flex flex-col justify-between space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-sm font-black text-white ring-1 ring-white/20">
+                            {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-extrabold text-white truncate group-hover:text-amber-300 transition">
+                              {name}
+                            </p>
+                            <p className="text-xs text-slate-300 truncate">{pos}</p>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${rankStyle} shrink-0`}>
+                          {rankText}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-black text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/20 font-mono">
+                            {scoreVal}%
+                          </span>
+                          <Badge tone={FIT_TONE[fitLabel] || "success"} className="text-[10px] uppercase font-extrabold capitalize">
+                            {FIT_LABEL[fitLabel] || fitLabel}
+                          </Badge>
+                        </div>
+                        <span className="text-xs font-bold text-white group-hover:translate-x-0.5 transition flex items-center gap-1">
+                          View Profile <ChevronRight size={13} />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Error banner */}
@@ -277,6 +492,31 @@ export default function Applicants() {
                   className="text-xs"
                 />
 
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  <select
+                    value={selectedPosition}
+                    onChange={(e) => setSelectedPosition(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">💼 All Positions Applied</option>
+                    {positionsList.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={selectedFit}
+                    onChange={(e) => setSelectedFit(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">🎯 All Fit Levels</option>
+                    <option value="high">🟢 High Fit</option>
+                    <option value="medium">🟡 Medium Fit</option>
+                    <option value="low">🔴 Low Fit</option>
+                    <option value="unscreened">⚪ Unscreened</option>
+                  </select>
+                </div>
+
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
                   {STATUSES.map((s) => (
                     <button
@@ -298,13 +538,13 @@ export default function Applicants() {
               <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
                 {loading ? (
                   <div className="py-10 text-center text-xs text-slate-400">Loading candidates...</div>
-                ) : applicants.length === 0 ? (
+                ) : processedApplicants.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">No applicants match filter.</div>
                 ) : (
-                  applicants.map((a) => {
+                  processedApplicants.map((a) => {
                     const isSelected = a.id === selectedApplicantId;
                     const name = `${a.first_name || ""} ${a.last_name || ""}`;
-                    const pos = a.job_posting?.job_library?.job_title || "Position Unspecified";
+                    const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
 
                     return (
                       <div
@@ -347,10 +587,10 @@ export default function Applicants() {
           ) : (
             /* ── FULL TABLE DIRECTORY (When no candidate is open) ───── */
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedApplicantId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
-              <CardHeader>
+              <CardHeader className="space-y-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <Users className="text-[#111A62]" size={18} /> Applicants Directory ({total})
+                    <Users className="text-[#111A62]" size={18} /> Applicants Directory ({processedApplicants.length})
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
                     {isScrolled && !selectedApplicantId && (
@@ -366,10 +606,93 @@ export default function Applicants() {
                       <SearchBar
                         value={q}
                         onChange={handleSearch}
-                        placeholder="Search applicants..."
+                        placeholder="Search name, position, email..."
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* ── Filters & Sort Toolbar ────────────────────────────── */}
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#111A62] bg-[#111A62]/5 px-2.5 py-1.5 rounded-xl border border-[#111A62]/10">
+                    <Filter size={13} /> Filters:
+                  </div>
+
+                  {/* Position Applied Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedPosition}
+                      onChange={(e) => {
+                        setSelectedPosition(e.target.value);
+                        setPage(1);
+                      }}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                    >
+                      <option value="all">💼 All Positions Applied ({positionsList.length})</option>
+                      {positionsList.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Fit Level Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedFit}
+                      onChange={(e) => {
+                        setSelectedFit(e.target.value);
+                        setPage(1);
+                      }}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                    >
+                      <option value="all">🎯 All Fit Levels</option>
+                      <option value="high">🟢 High Fit</option>
+                      <option value="medium">🟡 Medium Fit</option>
+                      <option value="low">🔴 Low Fit</option>
+                      <option value="unscreened">⚪ Unscreened</option>
+                    </select>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sort By Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
+                    >
+                      <option value="score_desc">⚡ AI Score: High to Low</option>
+                      <option value="score_asc">⚡ AI Score: Low to High</option>
+                      <option value="newest">📅 Applied: Newest First</option>
+                      <option value="oldest">📅 Applied: Oldest First</option>
+                    </select>
+                  </div>
+
+                  {/* Reset Filters */}
+                  {isFiltered && (
+                    <button
+                      onClick={resetFilters}
+                      className="flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer"
+                    >
+                      <X size={13} /> Reset
+                    </button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -379,10 +702,18 @@ export default function Applicants() {
                       <Skeleton key={i} className="h-14 rounded-xl" />
                     ))}
                   </div>
-                ) : applicants.length === 0 ? (
+                ) : processedApplicants.length === 0 ? (
                   <div className="py-12 text-center">
                     <Users size={48} className="mx-auto mb-3 text-slate-300" />
                     <p className="text-sm font-semibold text-slate-600">No applicants found</p>
+                    {isFiltered && (
+                      <button
+                        onClick={resetFilters}
+                        className="mt-3 text-xs font-bold text-[#111A62] underline hover:text-[#1a257c]"
+                      >
+                        Reset active filters
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <>
@@ -398,7 +729,7 @@ export default function Applicants() {
                         </tr>
                       </THead>
                       <tbody>
-                        {applicants.map((a) => {
+                        {processedApplicants.map((a) => {
                           const eval_ = a.ai_evaluation;
                           const job = a.job_posting?.job_library;
                           return (
