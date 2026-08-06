@@ -333,7 +333,7 @@ export default function ManpowerApprovals() {
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-slate-500">Department</p>
                               <p className="text-sm font-semibold text-slate-900 truncate">
-                                {r.department?.name || r.department?.department_name || "—"}
+                                {r.department?.department_name || r.department?.name || "—"}
                               </p>
                             </div>
                           </div>

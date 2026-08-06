@@ -21,6 +21,13 @@ const URGENCY_TONE = {
   critical: "danger"
 };
 
+const URGENCY_WEIGHT = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
 const STATUS_TONE = {
   pending: "warning",
   approved: "success",
@@ -184,18 +191,33 @@ export default function AdminManpowerRequests() {
     }
   };
 
+  const [sortByUrgency, setSortByUrgency] = useState("critical_first");
+
   const filtered = requests.filter((r) => {
     if (!q) return true;
     const searchLower = q.toLowerCase();
     const pos = (r.position_needed || r.jobLibrary?.job_title || "").toLowerCase();
-    const dept = (r.department?.name || "").toLowerCase();
+    const dept = (r.department?.department_name || r.department?.name || "").toLowerCase();
     const req = (r.requester?.name || r.requested_by || "").toLowerCase();
     const idStr = `prf-${String(r.id).padStart(3, "0")}`;
     return pos.includes(searchLower) || dept.includes(searchLower) || req.includes(searchLower) || idStr.includes(searchLower);
   });
 
-  const paginated = filtered;
-  const paginatedTotal = total || filtered.length;
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortByUrgency === "critical_first") {
+      const weightA = URGENCY_WEIGHT[a.urgency] || 0;
+      const weightB = URGENCY_WEIGHT[b.urgency] || 0;
+      if (weightB !== weightA) return weightB - weightA;
+    } else if (sortByUrgency === "low_first") {
+      const weightA = URGENCY_WEIGHT[a.urgency] || 0;
+      const weightB = URGENCY_WEIGHT[b.urgency] || 0;
+      if (weightB !== weightA) return weightA - weightB;
+    }
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  const paginated = sorted;
+  const paginatedTotal = total || sorted.length;
 
   const stats = {
     total: requests.length,
@@ -367,12 +389,13 @@ export default function AdminManpowerRequests() {
                   className="text-xs"
                 />
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+                {/* Status Filter Tabs (Clean Flex-Wrap, 0 Horizontal Scroll) */}
+                <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
                   {STATUS_FILTERS.map((f) => (
                     <button
                       key={f.value}
                       onClick={() => handleStatusChange(f.value)}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${
+                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer text-[10px] ${
                         statusFilter === f.value
                           ? "bg-[#111A62] text-white border-[#111A62]"
                           : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
@@ -382,20 +405,69 @@ export default function AdminManpowerRequests() {
                     </button>
                   ))}
                 </div>
+
+                {/* Urgency Sort Dropdown */}
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <span className="text-[10px] font-bold text-slate-500">Sort Requisitions:</span>
+                  <select
+                    value={sortByUrgency}
+                    onChange={(e) => setSortByUrgency(e.target.value)}
+                    className="flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[10px] font-extrabold text-slate-700 cursor-pointer shadow-2xs"
+                    title="Sort by Urgency"
+                  >
+                    <option value="critical_first">⚡ Urgency: Critical First</option>
+                    <option value="low_first">🟢 Urgency: Low First</option>
+                    <option value="newest">🕒 Sort: Newest First</option>
+                  </select>
+                </div>
+
+                {/* Color Legend Guide Bar */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-2.5 text-[10px] space-y-1.5">
+                  <div className="flex items-center justify-between font-bold text-slate-700">
+                    <span className="uppercase tracking-wider text-[9px] text-[#111A62]">Color Legend Guide</span>
+                    <span className="text-[9px] text-slate-400 font-mono">Hover dots for details</span>
+                  </div>
+                  <div className="space-y-1 font-semibold text-slate-600">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold text-slate-400 w-12">Urgency:</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" /> Critical</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-orange-500 inline-block" /> High</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-blue-500 inline-block" /> Med</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-slate-400 inline-block" /> Low</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold text-slate-400 w-12">Status:</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> Approved</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /> Pending</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-orange-500 inline-block" /> Revision</span>
+                      <span className="flex items-center gap-1 text-[10px]"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" /> Rejected</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Sidebar Cards */}
               <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
                 {loading ? (
                   <div className="py-10 text-center text-xs text-slate-400">Loading requests...</div>
-                ) : filtered.length === 0 ? (
+                ) : sorted.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">No requests match filters.</div>
                 ) : (
-                  filtered.map((r) => {
+                  sorted.map((r) => {
                     const prfId = `PRF-${String(r.id).padStart(3, "0")}`;
                     const isSelected = r.id === selectedRequestId;
                     const pos = r.position_needed || r.jobLibrary?.job_title || "Unspecified Position";
-                    const dept = r.department?.name || "—";
+                    const dept = r.department?.department_name || r.department?.name || "—";
+
+                    const urgencyBg =
+                      r.urgency === "critical" ? "bg-red-500" :
+                      r.urgency === "high" ? "bg-orange-500" :
+                      r.urgency === "medium" ? "bg-blue-500" : "bg-slate-400";
+
+                    const statusBg =
+                      r.status === "approved" ? "bg-emerald-500" :
+                      r.status === "pending" ? "bg-amber-500" :
+                      r.status === "revised" || r.status === "needs_revision" ? "bg-orange-500" : "bg-red-500";
 
                     return (
                       <div
@@ -411,13 +483,17 @@ export default function AdminManpowerRequests() {
                           <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
                             {prfId}
                           </span>
-                          <div className="flex items-center gap-1">
-                            <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="text-[9px] px-1.5 py-0.2">
-                              {r.urgency}
-                            </Badge>
-                            <Badge tone={STATUS_TONE[r.status] ?? "default"} className="text-[9px] px-1.5 py-0.2">
-                              {r.status}
-                            </Badge>
+                          
+                          {/* Color Dot Legend Badge Indicators */}
+                          <div className="flex items-center gap-1.5" title={`Urgency: ${r.urgency} | Status: ${r.status}`}>
+                            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 border border-slate-200">
+                              <span className={`h-2 w-2 rounded-full ${urgencyBg} inline-block`} />
+                              <span className="capitalize">{r.urgency}</span>
+                            </span>
+                            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 border border-slate-200">
+                              <span className={`h-2 w-2 rounded-full ${statusBg} inline-block`} />
+                              <span className="capitalize">{r.status === "revised" || r.status === "needs_revision" ? "Revision" : r.status}</span>
+                            </span>
                           </div>
                         </div>
 
@@ -452,6 +528,16 @@ export default function AdminManpowerRequests() {
                         ↑ Show Header & Stats
                       </button>
                     )}
+                    <select
+                      value={sortByUrgency}
+                      onChange={(e) => setSortByUrgency(e.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs"
+                      title="Sort by Urgency"
+                    >
+                      <option value="critical_first">⚡ Sort: Critical Urgency First</option>
+                      <option value="low_first">🟢 Sort: Low Urgency First</option>
+                      <option value="newest">🕒 Sort: Newest First</option>
+                    </select>
                     <div className="w-60">
                       <SearchBar
                         value={q}
@@ -502,7 +588,7 @@ export default function AdminManpowerRequests() {
                                 {r.position_needed || "—"}
                               </div>
                             </TD>
-                            <TD className="text-slate-600">{r.department?.name || "—"}</TD>
+                            <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
                             <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
                             <TD className="font-bold text-slate-900">{r.headcount}</TD>
                             <TD>

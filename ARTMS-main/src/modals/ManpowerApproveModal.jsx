@@ -275,7 +275,7 @@ export default function ManpowerApproveModal({
               <div>
                 <p className="text-xs font-semibold text-slate-500">Department</p>
                 <p className="text-sm font-medium text-slate-900">
-                  {request.department?.name || request.department?.department_name || "—"}
+                  {request.department?.department_name || request.department?.name || "—"}
                 </p>
               </div>
             </div>
