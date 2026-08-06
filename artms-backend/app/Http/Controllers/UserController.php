@@ -57,6 +57,7 @@ class UserController extends Controller
             'password'      => Hash::make($plainPassword),
             'role'          => $request->role,
             'department_id' => $request->department_id,
+            'avatar'        => $request->avatar,
         ]);
 
         AuditLog::record('create', 'user', "Created user: {$user->email}", null, $user->toArray(), User::class, $user->id);

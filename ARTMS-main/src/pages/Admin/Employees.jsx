@@ -3,10 +3,12 @@ import {
   FiUsers, FiUserCheck, FiUserX, FiClock, FiPlus,
   FiFileText, FiRefreshCw, FiChevronRight, FiLoader, FiSearch, FiX
 } from "react-icons/fi";
+import { Filter, Building2, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Employee201Panel from "../../components/employee/Employee201Panel";
@@ -28,6 +30,7 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [departmentFilter, setDepartmentFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -69,6 +72,7 @@ export default function Employees() {
         per_page: 10,
         search,
         status: statusFilter !== "All" ? statusFilter : undefined,
+        department_id: departmentFilter !== "All" ? departmentFilter : undefined,
       };
       const res = await employeeService.getAll(params);
       if (res.data.employees) {
@@ -86,7 +90,7 @@ export default function Employees() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, departmentFilter]);
 
   useEffect(() => {
     fetchEmployees();
@@ -208,20 +212,19 @@ export default function Employees() {
                   className="text-xs"
                 />
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
-                  {["All", "active", "on_leave", "resigned"].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => { setStatusFilter(s); setPage(1); }}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${statusFilter === s
-                        ? "bg-[#111A62] text-white border-[#111A62]"
-                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                        }`}
-                    >
-                      {s === "All" ? "All" : s.replace('_', ' ').toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <Select
+                  icon={Filter}
+                  size="sm"
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                  buttonClassName="bg-slate-50 hover:bg-white"
+                >
+                  <option value="All">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="on_leave">On Leave</option>
+                  <option value="resigned">Resigned</option>
+                  <option value="terminated">Terminated</option>
+                </Select>
               </div>
 
               {/* Vertical Scrollable Sidebar List */}
@@ -280,35 +283,60 @@ export default function Employees() {
                   <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                     <FiFileText className="text-[#111A62]" /> 201 Employee Directory
                   </CardTitle>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isScrolled && !selectedEmpId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer mr-2"
-                        title="Scroll to top to view Stats & Header"
-                      >
-                        ↑ Show Header & Stats
-                      </button>
-                    )}
-                    {["All", "active", "on_leave", "resigned", "terminated"].map(s => (
-                      <button
-                        key={s}
-                        onClick={() => { setStatusFilter(s); setPage(1); }}
-                        className={`rounded-full px-3 py-1 text-xs font-bold border transition cursor-pointer ${statusFilter === s
-                          ? "bg-[#111A62] text-white border-[#111A62]"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                          }`}
-                      >
-                        {s === "All" ? "All Status" : s.replace('_', ' ').toUpperCase()}
-                      </button>
-                    ))}
-                    <div className="w-60">
+                  <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto mt-2 lg:mt-0">
+                    <div className="w-full sm:w-60 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
                         value={search}
                         onChange={(val) => { setSearch(val); setPage(1); }}
                         placeholder="Search name, ID, position..."
+                        className="h-10 text-xs"
                       />
                     </div>
+
+                    {/* Department Dropdown */}
+                    {departments.length > 0 && (
+                      <div className="flex-1 sm:flex-initial min-w-[170px]">
+                        <Select
+                          icon={Building2}
+                          size="md"
+                          value={departmentFilter}
+                          onChange={(e) => { setDepartmentFilter(e.target.value); setPage(1); }}
+                          buttonClassName="bg-slate-50 hover:bg-white"
+                        >
+                          <option value="All">All Departments</option>
+                          {departments.map((d) => (
+                            <option key={d.id} value={d.id}>{d.department_name || d.name}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Status Dropdown */}
+                    <div className="flex-1 sm:flex-initial min-w-[150px]">
+                      <Select
+                        icon={Filter}
+                        size="md"
+                        value={statusFilter}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        <option value="All">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="on_leave">On Leave</option>
+                        <option value="resigned">Resigned</option>
+                        <option value="terminated">Terminated</option>
+                      </Select>
+                    </div>
+
+                    {isScrolled && !selectedEmpId && (
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Scroll to top to view Stats & Header"
+                      >
+                        ↑ Stats
+                      </button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

@@ -14,11 +14,13 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Briefcase, ChevronDown, RefreshCw, Calendar, Eye } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import Select from "../../components/ui/Select";
+import SearchBar from "../../components/ui/SearchBar";
 import { cn } from "../../utils/cn";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import applicantService from "../../services/applicantService";
@@ -152,7 +154,9 @@ function CandidateDetailModal({ applicant, open, onClose, onSchedule, onStatusCh
                 onSchedule(applicant.id);
               }}
             >
-              📅 Schedule Interview
+              <span className="flex items-center gap-1.5 font-bold">
+                <Calendar size={15} /> Schedule Interview
+              </span>
             </Button>
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
@@ -396,8 +400,9 @@ export default function Pipeline() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={loadData} disabled={loading} className="shrink-0">
-            {loading ? "Refreshing…" : "🔄 Refresh"}
+          <Button variant="outline" onClick={loadData} disabled={loading} className="shrink-0 flex items-center gap-2 font-semibold">
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {loading ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
       </div>
@@ -405,24 +410,25 @@ export default function Pipeline() {
       {/* Filter Toolbar */}
       <Card>
         <CardContent className="py-4 px-5">
-          <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Search Input */}
-            <div className="w-full md:flex-1">
-              <input
-                type="text"
-                placeholder="Search candidates by name, email, or APP-ID…"
+            <div className="w-full sm:flex-1 min-w-[220px]">
+              <SearchBar
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={setSearch}
+                placeholder="Search candidates by name, email, or APP-ID…"
+                className="h-11 text-sm"
               />
             </div>
 
             {/* Position Select */}
-            <div className="w-full md:w-64">
-              <select
+            <div className="w-full sm:w-72 shrink-0">
+              <Select
+                icon={Briefcase}
+                size="lg"
                 value={selectedJob}
                 onChange={(e) => setSelectedJob(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                buttonClassName="bg-slate-50 hover:bg-white"
               >
                 <option value="">All Job Vacancies</option>
                 {jobPostings.map((j) => (
@@ -430,7 +436,7 @@ export default function Pipeline() {
                     {j.job_library?.job_title ?? j.title ?? `Job #${j.id}`}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -560,25 +566,27 @@ export default function Pipeline() {
                               {/* Details Button */}
                               <button
                                 onClick={() => setSelectedApplicant(applicant)}
-                                className="font-bold text-slate-500 hover:text-blue-600 transition text-[10px] cursor-pointer"
+                                className="flex items-center font-bold text-slate-500 hover:text-blue-600 transition text-[11px] cursor-pointer"
                                 title="View Candidate Details"
                               >
-                                👁️ View
+                                <Eye size={13} className="mr-1 shrink-0" /> View
                               </button>
 
                               {/* Quick Stage Move Dropdown */}
-                              <select
-                                value={applicant.status || "applied"}
-                                onChange={(e) => moveApplicantStage(applicant.id, e.target.value)}
-                                className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 text-[9px] font-bold text-slate-700 focus:outline-none cursor-pointer max-w-[85px] truncate"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {STAGES.map((s) => (
-                                  <option key={s.key} value={s.key}>
-                                    {s.title}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  size="sm"
+                                  value={applicant.status || "applied"}
+                                  onChange={(e) => moveApplicantStage(applicant.id, e.target.value)}
+                                  buttonClassName="h-7 px-2 text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg shadow-none border-0"
+                                >
+                                  {STAGES.map((s) => (
+                                    <option key={s.key} value={s.key}>
+                                      {s.title}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </div>
                             </div>
                           </div>
                         );

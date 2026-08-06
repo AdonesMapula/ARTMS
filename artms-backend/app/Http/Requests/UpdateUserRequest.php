@@ -26,6 +26,7 @@ class UpdateUserRequest extends FormRequest
             'role'          => ['sometimes', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
             'department_id' => ['nullable', 'exists:departments,id'],
             'is_active'     => ['sometimes', 'boolean'],
+            'avatar'        => ['nullable'],
         ];
     }
 

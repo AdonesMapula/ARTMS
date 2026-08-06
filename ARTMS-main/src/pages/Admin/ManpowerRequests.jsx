@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X, ArrowUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Pagination from "../../components/ui/Pagination";
@@ -389,36 +390,34 @@ export default function AdminManpowerRequests() {
                   className="text-xs"
                 />
 
-                {/* Status Filter Tabs (Clean Flex-Wrap, 0 Horizontal Scroll) */}
-                <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
-                  {STATUS_FILTERS.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => handleStatusChange(f.value)}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer text-[10px] ${
-                        statusFilter === f.value
-                          ? "bg-[#111A62] text-white border-[#111A62]"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+                {/* Status Filter */}
+                <div>
+                  <Select
+                    icon={Filter}
+                    size="sm"
+                    value={statusFilter}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    buttonClassName="bg-slate-50 hover:bg-white"
+                  >
+                    {STATUS_FILTERS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </Select>
                 </div>
 
                 {/* Urgency Sort Dropdown */}
-                <div className="flex items-center justify-between gap-2 pt-0.5">
-                  <span className="text-[10px] font-bold text-slate-500">Sort Requisitions:</span>
-                  <select
+                <div>
+                  <Select
+                    icon={ArrowUpDown}
+                    size="sm"
                     value={sortByUrgency}
                     onChange={(e) => setSortByUrgency(e.target.value)}
-                    className="flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[10px] font-extrabold text-slate-700 cursor-pointer shadow-2xs"
-                    title="Sort by Urgency"
+                    buttonClassName="bg-slate-50 hover:bg-white"
                   >
-                    <option value="critical_first">⚡ Urgency: Critical First</option>
-                    <option value="low_first">🟢 Urgency: Low First</option>
-                    <option value="newest">🕒 Sort: Newest First</option>
-                  </select>
+                    <option value="critical_first">Urgency: Critical First</option>
+                    <option value="low_first">Urgency: Low First</option>
+                    <option value="newest">Sort: Newest First</option>
+                  </Select>
                 </div>
 
                 {/* Color Legend Guide Bar */}
@@ -518,33 +517,53 @@ export default function AdminManpowerRequests() {
                   <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                     <FileText className="text-[#111A62]" size={18} /> Manpower Requests ({paginatedTotal})
                   </CardTitle>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isScrolled && !selectedRequestId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer mr-2"
-                        title="Scroll to top"
-                      >
-                        ↑ Show Header & Stats
-                      </button>
-                    )}
-                    <select
-                      value={sortByUrgency}
-                      onChange={(e) => setSortByUrgency(e.target.value)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs"
-                      title="Sort by Urgency"
-                    >
-                      <option value="critical_first">⚡ Sort: Critical Urgency First</option>
-                      <option value="low_first">🟢 Sort: Low Urgency First</option>
-                      <option value="newest">🕒 Sort: Newest First</option>
-                    </select>
-                    <div className="w-60">
+                  <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto mt-2 lg:mt-0">
+                    <div className="w-full sm:w-60 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
                         value={q}
                         onChange={handleSearch}
                         placeholder="Search requests..."
+                        className="h-10 text-xs"
                       />
                     </div>
+
+                    <div className="flex-1 sm:flex-initial min-w-[150px]">
+                      <Select
+                        icon={Filter}
+                        size="md"
+                        value={statusFilter}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        {STATUS_FILTERS.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 sm:flex-initial min-w-[190px]">
+                      <Select
+                        icon={ArrowUpDown}
+                        size="md"
+                        value={sortByUrgency}
+                        onChange={(e) => setSortByUrgency(e.target.value)}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        <option value="critical_first">Urgency: Critical First</option>
+                        <option value="low_first">Urgency: Low First</option>
+                        <option value="newest">Sort: Newest First</option>
+                      </Select>
+                    </div>
+
+                    {isScrolled && !selectedRequestId && (
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Scroll to top"
+                      >
+                        ↑ Stats
+                      </button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

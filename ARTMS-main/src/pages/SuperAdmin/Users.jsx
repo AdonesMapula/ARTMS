@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users as UsersIcon, UserPlus, UserCheck, UserX, Filter, RefreshCw, Trash2, Edit, Ban, CheckCircle } from "lucide-react";
+import { Users as UsersIcon, User as UserIcon, UserPlus, UserCheck, UserX, Filter, RefreshCw, Trash2, Edit, Ban, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import SearchBar from "../../components/ui/SearchBar";
@@ -392,14 +392,28 @@ export default function Users() {
                   </tr>
                 </THead>
                 <tbody>
-                  {paginated.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50">
-                      <TD className="font-semibold text-slate-900">
-                        {[u.first_name, u.middle_name, u.last_name].filter(Boolean).join(" ") || u.name}
-                        {u.employee_id && (
-                          <div className="text-xs text-slate-400">{u.employee_id}</div>
-                        )}
-                      </TD>
+                  {paginated.map((u) => {
+                    const displayName = [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(" ") || u.name || "Unknown User";
+                    
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                        <TD className="font-semibold text-slate-900">
+                          <div className="flex items-center gap-3">
+                            {u.avatar ? (
+                              <img src={u.avatar} alt={displayName} className="h-10 w-10 shrink-0 rounded-full object-cover border border-slate-200 shadow-sm" />
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#111A62]/10 text-[#111A62] ring-1 ring-[#111A62]/20 shadow-sm" title="No photo - showing profile icon">
+                                <UserIcon size={18} />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs font-extrabold text-slate-900">{displayName}</p>
+                              {u.employee_id && (
+                                <p className="text-[10px] font-semibold text-slate-400">ID: {u.employee_id}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TD>
                       <TD className="text-slate-600">{u.email}</TD>
                       <TD>
                         <Badge tone={ROLE_TONE[u.role] ?? "default"}>
@@ -466,7 +480,8 @@ export default function Users() {
                         </div>
                       </TD>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </Table>
 

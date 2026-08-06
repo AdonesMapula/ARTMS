@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, UserCheck, Clock, XCircle, Eye, CheckCircle, Trash2, Filter, RefreshCw, ChevronRight, X, Trophy, Award, Sparkles, SlidersHorizontal, ArrowUpDown, Briefcase, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import StatusChip from "../../components/ui/StatusChip";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
@@ -499,29 +500,33 @@ export default function Applicants() {
                   className="text-xs"
                 />
 
-                <div className="grid gap-1.5 sm:grid-cols-2">
-                  <select
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Select
+                    icon={Briefcase}
+                    size="sm"
                     value={selectedPosition}
                     onChange={(e) => setSelectedPosition(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                    buttonClassName="bg-slate-50 hover:bg-white"
                   >
-                    <option value="all">💼 All Positions Applied</option>
+                    <option value="all">All Positions Applied</option>
                     {positionsList.map((p) => (
                       <option key={p.id} value={p.id}>{p.title}</option>
                     ))}
-                  </select>
+                  </Select>
 
-                  <select
+                  <Select
+                    icon={SlidersHorizontal}
+                    size="sm"
                     value={selectedFit}
                     onChange={(e) => setSelectedFit(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer"
+                    buttonClassName="bg-slate-50 hover:bg-white"
                   >
-                    <option value="all">🎯 All Fit Levels</option>
-                    <option value="high">🟢 High Fit</option>
-                    <option value="medium">🟡 Medium Fit</option>
-                    <option value="low">🔴 Low Fit</option>
-                    <option value="unscreened">⚪ Unscreened</option>
-                  </select>
+                    <option value="all">All Fit Levels</option>
+                    <option value="high">High Fit</option>
+                    <option value="medium">Medium Fit</option>
+                    <option value="low">Low Fit</option>
+                    <option value="unscreened">Unscreened</option>
+                  </Select>
                 </div>
 
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
@@ -601,88 +606,105 @@ export default function Applicants() {
                   </CardTitle>
 
                   {/* Searchbar & Filters Inline Side-by-Side Toolbar */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="w-52 sm:w-56 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
+                    <div className="w-full sm:w-56 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
                         value={q}
                         onChange={handleSearch}
                         placeholder="Search candidate..."
+                        className="h-10 text-xs"
                       />
                     </div>
 
                     {/* Position Applied Dropdown */}
-                    <select
-                      value={selectedPosition}
-                      onChange={(e) => {
-                        setSelectedPosition(e.target.value);
-                        setPage(1);
-                      }}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
-                    >
-                      <option value="all">💼 All Positions ({positionsList.length})</option>
-                      {positionsList.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex-1 sm:flex-initial min-w-[180px]">
+                      <Select
+                        icon={Briefcase}
+                        size="md"
+                        value={selectedPosition}
+                        onChange={(e) => {
+                          setSelectedPosition(e.target.value);
+                          setPage(1);
+                        }}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        <option value="all">All Positions ({positionsList.length})</option>
+                        {positionsList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
 
                     {/* Fit Level Dropdown */}
-                    <select
-                      value={selectedFit}
-                      onChange={(e) => {
-                        setSelectedFit(e.target.value);
-                        setPage(1);
-                      }}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
-                    >
-                      <option value="all">🎯 All Fit Levels</option>
-                      <option value="high">🟢 High Fit</option>
-                      <option value="medium">🟡 Medium Fit</option>
-                      <option value="low">🔴 Low Fit</option>
-                      <option value="unscreened">⚪ Unscreened</option>
-                    </select>
+                    <div className="flex-1 sm:flex-initial min-w-[145px]">
+                      <Select
+                        icon={SlidersHorizontal}
+                        size="md"
+                        value={selectedFit}
+                        onChange={(e) => {
+                          setSelectedFit(e.target.value);
+                          setPage(1);
+                        }}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        <option value="all">All Fit Levels</option>
+                        <option value="high">High Fit</option>
+                        <option value="medium">Medium Fit</option>
+                        <option value="low">Low Fit</option>
+                        <option value="unscreened">Unscreened</option>
+                      </Select>
+                    </div>
 
                     {/* Status Dropdown */}
-                    <select
-                      value={status}
-                      onChange={(e) => handleStatusChange(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex-1 sm:flex-initial min-w-[145px]">
+                      <Select
+                        icon={Filter}
+                        size="md"
+                        value={status}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
 
                     {/* Sort By Dropdown */}
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 cursor-pointer"
-                    >
-                      <option value="score_desc">⚡ AI Score: High to Low</option>
-                      <option value="score_asc">⚡ AI Score: Low to High</option>
-                      <option value="newest">📅 Applied: Newest First</option>
-                      <option value="oldest">📅 Applied: Oldest First</option>
-                    </select>
+                    <div className="flex-1 sm:flex-initial min-w-[175px]">
+                      <Select
+                        icon={ArrowUpDown}
+                        size="md"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        <option value="score_desc">AI Score: High to Low</option>
+                        <option value="score_asc">AI Score: Low to High</option>
+                        <option value="newest">Applied: Newest First</option>
+                        <option value="oldest">Applied: Oldest First</option>
+                      </Select>
+                    </div>
 
                     {/* Reset Filters */}
                     {isFiltered && (
                       <button
                         onClick={resetFilters}
-                        className="flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer shrink-0"
+                        className="flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer shrink-0"
                         title="Reset Filters"
                       >
-                        <X size={13} /> Reset
+                        <X size={14} /> Reset
                       </button>
                     )}
 
                     {isScrolled && !selectedApplicantId && (
                       <button
                         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer shrink-0"
+                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
                         title="Scroll to top"
                       >
                         ↑ Stats

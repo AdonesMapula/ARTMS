@@ -11,21 +11,49 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ── Default Departments ──────────────────────────────────────────────
+        // ── Default Departments (with department_code per new schema) ────────
         $departments = [
-            ['department_name' => 'Human Resources', 'description' => 'Handles recruitment, employee relations, and HR operations.'],
-            ['department_name' => 'Information Technology', 'description' => 'Manages software, hardware, and IT infrastructure.'],
-            ['department_name' => 'Finance', 'description' => 'Manages budgeting, payroll, and financial reporting.'],
-            ['department_name' => 'Operations', 'description' => 'Oversees day-to-day business operations.'],
-            ['department_name' => 'Marketing', 'description' => 'Handles brand promotion, campaigns, and communications.'],
-            ['department_name' => 'Administration', 'description' => 'General administrative support and facilities management.'],
+            [
+                'department_name' => 'Human Resources',
+                'department_code' => 'HR',
+                'description'     => 'Handles recruitment, employee relations, and HR operations.',
+            ],
+            [
+                'department_name' => 'Information Technology',
+                'department_code' => 'IT',
+                'description'     => 'Manages software, hardware, and IT infrastructure.',
+            ],
+            [
+                'department_name' => 'Finance',
+                'department_code' => 'FIN',
+                'description'     => 'Manages budgeting, payroll, and financial reporting.',
+            ],
+            [
+                'department_name' => 'Operations',
+                'department_code' => 'OPS',
+                'description'     => 'Oversees day-to-day business operations.',
+            ],
+            [
+                'department_name' => 'Marketing',
+                'department_code' => 'MKT',
+                'description'     => 'Handles brand promotion, campaigns, and communications.',
+            ],
+            [
+                'department_name' => 'Administration',
+                'department_code' => 'ADM',
+                'description'     => 'General administrative support and facilities management.',
+            ],
         ];
 
         foreach ($departments as $dept) {
-            Department::firstOrCreate(['department_name' => $dept['department_name']], $dept);
+            Department::firstOrCreate(
+                ['department_name' => $dept['department_name']],
+                $dept
+            );
         }
 
         $hrDept = Department::where('department_name', 'Human Resources')->first();
+        $itDept = Department::where('department_name', 'Information Technology')->first();
 
         // ── Super Admin ──────────────────────────────────────────────────────
         User::firstOrCreate(
@@ -63,8 +91,6 @@ class DatabaseSeeder extends Seeder
         );
 
         // ── Department Head ───────────────────────────────────────────────────
-        $itDept = Department::where('department_name', 'Information Technology')->first();
-
         User::firstOrCreate(
             ['email' => 'depthead@artms.com'],
             [
@@ -76,19 +102,35 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $this->command->info('Default users seeded successfully.');
-        $this->command->table(
-            ['Role', 'Email', 'Password'],
+        // ── Interviewer (uses hr_admin role — interviewer access via custom_role_id) ──
+        User::firstOrCreate(
+            ['email' => 'interviewer@artms.com'],
             [
-                ['Super Admin',     'superadmin@artms.com', 'SuperAdmin@2024'],
-                ['HR Admin',        'hradmin@artms.com',    'HrAdmin@2024'],
-                ['COO',             'coo@artms.com',        'CooUser@2024'],
-                ['Department Head', 'depthead@artms.com',   'DeptHead@2024'],
+                'name'          => 'Interviewer User',
+                'password'      => Hash::make('Interviewer@2024'),
+                'role'          => 'hr_admin',
+                'department_id' => $hrDept?->id,
+                'is_active'     => true,
             ]
         );
 
+        $this->command->info('✅ Default users and departments seeded successfully.');
+        $this->command->table(
+            ['Role', 'Email', 'Password'],
+            [
+                ['Super Admin',     'superadmin@artms.com',  'SuperAdmin@2024'],
+                ['HR Admin',        'hradmin@artms.com',     'HrAdmin@2024'],
+                ['COO',             'coo@artms.com',         'CooUser@2024'],
+                ['Department Head', 'depthead@artms.com',    'DeptHead@2024'],
+                ['Interviewer',     'interviewer@artms.com', 'Interviewer@2024'],
+            ]
+        );
+
+        // ── Call Sub-Seeders (in dependency order) ────────────────────────────
+        $this->call(PermissionSeeder::class);
         $this->call(ManpowerRequestSeeder::class);
         $this->call(JobPostingSeeder::class);
         $this->call(EmployeeSeeder::class);
+        $this->call(InterviewSeeder::class);
     }
 }

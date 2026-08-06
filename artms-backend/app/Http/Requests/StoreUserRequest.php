@@ -23,6 +23,7 @@ class StoreUserRequest extends FormRequest
             'password'      => $this->filled('password') ? ['string', 'min:8'] : ['nullable'],
             'role'          => ['required', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
             'department_id' => ['nullable', 'exists:departments,id'],
+            'avatar'        => ['nullable'],
         ];
     }
 

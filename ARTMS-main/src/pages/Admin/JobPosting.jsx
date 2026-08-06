@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   Briefcase, Eye, EyeOff, CheckCircle, Clock, XCircle,
-  Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw, ChevronRight,
+  Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
@@ -491,21 +492,17 @@ export default function JobPosting() {
                   className="text-xs"
                 />
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+                <Select
+                  icon={Filter}
+                  size="sm"
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                  buttonClassName="bg-slate-50 hover:bg-white"
+                >
                   {STATUS_FILTERS.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => { setStatusFilter(f.value); setPage(1); }}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${
-                        statusFilter === f.value
-                          ? "bg-[#111A62] text-white border-[#111A62]"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {f.label}
-                    </button>
+                    <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
-                </div>
+                </Select>
               </div>
 
               {/* Sidebar Cards */}
@@ -565,23 +562,39 @@ export default function JobPosting() {
                   <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                     <Briefcase className="text-[#111A62]" size={18} /> Job Postings ({filtered.length})
                   </CardTitle>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isScrolled && !selectedPostingId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer mr-2"
-                        title="Scroll to top"
-                      >
-                        ↑ Show Header & Stats
-                      </button>
-                    )}
-                    <div className="w-60">
+                  <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto mt-2 sm:mt-0">
+                    <div className="w-full sm:w-64 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
                         value={q}
                         onChange={(val) => { setQ(val); setPage(1); }}
-                        placeholder="Search job postings..."
+                        placeholder="Search job title or department..."
+                        className="h-10 text-xs"
                       />
                     </div>
+
+                    <div className="flex-1 sm:flex-initial min-w-[160px]">
+                      <Select
+                        icon={Filter}
+                        size="md"
+                        value={statusFilter}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        {STATUS_FILTERS.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    {isScrolled && !selectedPostingId && (
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Scroll to top"
+                      >
+                        ↑ Stats
+                      </button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

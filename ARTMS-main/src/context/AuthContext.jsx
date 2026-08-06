@@ -40,11 +40,21 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((updatedData) => {
+    setUser((prev) => {
+      const next = typeof updatedData === 'function' ? updatedData(prev) : { ...prev, ...updatedData };
+      if (next) {
+        localStorage.setItem('artms_user', JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
+
   const isAuthenticated = !!user;
   const role = user?.role || null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated, role }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isAuthenticated, role }}>
       {children}
     </AuthContext.Provider>
   );

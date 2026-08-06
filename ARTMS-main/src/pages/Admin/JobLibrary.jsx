@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, X
+  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, ChevronDown, X
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
@@ -442,20 +443,17 @@ export default function JobLibrary() {
                   className="text-xs"
                 />
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+                <Select
+                  icon={Filter}
+                  size="sm"
+                  value={filter}
+                  onChange={(e) => { setFilter(e.target.value); setPage(1); }}
+                  buttonClassName="bg-slate-50 hover:bg-white"
+                >
                   {APPROVAL_FILTERS.map((f) => (
-                    <button
-                      key={f.value}
-                      onClick={() => { setFilter(f.value); setPage(1); }}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${filter === f.value
-                        ? "bg-[#111A62] text-white border-[#111A62]"
-                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                        }`}
-                    >
-                      {f.label}
-                    </button>
+                    <option key={f.value} value={f.value}>{f.label}</option>
                   ))}
-                </div>
+                </Select>
               </div>
 
               {/* Sidebar Cards */}
@@ -505,38 +503,35 @@ export default function JobLibrary() {
             <div className="space-y-4">
               {/* Filters & Search Bar */}
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <Filter size={16} />
-                      Filters:
-                    </div>
-                    <div className="flex flex-1 flex-wrap gap-2">
-                      {APPROVAL_FILTERS.map((f) => (
-                        <button
-                          key={f.value}
-                          onClick={() => {
-                            setFilter(f.value);
-                            setPage(1);
-                          }}
-                          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${filter === f.value
-                            ? "border-[#111A62] bg-[#111A62] text-white"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                            }`}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="w-full lg:w-64">
+                <CardContent className="py-4 px-5">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="w-full sm:flex-1 min-w-[220px]">
                       <SearchBar
                         value={q}
                         onChange={(val) => {
                           setQ(val);
                           setPage(1);
                         }}
-                        placeholder="Search job templates..."
+                        placeholder="Search job templates by title or description..."
+                        className="h-11 text-sm"
                       />
+                    </div>
+
+                    <div className="w-full sm:w-64 shrink-0">
+                      <Select
+                        icon={Filter}
+                        size="lg"
+                        value={filter}
+                        onChange={(e) => {
+                          setFilter(e.target.value);
+                          setPage(1);
+                        }}
+                        buttonClassName="bg-slate-50 hover:bg-white"
+                      >
+                        {APPROVAL_FILTERS.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </Select>
                     </div>
                   </div>
                 </CardContent>
