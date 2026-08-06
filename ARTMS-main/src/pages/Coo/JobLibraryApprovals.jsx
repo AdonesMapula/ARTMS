@@ -7,7 +7,8 @@ import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
-import { JobLibraryApproveModal, JobLibraryViewModal } from "../../modals";
+import { JobLibraryApproveModal } from "../../modals";
+import JobLibraryViewPanel from "../../components/job/JobLibraryViewPanel";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
@@ -417,12 +418,19 @@ export default function JobLibraryApprovals() {
         </CardContent>
       </Card>
 
-      {/* ── Modals ── */}
-      <JobLibraryViewModal
-        open={viewModal.open}
-        job={viewModal.job}
-        onClose={() => setViewModal({ open: false, job: null })}
-      />
+      {/* ── Modals & Panels ── */}
+      {viewModal.open && viewModal.job && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl">
+            <JobLibraryViewPanel
+              jobId={viewModal.job.id}
+              initialJob={viewModal.job}
+              onClose={() => setViewModal({ open: false, job: null })}
+              onUpdated={fetchRows}
+            />
+          </div>
+        </div>
+      )}
 
       <JobLibraryApproveModal
         open={approveModal.open}

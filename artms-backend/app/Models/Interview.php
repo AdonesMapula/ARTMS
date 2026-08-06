@@ -17,6 +17,9 @@ class Interview extends Model
         'location',
         'meeting_link',
         'livekit_room_name',   // LiveKit room identifier
+        'notes',
+        'contact_email',
+        'contact_number',
         'interview_type',
         'status',
         'applicant_confirmed',

@@ -32,12 +32,17 @@ class InterviewController extends Controller
         $data = $request->validate([
             'applicant_id'    => ['required', 'exists:applicants,id'],
             'job_posting_id'  => ['required', 'exists:job_postings,id'],
-            'interview_stage' => ['required', 'in:interview_1,interview_2,final'],
+            'interview_stage' => ['required', 'string'],
             'scheduled_at'    => ['required', 'date'],
             'location'        => ['nullable', 'string'],
-            'meeting_link'    => ['nullable', 'url'],
-            'interview_type'  => ['required', 'in:in_person,online,phone'],
-            'interviewer_id'  => ['nullable', 'exists:users,id'],
+            'meeting_link'       => ['nullable', 'url'],
+            'interview_type'     => ['required', 'in:in_person,online,phone'],
+            'interviewer_id'     => ['nullable', 'exists:users,id'],
+            'notes'              => ['nullable', 'string'],
+            'contact_email'      => ['nullable', 'string'],
+            'contact_number'     => ['nullable', 'string'],
+            'notify_applicant'   => ['nullable', 'boolean'],
+            'notify_interviewer' => ['nullable', 'boolean'],
         ]);
 
         $interview = Interview::create($data);
@@ -53,13 +58,19 @@ class InterviewController extends Controller
         $formattedTime = \Carbon\Carbon::parse($interview->scheduled_at)->format('M d, Y \a\t g:i A');
 
         $stageLabels = [
-            'interview_1' => 'Initial Interview',
-            'interview_2' => 'Second Interview',
-            'final'       => 'Final Interview',
+            'technical_assessment' => 'Technical Assessment',
+            'initial_screening'    => 'Initial Screening',
+            'hr_interview'         => 'HR Interview',
+            'managerial_interview' => 'Managerial Interview',
+            'final'                => 'Final Interview',
+            'interview_1'          => 'Initial Interview',
+            'interview_2'          => 'Second Interview',
         ];
         $stageLabel = $stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage));
 
-        if ($applicant) {
+        $shouldNotifyApplicant = $request->input('notify_applicant', true);
+
+        if ($applicant && $shouldNotifyApplicant) {
             try {
                 Mail::send('emails.interview_invitation', [
                     'applicant' => $applicant,
@@ -78,7 +89,7 @@ class InterviewController extends Controller
         NotificationService::notifyRoles(
             ['hr_admin', 'super_admin', 'department_head'],
             'New Interview Scheduled',
-            "Interview session scheduled for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
+            "{$stageLabel} session scheduled for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
             '/admin/interviews',
             'interview'
         );
@@ -95,9 +106,13 @@ class InterviewController extends Controller
 
         // Update applicant status
         $stageStatus = [
-            'interview_1' => 'interview_1_scheduled',
-            'interview_2' => 'interview_2_scheduled',
-            'final'       => 'interview_2_scheduled',
+            'technical_assessment' => 'interview_1_scheduled',
+            'initial_screening'    => 'interview_1_scheduled',
+            'hr_interview'         => 'interview_2_scheduled',
+            'managerial_interview' => 'interview_2_scheduled',
+            'final'                => 'interview_2_scheduled',
+            'interview_1'          => 'interview_1_scheduled',
+            'interview_2'          => 'interview_2_scheduled',
         ];
         $applicant->update(['status' => $stageStatus[$data['interview_stage']] ?? $applicant->status]);
 
@@ -427,7 +442,7 @@ class InterviewController extends Controller
     public function getTranscripts(Interview $interview): JsonResponse
     {
         $transcripts = $interview->transcripts()
-            ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json(['transcripts' => $transcripts]);
@@ -541,6 +556,25 @@ PROMPT;
             'keywords'         => ['COMMUNICATION SKILLS', 'PROBLEM SOLVING', 'ACTIVE LISTENING', 'LEADERSHIP'],
             'overall_match'    => 84,
             'source'           => 'fallback',
+        ]);
+    }
+
+    /**
+     * DELETE /api/interviews/{interview}
+     * Delete an interview record and its associated transcripts.
+     */
+    public function destroy(Interview $interview): JsonResponse
+    {
+        $id = $interview->id;
+        $applicantName = $interview->applicant ? "{$interview->applicant->first_name} {$interview->applicant->last_name}" : "Applicant";
+
+        $interview->transcripts()->delete();
+        $interview->delete();
+
+        AuditLog::record('delete', 'interview', "Deleted interview session #{$id} for {$applicantName}");
+
+        return response()->json([
+            'message' => 'Interview record deleted successfully.',
         ]);
     }
 }

@@ -73,4 +73,45 @@ class Employee extends Model
     {
         return $this->employment_status === 'active';
     }
+
+    /**
+     * Generate standard employee number format: EMP-YYYY-XXXXX
+     */
+    public function generateEmployeeNumber(): string
+    {
+        $year = now()->year;
+        $paddedId = str_pad($this->id, 5, '0', STR_PAD_LEFT);
+        return "EMP-{$year}-{$paddedId}";
+    }
+
+    /**
+     * Seed default 201 file document checklist for new employee
+     */
+    public function seedDefaultDocuments(): void
+    {
+        $defaultTypes = [
+            'birth_cert'    => 'Birth Certificate',
+            'sss_card'      => 'SSS Number / Card / E-1 Form',
+            'tin'           => 'Tax Identification Number (TIN)',
+            'resume'        => 'Updated Resume / Curriculum Vitae',
+            'nbi_clearance' => 'NBI Clearance',
+            'medical_cert'  => 'Medical Clearance / Fit to Work Certificate',
+            'philhealth'    => 'PhilHealth MDR / ID',
+            'pagibig'       => 'Pag-IBIG MID / Member Record',
+            'diploma'       => 'Diploma / Transcript of Records',
+            'photo'         => '2x2 Professional ID Photo',
+        ];
+
+        foreach ($defaultTypes as $type => $remarks) {
+            $this->documents()->firstOrCreate(
+                ['document_type' => $type],
+                [
+                    'status'      => 'required',
+                    'remarks'     => $remarks,
+                    'file_path'   => null,
+                    'original_name' => null,
+                ]
+            );
+        }
+    }
 }

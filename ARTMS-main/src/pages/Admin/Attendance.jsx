@@ -23,34 +23,35 @@ import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
 import Modal from "../../components/ui/Modal";
 import { Table, THead, TH, TD } from "../../components/ui/Table";
+import Pagination from "../../components/ui/Pagination";
 import attendanceService from "../../services/attendanceService";
 import employeeService from "../../services/employeeService";
 import { useToast } from "../../context/ToastContext";
 
-// Fallback Mock Attendance Logs
+// Fallback Mock Attendance Logs (matching seeded 201 Employee records)
 const MOCK_ATTENDANCE_LOGS = [
   {
     id: 1,
     employee_id: 1,
-    employee_number: "EMP-2024-001",
-    employee_name: "John Doe",
-    department: "Human Resources",
-    position: "HR Specialist",
+    employee_number: "EMP-2026-00001",
+    employee_name: "Taylor Reyes",
+    department: "Operations",
+    position: "Senior Operations Lead",
     date: new Date().toISOString().split("T")[0],
     time_in: "08:00",
     time_out: "17:00",
     status: "present",
     late_minutes: 0,
     hours_worked: 8.0,
-    remarks: "On time",
+    remarks: "On time / Regular shift",
   },
   {
     id: 2,
     employee_id: 2,
-    employee_number: "EMP-2024-002",
-    employee_name: "Jane Smith",
-    department: "Information Technology",
-    position: "Senior Software Engineer",
+    employee_number: "EMP-2026-00002",
+    employee_name: "Morgan Lee",
+    department: "Human Resources",
+    position: "HR Generalist",
     date: new Date().toISOString().split("T")[0],
     time_in: "08:25",
     time_out: "17:30",
@@ -62,67 +63,61 @@ const MOCK_ATTENDANCE_LOGS = [
   {
     id: 3,
     employee_id: 3,
-    employee_number: "EMP-2024-003",
-    employee_name: "Alex Johnson",
-    department: "Finance",
-    position: "Financial Analyst",
+    employee_number: "EMP-2026-00003",
+    employee_name: "Casey Tan",
+    department: "Information Technology",
+    position: "IT Service Desk Specialist",
     date: new Date().toISOString().split("T")[0],
-    time_in: "07:55",
-    time_out: "17:05",
+    time_in: "07:50",
+    time_out: "17:00",
     status: "present",
     late_minutes: 0,
-    hours_worked: 8.1,
-    remarks: "Early bird",
+    hours_worked: 8.0,
+    remarks: "Early shift",
   },
   {
     id: 4,
     employee_id: 4,
-    employee_number: "EMP-2024-004",
-    employee_name: "Maria Santos",
+    employee_number: "EMP-2026-00004",
+    employee_name: "Jordan Cruz",
+    department: "Finance",
+    position: "Senior Accountant",
+    date: new Date().toISOString().split("T")[0],
+    time_in: "08:00",
+    time_out: "17:00",
+    status: "present",
+    late_minutes: 0,
+    hours_worked: 8.0,
+    remarks: "Regular shift",
+  },
+  {
+    id: 5,
+    employee_id: 5,
+    employee_number: "EMP-2026-00005",
+    employee_name: "Riley Santos",
     department: "Operations",
-    position: "Operations Supervisor",
+    position: "Business Operations Analyst",
     date: new Date().toISOString().split("T")[0],
     time_in: null,
     time_out: null,
     status: "on_leave",
     late_minutes: 0,
     hours_worked: 0,
-    remarks: "Sick Leave approved",
-  },
-  {
-    id: 5,
-    employee_id: 5,
-    employee_number: "EMP-2024-005",
-    employee_name: "Robert Cruz",
-    department: "Marketing",
-    position: "Marketing Manager",
-    date: new Date().toISOString().split("T")[0],
-    time_in: "08:12",
-    time_out: "17:15",
-    status: "late",
-    late_minutes: 12,
-    hours_worked: 8.0,
-    remarks: "Vehicle malfunction",
+    remarks: "Approved Vacation Leave",
   },
   {
     id: 6,
     employee_id: 6,
-    employee_number: "EMP-2024-006",
-    employee_name: "Elena Rostova",
-    department: "Information Technology",
-    position: "UI/UX Designer",
+    employee_number: "EMP-2026-00006",
+    employee_name: "Avery Gomez",
+    department: "Marketing",
+    position: "Content Specialist",
     date: new Date().toISOString().split("T")[0],
     time_in: null,
     time_out: null,
     status: "absent",
     late_minutes: 0,
     hours_worked: 0,
-    remarks: "Unexcused absence - Notified HR",
-  },
-  {
-    id: 7,
-    employee_id: 7,
-    employee_number: "EMP-2024-007",
     employee_name: "David Kim",
     department: "Operations",
     position: "Logistics Coordinator",
@@ -154,7 +149,27 @@ export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [deptFilter, setDeptFilter]     = useState("all");
-  
+  const [page, setPage]                 = useState(1);
+  const [isScrolled, setIsScrolled]     = useState(false);
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, deptFilter, selectedDate, activeTab]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
+      if (isScrollable && window.scrollY > 100) {
+        setIsScrolled(true);
+      } else if (window.scrollY < 20) {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // Modals
   const [isLogModalOpen, setIsLogModalOpen]     = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -343,107 +358,110 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6">
-      {/* Top Title & Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
-            Employee Operations & Monitoring
-          </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-            Attendance Per Employee Management
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Real-time employee attendance tracking, timesheets, tardiness monitoring, and shift logs.
-          </p>
+      {/* Top Title & Header + KPI Cards Collapsible Container */}
+      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+        {/* Top Title & Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
+              Employee Operations & Monitoring
+            </p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+              Attendance Per Employee Management
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Real-time employee attendance tracking, timesheets, tardiness monitoring, and shift logs.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleExportCSV} className="gap-2 text-xs font-semibold bg-white">
+              <FiDownload size={15} />
+              Export CSV
+            </Button>
+            <Button variant="primary" onClick={handleOpenCreateModal} className="gap-2 text-xs font-semibold bg-[#111A62]">
+              <FiPlus size={15} />
+              Log Attendance
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleExportCSV} className="gap-2 text-xs font-semibold">
-            <FiDownload size={15} />
-            Export CSV
-          </Button>
-          <Button variant="primary" onClick={handleOpenCreateModal} className="gap-2 text-xs font-semibold">
-            <FiPlus size={15} />
-            Log Attendance
-          </Button>
+        {/* KPI Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Card className="transition hover:shadow-md">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Monitored</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <FiUser size={18} />
+                </div>
+              </div>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{totalMonitored}</p>
+              <p className="mt-1 text-xs text-slate-500">Scheduled for today</p>
+            </CardContent>
+          </Card>
+
+          <Card className="transition hover:shadow-md">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Present</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <FiUserCheck size={18} />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <p className="text-3xl font-extrabold text-emerald-600">{presentCount}</p>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  {presentRate}% rate
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">On-time clock ins</p>
+            </CardContent>
+          </Card>
+
+          <Card className="transition hover:shadow-md">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Late / Tardiness</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                  <FiClock size={18} />
+                </div>
+              </div>
+              <p className="mt-2 text-3xl font-extrabold text-amber-600">{lateCount}</p>
+              <p className="mt-1 text-xs text-slate-500">Clocked in past schedule</p>
+            </CardContent>
+          </Card>
+
+          <Card className="transition hover:shadow-md">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">On Leave / Half Day</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <FiCalendar size={18} />
+                </div>
+              </div>
+              <p className="mt-2 text-3xl font-extrabold text-purple-600">{leaveCount + halfDayCount}</p>
+              <p className="mt-1 text-xs text-slate-500">{leaveCount} Leave • {halfDayCount} Half Day</p>
+            </CardContent>
+          </Card>
+
+          <Card className="transition hover:shadow-md">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Absent</span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                  <FiUserX size={18} />
+                </div>
+              </div>
+              <p className="mt-2 text-3xl font-extrabold text-rose-600">{absentCount}</p>
+              <p className="mt-1 text-xs text-slate-500">Unexcused / No time in</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card className="transition hover:shadow-md">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Monitored</span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <FiUser size={18} />
-              </div>
-            </div>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{totalMonitored}</p>
-            <p className="mt-1 text-xs text-slate-500">Scheduled for today</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition hover:shadow-md">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Present</span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <FiUserCheck size={18} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <p className="text-3xl font-extrabold text-emerald-600">{presentCount}</p>
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                {presentRate}% rate
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-slate-500">On-time clock ins</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition hover:shadow-md">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Late / Tardiness</span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <FiClock size={18} />
-              </div>
-            </div>
-            <p className="mt-2 text-3xl font-extrabold text-amber-600">{lateCount}</p>
-            <p className="mt-1 text-xs text-slate-500">Clocked in past schedule</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition hover:shadow-md">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">On Leave / Half Day</span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                <FiCalendar size={18} />
-              </div>
-            </div>
-            <p className="mt-2 text-3xl font-extrabold text-purple-600">{leaveCount + halfDayCount}</p>
-            <p className="mt-1 text-xs text-slate-500">{leaveCount} Leave • {halfDayCount} Half Day</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transition hover:shadow-md">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Absent</span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                <FiUserX size={18} />
-              </div>
-            </div>
-            <p className="mt-2 text-3xl font-extrabold text-rose-600">{absentCount}</p>
-            <p className="mt-1 text-xs text-slate-500">Unexcused / No time in</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main View Tabs & Search Filter Container */}
-      <Card>
+      {/* Main View Tabs & Search Filter Container (Sticky Sheet when scrolled) */}
+      <Card className={`sticky top-4 z-20 transition-all duration-300 ${isScrolled ? "shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
         <CardHeader className="border-b border-slate-100 pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             {/* View Switcher Tabs */}
@@ -472,14 +490,23 @@ export default function Attendance() {
               </button>
             </div>
 
-            {/* Date selector */}
-            <div className="flex items-center gap-2">
+            {/* Date selector & Expand Header trigger */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isScrolled && (
+                <button
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer"
+                  title="Scroll to top to view Stats & Header"
+                >
+                  ↑ Show Header & Stats
+                </button>
+              )}
               <span className="text-xs font-bold text-slate-500">Select Date:</span>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none cursor-pointer"
               />
             </div>
           </div>
@@ -554,7 +581,7 @@ export default function Attendance() {
                       </TD>
                     </tr>
                   ) : (
-                    filteredLogs.map(log => {
+                    filteredLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(log => {
                       const cfg = STATUS_CONFIG[log.status] || STATUS_CONFIG.present;
                       return (
                         <tr key={log.id} className="hover:bg-slate-50 transition">
@@ -647,7 +674,7 @@ export default function Attendance() {
                   </tr>
                 </THead>
                 <tbody>
-                  {employeeSummaries.map(emp => {
+                  {employeeSummaries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(emp => {
                     const rate = Math.round(((emp.present_days + emp.late_days) / Math.max(emp.total_days, 1)) * 100);
                     return (
                       <tr key={emp.employee_name} className="hover:bg-slate-50 transition">
@@ -725,6 +752,18 @@ export default function Attendance() {
                   })}
                 </tbody>
               </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {(activeTab === "live_log" ? filteredLogs.length : employeeSummaries.length) > PAGE_SIZE && (
+            <div className="pt-4 border-t border-slate-100">
+              <Pagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={activeTab === "live_log" ? filteredLogs.length : employeeSummaries.length}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>

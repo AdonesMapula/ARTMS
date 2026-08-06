@@ -42,11 +42,10 @@ export default function AdminLayout() {
       label: "Manpower Requests",
       to: "/admin/manpower-requests",
       icon: <FiClipboard />,
-      badge: "6",
     },
     { label: "Job Library", to: "/admin/job-library", icon: <FiBriefcase /> },
     { label: "Job Posting", to: "/admin/job-posting", icon: <FiLayers /> },
-    { label: "Applicants", to: "/admin/applicants", icon: <FiUsers />, badge: "14" },
+    { label: "Applicants", to: "/admin/applicants", icon: <FiUsers /> },
     { label: "AI Resume Screening", to: "/admin/ai-screening", icon: <FiCpu /> },
     
     // INTERVIEW & PIPELINE Section

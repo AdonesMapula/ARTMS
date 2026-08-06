@@ -197,11 +197,14 @@ export default function ScheduleInterviewModal({
     setInterviewers(interviewers.filter((i) => i !== name));
   };
 
-  // Derive the human-readable stage label to show in confirmation
   const STAGE_LABELS = {
-    interview_1: "Initial Interview",
-    interview_2: "Second Interview",
-    final: "Final Interview",
+    technical_assessment: "Technical Assessment",
+    initial_screening:    "Initial Screening",
+    hr_interview:         "HR Interview",
+    managerial_interview: "Managerial Interview",
+    final:                "Final Interview",
+    interview_1:          "Initial Interview",
+    interview_2:          "Second Interview",
   };
 
   // Submit Handler
@@ -218,9 +221,14 @@ export default function ScheduleInterviewModal({
       const scheduledIso = buildScheduledAt(interviewDate, interviewTime);
       const jobPostingId = currentApplicant?.job_posting_id || currentApplicant?.jobPosting?.id || 1;
 
-      let stageKey = "interview_1";
-      if (interviewType.includes("Final")) stageKey = "final";
-      else if (interviewType.includes("Managerial") || interviewType.includes("HR")) stageKey = "interview_2";
+      const TYPE_TO_STAGE_KEY = {
+        "Technical Assessment": "technical_assessment",
+        "Initial Screening":    "initial_screening",
+        "HR Interview":         "hr_interview",
+        "Managerial Interview": "managerial_interview",
+        "Final Interview":      "final",
+      };
+      const stageKey = TYPE_TO_STAGE_KEY[interviewType] || "initial_screening";
 
       let typeKey = "online";
       if (interviewMode === "ON-SITE") typeKey = "in_person";
@@ -233,6 +241,11 @@ export default function ScheduleInterviewModal({
         interview_type: typeKey,
         scheduled_at: scheduledIso,
         location: interviewMode === "ON-SITE" ? "Head Office" : null,
+        notes: notes.trim() || null,
+        contact_email: contactEmail.trim() || null,
+        contact_number: contactNumber.trim() || null,
+        notify_applicant: notifyApplicant,
+        notify_interviewer: notifyInterviewer,
       };
 
       const { data } = await interviewService.create(payload);

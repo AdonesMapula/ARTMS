@@ -20,6 +20,7 @@ import { Track } from "livekit-client";
 import "@livekit/components-styles";
 
 import { cn } from "../../utils/cn";
+import { Globe } from "lucide-react";
 import Button from "../../components/ui/Button";
 import interviewService from "../../services/interviewService";
 import InterviewReportModal from "../../modals/InterviewReportModal";
@@ -206,7 +207,7 @@ function ApplicantVerificationForm({ onSubmit, loading, error, onCancel }) {
 
 // ── Zoom Video Stage Component (Shared between Applicant & Interviewer) ─────
 
-function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption }) {
+function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, speechLang, setSpeechLang }) {
   // Query both camera and screen share tracks across local and remote participants
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
@@ -267,76 +268,55 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption })
     }
   }, [localParticipant, isScreenShareEnabled]);
 
-  const remoteParticipantName = remoteCameraTrack?.participant?.name ||
-    remoteCameraTrack?.participant?.identity ||
-    (isApplicant ? "Interviewer / HR" : applicantName || "Candidate");
+  // Handle participant labels
+  const remoteParticipantName = isApplicant ? "HR Interviewer" : applicantName;
+  const localParticipantName = isApplicant ? applicantName : "HR Interviewer";
 
   return (
-    <div className="relative flex flex-col h-full w-full bg-[#151c28] rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
+    <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl bg-[#0b0f17] border border-slate-800 shadow-2xl">
       
-      {/* ── Main Stage Area ──────────────────────────────────────────────── */}
-      <div className="relative flex-1 flex items-center justify-center bg-[#131a26] overflow-hidden min-h-[360px]">
-        
-        {/* Google MediaPipe Vision AI Landmark Overlay Badge */}
-        {isRemoteVideoActive && (
-          <div className="absolute top-4 left-4 z-30 flex items-center gap-2 rounded-lg bg-slate-950/85 px-3 py-1.5 backdrop-blur-md border border-indigo-500/40 text-[11px] font-bold text-indigo-300 shadow-xl">
-            <span className="flex h-2 w-2 rounded-full bg-indigo-400 animate-ping" />
-            <span>⚡ Google MediaPipe Vision Active (468 Landmark Mesh Points)</span>
-          </div>
-        )}
+      {/* ── Main Video Display Stage (Zoom Layout) ────────────────────── */}
+      <div className="relative flex-1 w-full bg-[#111723] overflow-hidden">
 
-        {/* Main Stage: Screen Share OR Remote Video OR Fallback Avatar */}
+        {/* Priority 1: Screen Share view if active */}
         {screenShareTrack ? (
-          <VideoTrack trackRef={screenShareTrack} className="w-full h-full object-contain bg-black" />
-        ) : isRemoteVideoActive && remoteCameraTrack ? (
-          <VideoTrack trackRef={remoteCameraTrack} className="w-full h-full object-cover" />
+          <div className="h-full w-full flex items-center justify-center bg-black">
+            <VideoTrack trackRef={screenShareTrack} className="max-h-full max-w-full object-contain" />
+          </div>
+        ) : isRemoteVideoActive ? (
+          /* Priority 2: Remote Participant Camera Track (Full Stage) */
+          <VideoTrack trackRef={remoteCameraTrack} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
-            <div className="flex h-32 w-32 items-center justify-center rounded-full bg-slate-800/80 border-4 border-slate-700/50 shadow-2xl">
-              <UserIcon className="w-16 h-16 text-slate-400" />
+          /* Priority 3: Connecting / Audio Only Placeholder for Remote Participant */
+          <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-slate-900/90 text-slate-400">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-800 text-3xl font-bold text-white shadow-xl border border-slate-700">
+              {remoteParticipantName ? remoteParticipantName.charAt(0).toUpperCase() : "A"}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-200 mb-1">
-                {remoteCameraTrack ? `${remoteParticipantName} (Camera Off)` : `Waiting for ${remoteParticipantName} to join...`}
-              </p>
-              <p className="text-xs text-slate-400">
-                {remoteCameraTrack ? "Audio is active. Video will appear when turned on." : "The call will begin automatically once connected."}
+            <div className="text-center">
+              <p className="font-semibold text-white text-lg">{remoteParticipantName}</p>
+              <p className="text-xs text-slate-400 mt-1 animate-pulse">
+                {remoteCameraTrack ? "Camera muted" : "Connecting video..."}
               </p>
             </div>
           </div>
         )}
 
-        {/* Floating Self-View PIP (Top Right) */}
-        <div className="absolute top-4 right-4 z-30 w-44 h-32 md:w-52 md:h-36 rounded-xl bg-[#20293a] border border-slate-700/60 shadow-2xl overflow-hidden flex items-center justify-center">
-          {isLocalVideoActive && localCameraTrack ? (
-            <VideoTrack trackRef={localCameraTrack} className="w-full h-full object-cover" />
+        {/* Local Participant Picture-in-Picture (Top Right) */}
+        <div className="absolute top-4 right-4 z-30 h-36 w-48 overflow-hidden rounded-xl border-2 border-slate-700 bg-slate-900 shadow-2xl transition-all hover:scale-105">
+          {isLocalVideoActive ? (
+            <VideoTrack trackRef={localCameraTrack} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex flex-col items-center justify-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 border border-slate-700 shadow-md">
-                <UserIcon className="w-7 h-7 text-slate-400" />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-slate-800 text-slate-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white">
+                {localParticipantName ? localParticipantName.charAt(0).toUpperCase() : "Y"}
               </div>
-              <span className="text-[11px] font-medium text-slate-400 mt-2">You (Camera Off)</span>
+              <span className="text-[10px] font-medium text-slate-300">You (Muted)</span>
             </div>
           )}
-          <div className="absolute bottom-2 right-2 z-10 text-slate-400">
-            <svg className="w-3.5 h-3.5 opacity-60" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-            </svg>
-          </div>
+          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+            You
+          </span>
         </div>
-
-        {/* Floating Live Closed Captions Banner (Zoom / Google Meet Style) */}
-        {latestCaption && (
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-xl w-[90%] rounded-xl bg-slate-950/90 px-4 py-2.5 backdrop-blur-md border border-slate-700/80 shadow-2xl text-center transition-all animate-fadeIn">
-            <div className="flex items-center justify-center gap-2 mb-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>{latestCaption.speaker_role === "hr" ? "Interviewer (HR)" : "Applicant"} Speaking</span>
-            </div>
-            <p className="text-xs font-semibold text-white leading-relaxed">
-              "{latestCaption.text}"
-            </p>
-          </div>
-        )}
 
         {/* Participant Name Badge (Bottom Left) */}
         <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 rounded-lg bg-slate-900/90 px-3.5 py-2 backdrop-blur-md border border-slate-800/80 shadow-md">
@@ -350,6 +330,24 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption })
       {/* ── Zoom Control Bar (Bottom) ────────────────────────────────────── */}
       <div className="h-16 bg-[#0b0f17] px-6 flex items-center justify-center gap-4 border-t border-slate-800/80 z-40">
         
+        {/* Speech Dialect / Language Selector */}
+        {setSpeechLang && (
+          <div className="flex items-center gap-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 text-xs text-slate-300 shadow-md">
+            <Globe size={14} className="text-blue-400 shrink-0" />
+            <select
+              value={speechLang || "fil-PH"}
+              onChange={(e) => setSpeechLang(e.target.value)}
+              className="bg-transparent font-medium text-white outline-none cursor-pointer text-xs pr-1"
+              title="Select Dialect / Language for Speech Recognition"
+            >
+              <option value="fil-PH" className="bg-[#111723] text-white"> Tagalog / Taglish</option>
+              <option value="ceb-PH" className="bg-[#111723] text-white"> Cebuano / Bisaya</option>
+              <option value="en-PH" className="bg-[#111723] text-white"> PH English</option>
+              <option value="en-US" className="bg-[#111723] text-white"> US English</option>
+            </select>
+          </div>
+        )}
+
         {/* Mic Toggle */}
         <button
           onClick={toggleMic}
@@ -411,6 +409,7 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption })
 // ── Applicant Layout (Matching Image 1) ──────────────────────────────────────
 
 function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
+  const [speechLang, setSpeechLang] = useState("fil-PH");
   const recognitionRef = useRef(null);
 
   // Web Speech API for Applicant Speech Transcription
@@ -425,10 +424,26 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-US";
+      recognition.lang = speechLang;
+
+      recognition.onstart = () => {
+        console.log("Applicant speech recognition started", { speechLang });
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("Applicant speech recognition error:", event.error);
+        if (!isMounted) return;
+        if (restartTimer) clearTimeout(restartTimer);
+        restartTimer = setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 400);
+      };
 
       recognition.onend = () => {
         if (!isMounted) return;
+        if (restartTimer) clearTimeout(restartTimer);
         restartTimer = setTimeout(() => {
           try { recognition.start(); } catch (e) {}
         }, 400);
@@ -439,7 +454,10 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
           if (event.results[i].isFinal) {
             const text = event.results[i][0].transcript;
             if (text && text.trim().length > 0) {
-              interviewService.storePublicTranscript(interviewId, text.trim());
+              console.log("Applicant spoke:", text.trim());
+              interviewService.storePublicTranscript(interviewId, text.trim())
+                .then(() => console.log("Applicant transcript successfully saved to DB"))
+                .catch((err) => console.error("Failed to store applicant transcript:", err));
             }
           }
         }
@@ -447,7 +465,9 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
 
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to initialize applicant speech recognition:", e);
+    }
 
     return () => {
       isMounted = false;
@@ -456,12 +476,18 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
-  }, [interviewId]);
+  }, [interviewId, speechLang]);
 
   return (
     <div className="h-screen w-screen bg-[#111723] flex flex-col justify-between p-4 overflow-hidden">
       <div className="flex-1 w-full max-w-[1400px] mx-auto h-full py-2">
-        <ZoomVideoStage applicantName={applicantName} onHangup={onHangup} isApplicant={true} />
+        <ZoomVideoStage
+          applicantName={applicantName}
+          onHangup={onHangup}
+          isApplicant={true}
+          speechLang={speechLang}
+          setSpeechLang={setSpeechLang}
+        />
       </div>
     </div>
   );
@@ -478,6 +504,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
   const [manualInput, setManualInput]   = useState("");
   const [manualRole, setManualRole]     = useState("applicant");
   const [isListening, setIsListening]   = useState(false);
+  const [speechLang, setSpeechLang]     = useState("fil-PH");
 
   const [liveMetrics, setLiveMetrics] = useState({
     confidence_score: 85,
@@ -514,15 +541,27 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-US";
+      recognition.lang = speechLang;
 
       recognition.onstart = () => {
         if (isMounted) setIsListening(true);
       };
 
+      recognition.onerror = (event) => {
+        console.warn("HR speech recognition error:", event.error);
+        if (!isMounted) return;
+        if (restartTimer) clearTimeout(restartTimer);
+        restartTimer = setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 400);
+      };
+
       recognition.onend = () => {
         if (!isMounted) return;
         setIsListening(false);
+        if (restartTimer) clearTimeout(restartTimer);
         restartTimer = setTimeout(() => {
           try {
             recognition.start();
@@ -548,7 +587,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
               setTranscripts((prev) => [...prev, newSegment]);
               setInterimSpeech("");
 
-              // Save transcript to backend DB
+              // Save transcript to backend DB automatically tagged as HR
               interviewService.storeTranscript(interviewId, transcriptText.trim(), "hr");
 
               // Trigger Grok AI live analysis update
@@ -576,7 +615,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
         try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
-  }, [interviewId]);
+  }, [interviewId, speechLang]);
 
   // 3. Fast 3-second live sync polling for new transcripts & Grok AI updates
   useEffect(() => {
@@ -595,7 +634,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
           if (data && data.confidence_score) setLiveMetrics(data);
         })
         .catch(() => {});
-    }, 3500);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [interviewId]);
@@ -608,8 +647,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
   }, [transcripts, interimSpeech]);
 
   // Handle Notes Auto-save
-  const handleNotesChange = (e) => {
-    const text = e.target.value;
+  const handleNotesChange = (text) => {
     setNotes(text);
     setSavingNotes(true);
     interviewService.saveNotes(interviewId, text)
@@ -661,6 +699,8 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
               applicantName={applicantName}
               onHangup={onHangup}
               isApplicant={false}
+              speechLang={speechLang}
+              setSpeechLang={setSpeechLang}
               latestCaption={transcripts[transcripts.length - 1] || (interimSpeech ? { speaker_role: 'hr', text: interimSpeech } : null)}
             />
           </div>

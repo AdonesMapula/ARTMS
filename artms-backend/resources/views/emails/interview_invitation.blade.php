@@ -83,15 +83,45 @@
       @endif
       @if($interview->meeting_link)
       <tr style="background:#f9fafb;">
-        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;">Video Room Link</td>
-        <td style="padding:12px 16px;font-size:14px;">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Video Room Link</td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;">
           <a href="{{ $interview->meeting_link }}" style="color:#2563eb;word-break:break-all;font-weight:600;">
             {{ $interview->meeting_link }}
           </a>
         </td>
       </tr>
       @endif
+      @if($interview->contact_email)
+      <tr>
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">HR Contact Email</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;">
+          <a href="mailto:{{ $interview->contact_email }}" style="color:#2563eb;text-decoration:none;font-weight:600;">
+            {{ $interview->contact_email }}
+          </a>
+        </td>
+      </tr>
+      @endif
+      @if($interview->contact_number)
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;">HR Contact Number</td>
+        <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:600;">
+          {{ $interview->contact_number }}
+        </td>
+      </tr>
+      @endif
     </table>
+
+    {{-- ── Special Preparation Notes & Instructions Box ───────────────── --}}
+    @if($interview->notes)
+    <div style="margin-top:24px;padding:18px 20px;background:#f0f9ff;border-left:4px solid #0284c7;border-radius:6px;">
+      <p style="margin:0 0 6px;font-size:13px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;">
+        📋 Special Instructions &amp; What to Bring
+      </p>
+      <p style="margin:0;font-size:14px;color:#0c4a6e;line-height:1.6;white-space:pre-line;">
+        {{ $interview->notes }}
+      </p>
+    </div>
+    @endif
 
     {{-- ── CTA Button ───────────────────────────────── --}}
     <div style="margin-top:28px;text-align:center;">
@@ -109,7 +139,17 @@
     </div>
 
     <p style="margin-top:28px;font-size:13px;color:#6b7280;line-height:1.6;">
-      If you have any questions or need to reschedule, please reply to this email or contact our HR team directly.
+      If you have any questions or need to reschedule, please reach out to us at 
+      @if($interview->contact_email)
+        <strong>{{ $interview->contact_email }}</strong>
+      @else
+        our HR team
+      @endif
+      @if($interview->contact_number)
+        ({{ $interview->contact_number }}).
+      @else
+        directly.
+      @endif
       We look forward to meeting you!
     </p>
 

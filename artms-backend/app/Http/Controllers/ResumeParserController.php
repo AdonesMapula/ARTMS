@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\ResumeParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,8 +63,6 @@ class ResumeParserController extends Controller
             $parser = new ResumeParserService();
             $rawText = $parser->extractText($storedPath);
 
-            Log::info('Text extracted', ['length' => strlen($rawText)]);
-
             Storage::disk('local')->delete($storedPath);
 
             if (empty(trim($rawText))) {
@@ -75,42 +74,15 @@ class ResumeParserController extends Controller
                 ]);
             }
 
-            // 1. Locally extract name parts to redact them from AI payload for privacy concerns
-            $nameParts = $this->extractNameParts($rawText);
-            
-            $redactedText = $rawText;
-            $first = $nameParts['first'];
-            $last = $nameParts['last'];
-            $middle = $nameParts['middle'];
-            
-            if (!empty($first)) {
-                $redactedText = str_ireplace($first, '[REDACTED NAME]', $redactedText);
-            }
-            if (!empty($last)) {
-                $redactedText = str_ireplace($last, '[REDACTED NAME]', $redactedText);
-            }
-            if (!empty($middle)) {
-                $redactedText = str_ireplace($middle, '[REDACTED NAME]', $redactedText);
-            }
-            $fullName = trim("{$first} {$middle} {$last}");
-            if (!empty($fullName)) {
-                $redactedText = str_ireplace($fullName, '[REDACTED NAME]', $redactedText);
-            }
-            $shortName = trim("{$first} {$last}");
-            if (!empty($shortName)) {
-                $redactedText = str_ireplace($shortName, '[REDACTED NAME]', $redactedText);
-            }
+            // Clean PDF artifacts (e.g. A<>L<>E<>X or stray null markers from font kerning)
+            $cleanedText = $this->cleanRawPdfText($rawText);
+            Log::info('Cleaned raw text length', ['length' => strlen($cleanedText)]);
 
-            // AI-assisted extraction using xAI / Groq API
-            $parsed = $this->parseResumeWithAI($redactedText);
+            // 1. AI-assisted extraction using xAI / Groq API
+            $parsed = $this->parseResumeWithAI($cleanedText);
 
-            // Re-merge locally extracted name parts
-            $parsed['firstName'] = $nameParts['first'];
-            $parsed['lastName'] = $nameParts['last'];
-            $parsed['middleName'] = $nameParts['middle'];
-            
             // 2. Validate, Clean, & Apply Confidence Scores
-            $finalData = $this->processAndValidateData($parsed, $rawText);
+            $finalData = $this->processAndValidateData($parsed, $cleanedText);
 
             // 3. Robustly sanitize UTF-8 to prevent JSON serialization errors
             $sanitizedData = $this->sanitizeUtf8($finalData);
@@ -137,6 +109,23 @@ class ResumeParserController extends Controller
     }
 
     /**
+     * Clean PDF kerning artifacts (such as A<>L<>E<>X or stray null characters).
+     */
+    private function cleanRawPdfText(string $text): string
+    {
+        // Fix letter-by-letter <> tags from PDF parsers (e.g., A<>L<>E<>X -> ALEX)
+        $text = preg_replace('/(?<=\w)<>(?=\w)/u', '', $text);
+        // Replace remaining <> with spaces
+        $text = str_replace('<>', ' ', $text);
+        // Normalize bullet points and weird symbols
+        $text = preg_replace('/[▪•\x{2022}\x{2023}\x{25E6}\x{2043}\x{2219}]/u', '- ', $text);
+        // Clean null characters and control codes
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $text);
+        // Normalize space sequences
+        return preg_replace('/[ \t]+/', ' ', $text);
+    }
+
+    /**
      * Call the xAI/Groq API to get structured JSON data from resume text.
      */
     private function parseResumeWithAI(string $rawText): array
@@ -158,16 +147,19 @@ Your response must be valid JSON only. Do not wrap in markdown or backticks.
 
 == SCHEMA ==
 {
-  "email": "string (valid email)",
-  "phone": "string (contact number)",
-  "address": "string",
+  "firstName": "string (Candidate's first name)",
+  "lastName": "string (Candidate's last name)",
+  "middleName": "string (Candidate's middle name, or empty if none)",
+  "email": "string (valid email address)",
+  "phone": "string (contact phone number)",
+  "address": "string (city/location/address)",
   "gender": "string (Male, Female, Non-binary, or empty)",
   "dateOfBirth": "string (YYYY-MM-DD format if found, otherwise empty)",
   "nationality": "string (e.g. Filipino, American, etc.)",
   "civilStatus": "string (Single, Married, Divorced, Widowed, etc.)",
   "skills": ["string"],
-  "education": "string (summary of educational background)",
-  "experience": "string (summary of work experience)"
+  "education": "string (summary of degrees, institutions, and dates)",
+  "experience": "string (summary of job titles, companies, and responsibilities)"
 }
 
 == RAW RESUME TEXT ==
@@ -227,7 +219,23 @@ EOT;
         $validated = $aiData;
         $confidence = [];
 
-        // 1. Email Verification and Fallback
+        // 1. Name Verification & Fallback
+        $firstName = trim($validated['firstName'] ?? '');
+        $lastName = trim($validated['lastName'] ?? '');
+        if (empty($firstName) || empty($lastName)) {
+            $fallbackName = $this->extractNameParts($rawText);
+            if (empty($firstName)) $validated['firstName'] = $fallbackName['first'];
+            if (empty($lastName)) $validated['lastName'] = $fallbackName['last'];
+            if (empty($validated['middleName'])) $validated['middleName'] = $fallbackName['middle'];
+        }
+
+        foreach (['firstName', 'lastName'] as $field) {
+            $val = trim($validated[$field] ?? '');
+            $confidence[$field] = !empty($val) ? 0.95 : 0.0;
+        }
+        $confidence['middleName'] = empty($validated['middleName']) ? 0.0 : 0.7;
+
+        // 2. Email Verification and Fallback
         $email = trim($validated['email'] ?? '');
         $emailRegex = '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/';
         if (preg_match($emailRegex, $email, $match)) {
@@ -243,40 +251,22 @@ EOT;
             }
         }
 
-        // 2. Phone Verification and Fallback
-        $phone = preg_replace('/[\s\-().]/', '', trim($validated['phone'] ?? ''));
-        $phoneRegex = '/(?:\+?63|0)9\d{9}/';
-        if (preg_match($phoneRegex, $phone, $match)) {
-            $validated['phone'] = $match[0];
-            $confidence['phone'] = 1.0;
+        // 3. Phone Verification and Fallback (International & Philippine support)
+        $phoneRaw = trim($validated['phone'] ?? '');
+        $phoneClean = preg_replace('/[^\d+]/', '', $phoneRaw);
+        if (strlen($phoneClean) >= 7) {
+            $validated['phone'] = $phoneRaw;
+            $confidence['phone'] = 0.95;
         } else {
-            if (preg_match($phoneRegex, preg_replace('/[\s\-().]/', '', $rawText), $match)) {
-                $validated['phone'] = $match[0];
+            $fallbackPhone = $this->extractPhone($rawText);
+            if (!empty($fallbackPhone)) {
+                $validated['phone'] = $fallbackPhone;
                 $confidence['phone'] = 0.85;
             } else {
-                $validated['phone'] = $phone;
-                $confidence['phone'] = empty($phone) ? 0.0 : 0.6;
+                $validated['phone'] = '';
+                $confidence['phone'] = 0.0;
             }
         }
-
-        // 3. Names Verification
-        foreach (['firstName', 'lastName'] as $field) {
-            $val = trim($validated[$field] ?? '');
-            if (!empty($val)) {
-                $lines = array_slice(explode("\n", strtolower($rawText)), 0, 15);
-                $found = false;
-                foreach ($lines as $line) {
-                    if (str_contains($line, strtolower($val))) {
-                        $found = true;
-                        break;
-                    }
-                }
-                $confidence[$field] = $found ? 0.95 : 0.75;
-            } else {
-                $confidence[$field] = 0.0;
-            }
-        }
-        $confidence['middleName'] = empty($validated['middleName']) ? 0.0 : 0.7;
 
         // 4. Date of Birth
         $dob = trim($validated['dateOfBirth'] ?? '');
@@ -403,7 +393,6 @@ EOT;
 
     private function extractPhone(string $text): string
     {
-        // Matches PH numbers and standard global variations
         if (preg_match('/(?:\+?63|0)[\s\-]?9\d{2}[\s\-]?\d{3}[\s\-]?\d{4}/', $text, $m)) {
             return preg_replace('/[\s\-]/', '', $m[0]);
         }
@@ -426,7 +415,6 @@ EOT;
                   'date', 'birth', 'gender', 'civil', 'nationality', 'skills', 'education',
                   'experience', 'references', 'page'];
 
-        // Scan deeper (up to 15 lines) to locate the applicant's name
         foreach (array_slice($lines, 0, 15) as $line) {
             $lower = strtolower($line);
             $isSkip = false;
@@ -581,13 +569,10 @@ EOT;
     private function extractSection(string $text, array $headers): string
     {
         foreach ($headers as $header) {
-            // Find where the header occurs case-insensitively anywhere in the text
             $pos = stripos($text, $header);
             if ($pos !== false) {
-                // Slice from the header onward
                 $sub = substr($text, $pos + strlen($header));
                 
-                // Cut off at the next major heading boundary
                 $nextHeaders = ['EDUCATION', 'EDUCATIONAL BACKGROUND', 'EXPERIENCE', 'WORK HISTORY', 'EMPLOYMENT HISTORY', 'SKILLS', 'REFERENCES', 'CERTIFICATES', 'PROJECTS', 'SUMMARY', 'OBJECTIVE'];
                 $minPos = strlen($sub);
                 

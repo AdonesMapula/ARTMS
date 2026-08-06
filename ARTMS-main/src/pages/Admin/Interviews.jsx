@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiCalendar, FiClock, FiMapPin, FiLink,
-  FiPlus, FiBell, FiClipboard, FiRefreshCw, FiVideo, FiFileText,
+  FiPlus, FiBell, FiClipboard, FiRefreshCw, FiVideo, FiFileText, FiTrash2,
 } from "react-icons/fi";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -24,6 +24,7 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
 import StarRating from "../../components/interview/StarRating";
 import StatusDropdown, { StatusBadge } from "../../components/interview/StatusDropdown";
@@ -38,22 +39,32 @@ import { useToast } from "../../context/ToastContext";
 
 // ── constants ──────────────────────────────────────────────────────────────
 const STAGE_TABS = [
-  { key: "",           label: "All"         },
-  { key: "interview_1",label: "Interview 1" },
-  { key: "interview_2",label: "Interview 2" },
-  { key: "final",      label: "Final"       },
+  { key: "",                     label: "All"                  },
+  { key: "initial_screening",    label: "Initial Screening"    },
+  { key: "technical_assessment", label: "Technical Assessment" },
+  { key: "hr_interview",         label: "HR Interview"         },
+  { key: "managerial_interview", label: "Managerial Interview" },
+  { key: "final",                label: "Final Interview"      },
 ];
 
 const STAGE_TONE = {
-  interview_1: "info",
-  interview_2: "warning",
-  final:       "accent",
+  initial_screening:    "info",
+  technical_assessment: "purple",
+  hr_interview:         "warning",
+  managerial_interview: "indigo",
+  final:                "accent",
+  interview_1:          "info",
+  interview_2:          "warning",
 };
 
 const STAGE_LABEL = {
-  interview_1: "Interview 1",
-  interview_2: "Interview 2",
-  final:       "Final",
+  initial_screening:    "Initial Screening",
+  technical_assessment: "Technical Assessment",
+  hr_interview:         "HR Interview",
+  managerial_interview: "Managerial Interview",
+  final:                "Final Interview",
+  interview_1:          "Initial Interview",
+  interview_2:          "Second Interview",
 };
 
 const TYPE_ICON = {
@@ -111,6 +122,7 @@ export default function Interviews() {
   const [evalOpen,      setEvalOpen]      = useState(false);
   const [activeInterview, setActiveInterview] = useState(null);
   const [reportModalInterviewId, setReportModalInterviewId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // ── fetch interviews ──────────────────────────────────────────────────
   const fetchInterviews = useCallback(async () => {
@@ -188,6 +200,22 @@ export default function Interviews() {
       toast.error("Reminder Failed", err?.response?.data?.message || "Failed to send reminder.");
     } finally {
       setActionLoading((s) => ({ ...s, [`r_${interview.id}`]: false }));
+    }
+  }
+
+  // ── delete interview record ────────────────────────────────────────────
+  async function handleDeleteInterview() {
+    if (!deleteConfirm) return;
+    const targetId = deleteConfirm.id;
+    setActionLoading((s) => ({ ...s, [`d_${targetId}`]: true }));
+    try {
+      await interviewService.destroy(targetId);
+      toast.success("Interview Deleted", "The interview record has been permanently removed.");
+      fetchInterviews();
+    } catch (err) {
+      toast.error("Delete Failed", err?.response?.data?.message || "Failed to delete interview.");
+    } finally {
+      setActionLoading((s) => ({ ...s, [`d_${targetId}`]: false }));
     }
   }
 
@@ -513,7 +541,7 @@ export default function Interviews() {
                             </button>
 
                             {/* Send reminder */}
-                            {i.status !== "done" && i.status !== "cancelled" && (
+                            {i.status !== "done" && i.status !== "cancelled" && i.status !== "no_show" && (
                               <button
                                 title={i.reminder_sent ? "Reminder already sent" : "Send Reminder"}
                                 disabled={actionLoading[`r_${i.id}`] || i.reminder_sent}
@@ -525,6 +553,18 @@ export default function Interviews() {
                                 }`}
                               >
                                 <FiBell size={13} className={actionLoading[`r_${i.id}`] ? "animate-bounce" : ""} />
+                              </button>
+                            )}
+
+                            {/* Delete button — only shown when status is done, cancelled, or no_show */}
+                            {(i.status === "done" || i.status === "cancelled" || i.status === "no_show") && (
+                              <button
+                                title="Delete Interview Record"
+                                disabled={actionLoading[`d_${i.id}`]}
+                                onClick={() => setDeleteConfirm(i)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
+                              >
+                                <FiTrash2 size={13} />
                               </button>
                             )}
                           </div>
@@ -573,6 +613,18 @@ export default function Interviews() {
         isOpen={Boolean(reportModalInterviewId)}
         onClose={() => setReportModalInterviewId(null)}
         interviewId={reportModalInterviewId}
+      />
+
+      {/* Delete Interview Confirm Dialog */}
+      <ConfirmDialog
+        open={Boolean(deleteConfirm)}
+        title="Delete Interview Record?"
+        description={`Are you sure you want to delete the interview record for ${deleteConfirm?.applicant?.first_name || "this candidate"} ${deleteConfirm?.applicant?.last_name || ""}? This action cannot be undone and all interview data will be permanently removed.`}
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleDeleteInterview}
+        onClose={() => setDeleteConfirm(null)}
       />
     </div>
   );

@@ -26,6 +26,35 @@ body {
   color: var(--artms-fg);
 }
 
+/* Display hand cursor (pointer) for buttons and interactive clickable elements */
+button,
+a,
+select,
+summary,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"]::file-selector-button,
+input[type="file"]::-webkit-file-upload-button,
+label,
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Ensure disabled states display not-allowed cursor */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"],
+.disabled,
+.disabled * {
+  cursor: not-allowed !important;
+}
+
 /* Better default focus + smooth UI (exclude form inputs which use custom container borders) */
 :focus-visible:not(input):not(select):not(textarea) {
   outline: 3px solid var(--artms-ring);

@@ -10,6 +10,9 @@ use App\Models\ApplicantDocument;
 use App\Models\ApplicantNote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\Employee;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -31,7 +34,19 @@ class ApplicantController extends Controller
                        ->orWhere('application_id', 'like', "%{$request->search}%")
                 )
             )
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->status, function ($q) use ($request) {
+                if ($request->status === 'interview_1') {
+                    $q->whereIn('status', ['interview_1', 'interview_1_scheduled', 'interview_1_done']);
+                } elseif ($request->status === 'interview_2') {
+                    $q->whereIn('status', ['interview_2', 'interview_2_scheduled', 'interview_2_done']);
+                } elseif ($request->status === 'ai_screening') {
+                    $q->whereIn('status', ['ai_screening', 'under_review']);
+                } elseif ($request->status === 'screening_passed') {
+                    $q->whereIn('status', ['screening_passed', 'shortlisted']);
+                } else {
+                    $q->where('status', $request->status);
+                }
+            })
             ->when($request->job_posting_id, fn ($q) => $q->where('job_posting_id', $request->job_posting_id))
             ->when($request->is_shortlisted, fn ($q) => $q->where('is_shortlisted', true))
             ->orderByDesc(fn ($q) => $q->select('ai_score')->from('ai_evaluations')->whereColumn('applicant_id', 'applicants.id'))
@@ -213,37 +228,6 @@ class ApplicantController extends Controller
     }
 
     /**
-     * PATCH /api/applicants/{id}/hire
-     */
-    public function hire(Applicant $applicant): JsonResponse
-    {
-        $applicant->update(['status' => 'hired']);
-        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'the position';
-
-        // Notify applicant
-        NotificationService::notifyEmail(
-            $applicant->email,
-            'Congratulations! Job Offer — ARTMS',
-            "Hello {$applicant->first_name}, congratulations! We are pleased to extend a job offer for {$jobTitle}.",
-            null,
-            'alert'
-        );
-
-        // Notify HR & Admins
-        NotificationService::notifyRoles(
-            ['hr_admin', 'super_admin', 'coo'],
-            'Applicant Hired',
-            "Applicant {$applicant->first_name} {$applicant->last_name} was officially HIRED for '{$jobTitle}'.",
-            '/admin/applicants',
-            'alert'
-        );
-
-        AuditLog::record('hire', 'applicant', "Applicant hired: {$applicant->application_id}");
-
-        return response()->json(['message' => 'Applicant marked as hired. Email notification sent.']);
-    }
-
-    /**
      * PATCH /api/applicants/{id}/reject
      */
     public function reject(Request $request, Applicant $applicant): JsonResponse
@@ -288,5 +272,132 @@ class ApplicantController extends Controller
             ->firstOrFail();
 
         return response()->json(['application' => $applicant]);
+    }
+
+    /**
+     * DELETE /api/applicants/{id}
+     * Delete an applicant record completely from database (along with evaluations, transcripts, interviews).
+     */
+    public function destroy(Applicant $applicant): JsonResponse
+    {
+        $name = "{$applicant->first_name} {$applicant->last_name}";
+        $appId = $applicant->application_id;
+
+        // Delete resume file if exists
+        if ($applicant->resume_path && Storage::disk('local')->exists($applicant->resume_path)) {
+            Storage::disk('local')->delete($applicant->resume_path);
+        }
+
+        // Cascade delete related records
+        $applicant->aiEvaluation()?->delete();
+        $applicant->documents()->delete();
+        $applicant->interviews()->delete();
+        $applicant->notes()->delete();
+        $applicant->delete();
+
+        AuditLog::record('delete_applicant', 'applicant', "Deleted applicant {$name} ({$appId})");
+
+        return response()->json([
+            'message' => 'Applicant deleted successfully.',
+        ]);
+    }
+
+    /**
+     * POST /api/applicants/{id}/hire
+     * Mark applicant as hired, auto-generate Employee 201 file record & assign Employee Number (EMP-YYYY-XXXXX).
+     */
+    public function hire(Request $request, Applicant $applicant): JsonResponse
+    {
+        $request->validate([
+            'date_hired'      => ['nullable', 'date'],
+            'salary'          => ['nullable', 'numeric', 'min:0'],
+            'employment_type' => ['nullable', 'string'],
+        ]);
+
+        $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? "Position";
+        $deptId   = $applicant->jobPosting?->department_id;
+
+        // 1. Mark Applicant as Hired
+        $applicant->update(['status' => 'hired']);
+
+        // 2. Create or find User
+        $user = User::where('email', $applicant->email)->first();
+        if (!$user) {
+            $user = User::create([
+                'name'          => "{$applicant->first_name} {$applicant->last_name}",
+                'email'         => $applicant->email,
+                'password'      => Hash::make(Str::random(12)),
+                'role'          => 'employee',
+                'department_id' => $deptId,
+                'is_active'     => true,
+            ]);
+        }
+
+        // 3. Create or find Employee record
+        $employee = Employee::where('user_id', $user->id)->first();
+        if (!$employee) {
+            $employee = Employee::create([
+                'user_id'                  => $user->id,
+                'department_id'            => $deptId ?? 1,
+                'position'                 => $jobTitle,
+                'date_hired'               => $request->date_hired ?? now()->toDateString(),
+                'salary'                   => $request->salary ?? ($applicant->jobPosting?->jobLibrary?->salary_min ?? 0),
+                'employment_type'          => $request->employment_type ?? 'regular',
+                'employment_status'        => 'active',
+                'address'                  => $applicant->address,
+                'contact_number'           => $applicant->phone,
+                'emergency_contact_name'   => null,
+                'emergency_contact_number' => null,
+            ]);
+        }
+
+        // 4. Auto-generate Employee Number (EMP-YYYY-XXXXX) & save to User
+        $empId = $employee->generateEmployeeNumber();
+        $user->update(['employee_id' => $empId]);
+
+        // 5. Seed default 201 Document Checklist
+        $employee->seedDefaultDocuments();
+
+        // 6. Transfer candidate resume to 201 documents if present
+        if ($applicant->resume_path && Storage::disk('local')->exists($applicant->resume_path)) {
+            $folder = "employee_documents/{$empId}";
+            $targetPath = "{$folder}/Resume_{$empId}." . pathinfo($applicant->resume_path, PATHINFO_EXTENSION);
+            Storage::disk('public')->put($targetPath, Storage::disk('local')->get($applicant->resume_path));
+
+            $employee->documents()->updateOrCreate(
+                ['document_type' => 'resume'],
+                [
+                    'file_path'     => $targetPath,
+                    'original_name' => "Resume_{$applicant->first_name}_{$applicant->last_name}",
+                    'status'        => 'submitted',
+                    'submitted_at'  => now(),
+                    'remarks'       => 'Auto-transferred from job application resume',
+                ]
+            );
+        }
+
+        // 7. Send Notifications
+        NotificationService::notifyEmail(
+            $applicant->email,
+            "Congratulations! You have been hired — ARTMS 201 File Created",
+            "Hello {$applicant->first_name}, welcome aboard! You have been officially hired as {$jobTitle}. Your Employee Number is {$empId}.",
+            null,
+            'application'
+        );
+
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
+            "New Employee Hired — 201 File Created",
+            "{$applicant->first_name} {$applicant->last_name} was hired as {$jobTitle}. Employee Number: {$empId}.",
+            '/admin/employees',
+            'application'
+        );
+
+        AuditLog::record('hire_applicant', 'employee', "Hired applicant {$applicant->first_name} {$applicant->last_name} ({$applicant->application_id}) as Employee {$empId}");
+
+        return response()->json([
+            'message'  => "Applicant hired successfully. Employee 201 record {$empId} created.",
+            'employee' => $employee->load('user', 'department', 'documents'),
+        ]);
     }
 }

@@ -7,6 +7,7 @@ const interviewService = {
   update:       (id, data)    => api.put(`/interviews/${id}`, data),
   patch:        (id, data)    => api.patch(`/interviews/${id}`, data),
   destroy:      (id)          => api.delete(`/interviews/${id}`),
+  delete:       (id)          => api.delete(`/interviews/${id}`),
   confirm:      (id)          => api.patch(`/interviews/${id}/confirm`),
   sendReminder: (id)          => api.post(`/interviews/${id}/send-reminder`),
   // Re-send invitation email for an already-scheduled interview

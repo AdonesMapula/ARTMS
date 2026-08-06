@@ -26,6 +26,9 @@ const applicantService = {
   /** Reject applicant */
   reject: (id, data) => api.patch(`/applicants/${id}/reject`, data),
 
+  /** Delete applicant completely */
+  delete: (id) => api.delete(`/applicants/${id}`),
+
   /** Add note to applicant */
   addNote: (id, data) => api.post(`/applicants/${id}/notes`, data),
 

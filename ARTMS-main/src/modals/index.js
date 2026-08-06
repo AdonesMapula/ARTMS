@@ -1,13 +1,11 @@
-// Central export for all modals
+// Central export for active modals
 // Job Library Modals
 export { default as JobLibraryFormModal } from './JobLibraryFormModal';
 export { default as JobLibraryApproveModal } from './JobLibraryApproveModal';
 export { default as JobLibraryDeleteModal } from './JobLibraryDeleteModal';
-export { default as JobLibraryViewModal } from './JobLibraryViewModal';
 
-// Manpower Approvals
+// Manpower Approvals & Revisions
 export { default as ManpowerApproveModal } from './ManpowerApproveModal';
-export { default as ManpowerViewModal } from './ManpowerViewModal';
 export { default as ManpowerEditModal } from './ManpowerEditModal';
 
 // Job Posting Approvals
@@ -16,9 +14,6 @@ export { default as JobPostingApproveModal } from './JobPostingApproveModal';
 // Public Modals
 export { default as JobDetailsModal } from './JobDetailsModal';
 export { default as ApplyModal } from './ApplyModal';
-
-// Applicant Modals
-export { default as ApplicantDetailModal } from './ApplicantDetailModal';
 
 // Permission Modals
 export { default as PermissionModal } from './PermissionModal';

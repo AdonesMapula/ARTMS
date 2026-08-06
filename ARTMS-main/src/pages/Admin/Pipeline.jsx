@@ -23,6 +23,7 @@ import { cn } from "../../utils/cn";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import applicantService from "../../services/applicantService";
 import jobService from "../../services/jobService";
+import employeeService from "../../services/employeeService";
 import { useToast } from "../../context/ToastContext";
 
 // ── Pipeline Stage Definitions ───────────────────────────────────────────────
@@ -37,7 +38,7 @@ const STAGES = [
     barColor: "bg-blue-500",
   },
   {
-    key: "under_review",
+    key: "ai_screening",
     title: "AI Screening",
     color: "bg-amber-50/80 border-amber-200/80",
     headerBg: "bg-amber-100/80 text-amber-900",
@@ -45,16 +46,32 @@ const STAGES = [
     barColor: "bg-amber-500",
   },
   {
-    key: "shortlisted",
-    title: "Shortlisted",
+    key: "screening_passed",
+    title: "Screening Passed",
+    color: "bg-emerald-50/80 border-emerald-200/80",
+    headerBg: "bg-emerald-100/80 text-emerald-900",
+    badgeTone: "success",
+    barColor: "bg-emerald-500",
+  },
+  {
+    key: "ready_for_interview",
+    title: "Ready for Interview",
     color: "bg-violet-50/80 border-violet-200/80",
     headerBg: "bg-violet-100/80 text-violet-900",
     badgeTone: "accent",
     barColor: "bg-violet-500",
   },
   {
-    key: "ready_for_interview",
-    title: "Interview",
+    key: "interview_1",
+    title: "Interview 1",
+    color: "bg-sky-50/80 border-sky-200/80",
+    headerBg: "bg-sky-100/80 text-sky-900",
+    badgeTone: "info",
+    barColor: "bg-sky-600",
+  },
+  {
+    key: "interview_2",
+    title: "Interview 2",
     color: "bg-indigo-50/80 border-indigo-200/80",
     headerBg: "bg-indigo-100/80 text-indigo-900",
     badgeTone: "primary",
@@ -63,10 +80,10 @@ const STAGES = [
   {
     key: "hired",
     title: "Hired",
-    color: "bg-emerald-50/80 border-emerald-200/80",
-    headerBg: "bg-emerald-100/80 text-emerald-900",
+    color: "bg-teal-50/80 border-teal-200/80",
+    headerBg: "bg-teal-100/80 text-teal-900",
     badgeTone: "success",
-    barColor: "bg-emerald-500",
+    barColor: "bg-teal-600",
   },
   {
     key: "rejected",
@@ -74,7 +91,7 @@ const STAGES = [
     color: "bg-rose-50/80 border-rose-200/80",
     headerBg: "bg-rose-100/80 text-rose-900",
     badgeTone: "danger",
-    barColor: "bg-rose-400",
+    barColor: "bg-rose-500",
   },
 ];
 
@@ -266,33 +283,63 @@ export default function Pipeline() {
     });
   }, [applicants, selectedJob, search]);
 
-  // Group applicants by stage key
+  // Group applicants by stage key with robust status alias mapping
   const stageMap = useMemo(() => {
     const map = {};
     STAGES.forEach((s) => (map[s.key] = []));
     
     filteredApplicants.forEach((a) => {
-      const key = a.status && map[a.status] ? a.status : "applied";
-      map[key].push(a);
+      let key = "applied";
+      const s = (a.status || "").toLowerCase();
+      if (s === "applied") key = "applied";
+      else if (s === "ai_screening" || s === "under_review") key = "ai_screening";
+      else if (s === "screening_passed" || s === "shortlisted") key = "screening_passed";
+      else if (s === "ready_for_interview") key = "ready_for_interview";
+      else if (s === "interview_1" || s.startsWith("interview_1")) key = "interview_1";
+      else if (s === "interview_2" || s.startsWith("interview_2") || s === "final") key = "interview_2";
+      else if (s === "hired") key = "hired";
+      else if (s === "rejected" || s === "screening_failed") key = "rejected";
+
+      if (map[key]) map[key].push(a);
+      else map["applied"].push(a);
     });
     return map;
   }, [filteredApplicants]);
 
   // ── Move Applicant Stage ─────────────────────────────────────────────────
-  const moveApplicantStage = async (applicantId, newStage) => {
+  const moveApplicantStage = async (applicantId, newStageKey) => {
     setUpdatingId(applicantId);
     
+    // Map stage key to exact database status string
+    const STAGE_TO_STATUS = {
+      applied: "applied",
+      ai_screening: "ai_screening",
+      screening_passed: "screening_passed",
+      ready_for_interview: "ready_for_interview",
+      interview_1: "interview_1_scheduled",
+      interview_2: "interview_2_scheduled",
+      hired: "hired",
+      rejected: "rejected",
+    };
+    const targetStatus = STAGE_TO_STATUS[newStageKey] || newStageKey;
+
     // Optimistic UI update
     const oldApplicant = applicants.find(a => a.id === applicantId);
     setApplicants((prev) =>
-      prev.map((a) => (a.id === applicantId ? { ...a, status: newStage } : a))
+      prev.map((a) => (a.id === applicantId ? { ...a, status: targetStatus } : a))
     );
 
     try {
-      await applicantService.update(applicantId, { status: newStage });
-      const name = oldApplicant ? `${oldApplicant.first_name} ${oldApplicant.last_name}` : "Applicant";
-      const stageLabel = newStage.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      toast.success("Stage Updated", `${name} moved to "${stageLabel}".`);
+      if (targetStatus === "hired") {
+        await employeeService.hireApplicant(applicantId);
+        const name = oldApplicant ? `${oldApplicant.first_name} ${oldApplicant.last_name}` : "Applicant";
+        toast.success("Applicant Hired!", `${name} was hired & a Digital 201 File was generated!`);
+      } else {
+        await applicantService.update(applicantId, { status: targetStatus });
+        const name = oldApplicant ? `${oldApplicant.first_name} ${oldApplicant.last_name}` : "Applicant";
+        const stageLabel = targetStatus.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        toast.success("Stage Updated", `${name} moved to "${stageLabel}".`);
+      }
     } catch (err) {
       console.error("Failed to update applicant stage:", err);
       toast.error("Update Failed", err?.response?.data?.message || "Failed to move applicant. Changes have been reverted.");

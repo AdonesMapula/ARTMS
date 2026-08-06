@@ -77,6 +77,7 @@ class GenerateAIInterviewReportJob implements ShouldQueue
 
             $prompt = <<<PROMPT
 You are a senior executive HR evaluator. Perform a deep, personalized evaluation of the candidate based strictly on their transcript and job role.
+Note: The interview transcript may contain Philippine dialects and languages (such as Bisaya/Cebuano, Tagalog, Taglish, or Bislish). Evaluate the substance and candidate competence accurately regardless of the dialect or language used.
 
 Position: {$positionTitle}
 Candidate Name: {$applicantName}

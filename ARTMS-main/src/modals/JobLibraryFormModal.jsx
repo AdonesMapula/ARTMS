@@ -15,8 +15,9 @@ export default function JobLibraryFormModal({
   open,
   mode,
   data,
-  form,
-  setForm,
+  initialData,
+  form: propForm,
+  setForm: propSetForm,
   onClose,
   onSave,
   saving = false,
@@ -25,8 +26,23 @@ export default function JobLibraryFormModal({
   const isRejected = mode === "edit" && data?.approval_status === "rejected";
   const remarksText = data?.approval_remarks || data?.remarks;
 
-  const qualBlocks = Array.isArray(form.qualifications) ? form.qualifications : [];
-  const respBlocks = Array.isArray(form.responsibilities) ? form.responsibilities : [];
+  const [internalForm, setInternalForm] = useState({
+    job_title: "",
+    job_description: "",
+    qualifications: [],
+    responsibilities: [],
+    job_category: "",
+    employment_type: "full_time",
+    salary_type: "exact",
+    salary_min: "",
+    salary_max: "",
+  });
+
+  const form = propForm || internalForm;
+  const setForm = propSetForm || setInternalForm;
+
+  const qualBlocks = Array.isArray(form?.qualifications) ? form.qualifications : [];
+  const respBlocks = Array.isArray(form?.responsibilities) ? form.responsibilities : [];
 
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -47,8 +63,21 @@ export default function JobLibraryFormModal({
       fetchCategories();
       setShowCategoryModal(false);
       setNewCategory("");
+      const init = initialData || data || {};
+      setInternalForm({
+        id: init.id,
+        job_title: init.job_title || "",
+        job_description: init.job_description || "",
+        qualifications: Array.isArray(init.qualifications) ? init.qualifications : [],
+        responsibilities: Array.isArray(init.responsibilities) ? init.responsibilities : [],
+        job_category: init.job_category || "",
+        employment_type: init.employment_type || "full_time",
+        salary_type: init.salary_type || "exact",
+        salary_min: init.salary_min ?? "",
+        salary_max: init.salary_max ?? "",
+      });
     }
-  }, [open]);
+  }, [open, initialData, data]);
 
   const fetchCategories = async () => {
     try {
@@ -169,7 +198,7 @@ export default function JobLibraryFormModal({
             <Button variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button variant={isRejected ? "primary" : "primary"} onClick={onSave} disabled={saving} className={isRejected ? "bg-red-600 hover:bg-red-700 font-bold" : ""}>
+            <Button variant={isRejected ? "primary" : "primary"} onClick={() => onSave(form)} disabled={saving} className={isRejected ? "bg-red-600 hover:bg-red-700 font-bold" : ""}>
               {saving
                 ? "Saving..."
                 : isRejected
@@ -181,7 +210,7 @@ export default function JobLibraryFormModal({
           </div>
         }
       >
-        <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); onSave(form); }} className="space-y-6">
           {/* COO Feedback Banner for Rejected Entries */}
           {isRejected && remarksText && (
             <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-amber-50/60 p-4 shadow-sm">

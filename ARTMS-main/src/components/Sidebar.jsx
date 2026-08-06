@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiLogOut, FiChevronDown, FiChevronRight } from "react-icons/fi";
 import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 
 const ROLE_LABELS = {
@@ -144,6 +145,66 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
   const { user, logout } = useAuth();
   const navigate          = useNavigate();
 
+  const [counts, setCounts] = useState({
+    manpower_requests: null,
+    applicants: null,
+    notifications: null,
+    interviews: null,
+  });
+
+  const fetchCounts = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data } = await api.get("/sidebar-counts");
+      if (data) setCounts(data);
+    } catch (e) {}
+  }, [user]);
+
+  useEffect(() => {
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 10000);
+    const handleRefresh = () => fetchCounts();
+
+    window.addEventListener("artms-refresh-sidebar", handleRefresh);
+    window.addEventListener("artms-refresh-notifications", handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("artms-refresh-sidebar", handleRefresh);
+      window.removeEventListener("artms-refresh-notifications", handleRefresh);
+    };
+  }, [fetchCounts]);
+
+  const formattedItems = useMemo(() => {
+    return items.map((it) => {
+      if (it.type === "label") return it;
+
+      let dynamicBadge = it.badge;
+      const lowerTo = (it.to || "").toLowerCase();
+      const lowerLabel = (it.label || "").toLowerCase();
+
+      if (lowerTo.includes("manpower") || lowerLabel.includes("manpower") || lowerLabel.includes("prf")) {
+        if (counts.manpower_requests !== null) {
+          dynamicBadge = counts.manpower_requests > 0 ? String(counts.manpower_requests) : null;
+        }
+      } else if (lowerTo.includes("applicant") || lowerLabel.includes("applicant")) {
+        if (counts.applicants !== null) {
+          dynamicBadge = counts.applicants > 0 ? String(counts.applicants) : null;
+        }
+      } else if (lowerTo.includes("notification") || lowerLabel.includes("notification")) {
+        if (counts.notifications !== null) {
+          dynamicBadge = counts.notifications > 0 ? String(counts.notifications) : null;
+        }
+      } else if (lowerTo.includes("interview") || lowerLabel.includes("interview")) {
+        if (counts.interviews !== null) {
+          dynamicBadge = counts.interviews > 0 ? String(counts.interviews) : null;
+        }
+      }
+
+      return { ...it, badge: dynamicBadge };
+    });
+  }, [items, counts]);
+
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
@@ -179,8 +240,8 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         {/* Nav items */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           <ul className="space-y-1">
-            {items.map((it, idx) => (
-              <NavItem key={it.to ?? it.type === "label" ? `label-${idx}` : `group-${idx}`} it={it} />
+            {formattedItems.map((it, idx) => (
+              <NavItem key={it.to ?? (it.type === "label" ? `label-${idx}` : `group-${idx}`)} it={it} />
             ))}
           </ul>
         </nav>

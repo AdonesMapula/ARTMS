@@ -8,6 +8,21 @@ const employeeService = {
   delete: (id) => api.delete(`/employees/${id}`),
   terminate: (id, data) => api.patch(`/employees/${id}/terminate`, data),
   processClearance: (id) => api.patch(`/employees/${id}/clearance`),
+
+  // Digital 201 File Document Management
+  uploadDocument: (id, formData) => api.post(`/employees/${id}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  downloadDocument: (id, docId) => api.get(`/employees/${id}/documents/${docId}/download`, {
+    responseType: 'blob',
+  }),
+  updateDocumentStatus: (id, docId, data) => api.patch(`/employees/${id}/documents/${docId}/status`, data),
+
+  // Edit History Timeline
+  getEditHistory: (id) => api.get(`/employees/${id}/history`),
+
+  // Hiring flow
+  hireApplicant: (applicantId, data = {}) => api.post(`/applicants/${applicantId}/hire`, data),
 };
 
 export default employeeService;

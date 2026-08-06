@@ -1,22 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpen,
-  CheckCircle,
-  Clock,
-  Plus,
-  Edit,
-  Trash2,
-  XCircle,
-  Filter,
-  RefreshCw,
-  Eye,
-  FileText,
-  Briefcase,
-  User,
-  DollarSign,
-  Calendar,
-  MousePointerClick,
-  AlertTriangle,
+  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, X
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -29,8 +13,8 @@ import {
   JobLibraryFormModal,
   JobLibraryApproveModal,
   JobLibraryDeleteModal,
-  JobLibraryViewModal,
 } from "../../modals";
+import JobLibraryViewPanel from "../../components/job/JobLibraryViewPanel";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
@@ -88,7 +72,11 @@ export default function JobLibrary() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 9;
+
+  // Selected Job Template ID for Split View Detail Panel
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Modals
   const [formModal, setFormModal] = useState({
@@ -97,13 +85,16 @@ export default function JobLibrary() {
     data: null,
   });
   const [deleteModal, setDeleteModal] = useState({ open: false, job: null });
-  const [viewModal, setViewModal] = useState({ open: false, job: null });
   const [approveModal, setApproveModal] = useState({
     open: false,
     job: null,
     status: "approved",
     remarks: "",
   });
+
+  const [saving, setSaving] = useState(false);
+
+  // Alert Modal state
   const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
@@ -111,16 +102,22 @@ export default function JobLibrary() {
     message: "",
   });
 
-  const setAlertModal = (modalConfig) => {
-    setAlertModalState(modalConfig);
-    if (modalConfig?.title) {
-      const v = modalConfig.variant === "danger" ? "error" : modalConfig.variant || "info";
-      toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
-    }
+  const showAlert = (variant, title, message) => {
+    setAlertModalState({ open: true, variant, title, message });
   };
 
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
+      if (isScrollable && window.scrollY > 100) {
+        setIsScrolled(true);
+      } else if (window.scrollY < 20) {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     fetchJobs();
@@ -130,43 +127,30 @@ export default function JobLibrary() {
     setLoading(true);
     try {
       const res = await api.get("/job-library");
-      const raw = res.data.data ?? res.data ?? [];
-      setJobs(Array.isArray(raw) ? raw : []);
-    } catch {
-      showAlert("error", "Error", "Failed to load Job Library.");
+      setJobs(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch job library:", err);
+      toast.error("Failed to load job templates.");
     } finally {
       setLoading(false);
     }
   };
 
-  const showAlert = (variant, title, message) =>
-    setAlertModal({ open: true, variant, title, message });
-
-  // ── Filter logic ──
   const filtered = jobs.filter((j) => {
-    // Search filter
-    if (q.trim()) {
-      const s = q.toLowerCase();
-      const matchesSearch =
-        j.job_title?.toLowerCase().includes(s) ||
-        j.job_category?.toLowerCase().includes(s) ||
-        j.employment_type?.toLowerCase().includes(s);
-      if (!matchesSearch) return false;
-    }
+    const matchesSearch =
+      !q ||
+      j.job_title?.toLowerCase().includes(q.toLowerCase()) ||
+      j.job_category?.toLowerCase().includes(q.toLowerCase()) ||
+      j.creator?.name?.toLowerCase().includes(q.toLowerCase());
 
-    // Status filter
-    if (filter !== "all" && j.approval_status !== filter) return false;
+    const matchesStatus =
+      filter === "all" || j.approval_status === filter;
 
-    return true;
+    return matchesSearch && matchesStatus;
   });
 
-  // Pagination
-  const total = filtered.length;
-  const startIdx = (page - 1) * pageSize;
-  const endIdx = startIdx + pageSize;
-  const paginated = filtered.slice(startIdx, endIdx);
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  // Statistics
   const stats = {
     total: jobs.length,
     approved: jobs.filter((j) => j.approval_status === "approved").length,
@@ -174,73 +158,49 @@ export default function JobLibrary() {
     rejected: jobs.filter((j) => j.approval_status === "rejected").length,
   };
 
-  // ── Create / Edit ──
+  // Open Create Modal
   const openCreate = () => {
-    setForm(EMPTY_FORM);
-    setFormModal({ open: true, mode: "create", data: null });
+    setFormModal({ open: true, mode: "create", data: { ...EMPTY_FORM } });
   };
 
-  const normalizeBlocks = (blocks) => {
-    if (!Array.isArray(blocks)) return [];
-    return blocks.map((b, i) => ({
-      id: b.id || Date.now() + i,
-      title: typeof b === "string" ? b : (b.title || ""),
-      details: Array.isArray(b.details)
-        ? b.details.map((d, j) => ({
-          id: typeof d === "object" && d !== null && d.id ? d.id : Date.now() + i * 100 + j,
-          value: typeof d === "object" && d !== null ? (d.value ?? d.title ?? "") : String(d ?? ""),
-        }))
-        : typeof b.details === "string" && b.details
-          ? [{ id: Date.now() + i * 100, value: b.details }]
-          : [],
-    }));
-  };
-
+  // Open Edit Modal
   const openEdit = (job) => {
-    setForm({
-      job_title: job.job_title ?? "",
-      job_description: job.job_description ?? "",
-      qualifications: normalizeBlocks(job.qualifications),
-      responsibilities: normalizeBlocks(job.responsibilities),
-      job_category: job.job_category ?? "",
-      employment_type: job.employment_type ?? "full_time",
-      salary_type: job.salary_type ?? "exact",
-      salary_min: job.salary_min ?? "",
-      salary_max: job.salary_max ?? "",
+    setFormModal({
+      open: true,
+      mode: "edit",
+      data: {
+        id: job.id,
+        job_title: job.job_title || "",
+        job_description: job.job_description || "",
+        qualifications: job.qualifications || [],
+        responsibilities: job.responsibilities || [],
+        job_category: job.job_category || "",
+        employment_type: job.employment_type || "full_time",
+        salary_type: job.salary_type || "exact",
+        salary_min: job.salary_min ?? "",
+        salary_max: job.salary_max ?? "",
+      },
     });
-    setFormModal({ open: true, mode: "edit", data: job });
   };
 
-  const handleSave = async () => {
-    if (!form.job_title.trim()) {
-      showAlert("error", "Validation", "Job title is required.");
-      return;
-    }
-    if (!form.job_description.trim()) {
-      showAlert("error", "Validation", "Job description is required.");
-      return;
-    }
-    if (!form.qualifications || form.qualifications.length === 0) {
-      showAlert("error", "Validation", "Qualifications are required.");
-      return;
-    }
-    if (!form.responsibilities || form.responsibilities.length === 0) {
-      showAlert("error", "Validation", "Responsibilities are required.");
-      return;
-    }
-
+  // Save Form (Create or Edit)
+  const handleSaveForm = async (formData) => {
     setSaving(true);
     try {
       if (formModal.mode === "create") {
-        await api.post("/job-library", form);
+        await api.post("/job-library", formData);
         showAlert(
           "success",
-          "Submitted",
-          "Job entry created and sent to COO for approval."
+          "Success",
+          "Job template created and submitted to COO for approval."
         );
       } else {
-        await api.put(`/job-library/${formModal.data.id}`, form);
-        showAlert("success", "Updated", "Job entry updated successfully.");
+        await api.put(`/job-library/${formData.id}`, formData);
+        showAlert(
+          "success",
+          "Success",
+          "Job template updated and resubmitted to COO for approval."
+        );
       }
       setFormModal({ open: false, mode: "create", data: null });
       fetchJobs();
@@ -255,12 +215,13 @@ export default function JobLibrary() {
     }
   };
 
-  // ── Delete ──
+  // Delete
   const handleDelete = async () => {
     try {
       await api.delete(`/job-library/${deleteModal.job.id}`);
       showAlert("success", "Deleted", "Job entry removed from the library.");
       setDeleteModal({ open: false, job: null });
+      if (selectedJobId === deleteModal.job.id) setSelectedJobId(null);
       fetchJobs();
     } catch (err) {
       showAlert(
@@ -272,7 +233,7 @@ export default function JobLibrary() {
     }
   };
 
-  // ── COO Approve / Reject ──
+  // COO Approve / Reject
   const handleApprove = async () => {
     setSaving(true);
     try {
@@ -304,415 +265,443 @@ export default function JobLibrary() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
-            Recruitment
-          </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
-            Job Library
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Reusable job templates for PRFs and job postings — requires COO approval.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={fetchJobs}
-            disabled={loading}
-            className="gap-2"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-          {canEdit && (
-            <Button variant="primary" onClick={openCreate} className="gap-2">
-              <Plus size={14} />
-              Add Job Entry
+    <div className="space-y-6">
+      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
+      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+        {/* Header */}
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
+              Recruitment
+            </p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
+              Job Library
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Reusable job templates for PRFs and job postings — requires COO approval.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={fetchJobs}
+              disabled={loading}
+              className="gap-2 bg-white"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Needs Revision Banner for Rejected Entries */}
-      {stats.rejected > 0 && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-red-900">
-                {stats.rejected} Job {stats.rejected === 1 ? "Entry Needs" : "Entries Need"} Revision & Resubmission
-              </h3>
-              <p className="text-xs text-red-700 mt-0.5">
-                The COO has reviewed and returned job template(s) with feedback remarks. Click below to view COO comments and edit to resubmit.
-              </p>
-            </div>
+            {canEdit && (
+              <Button variant="primary" onClick={openCreate} className="gap-2 bg-[#111A62]">
+                <Plus size={14} />
+                Add Job Entry
+              </Button>
+            )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setFilter("rejected"); setPage(1); }}
-            className="self-start sm:self-center border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 font-bold whitespace-nowrap"
+        </div>
+
+        {/* Needs Revision Banner for Rejected Entries */}
+        {stats.rejected > 0 && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-900">
+                  {stats.rejected} Job {stats.rejected === 1 ? "Entry Needs" : "Entries Need"} Revision & Resubmission
+                </h3>
+                <p className="text-xs text-red-700 mt-0.5">
+                  The COO has reviewed and returned job template(s) with feedback remarks. Click below to view COO comments and edit to resubmit.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setFilter("rejected"); setPage(1); }}
+              className="self-start sm:self-center border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 font-bold whitespace-nowrap"
+            >
+              Review Rejected Entries ({stats.rejected})
+            </Button>
+          </div>
+        )}
+
+        {/* Statistics Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card
+            onClick={() => { setFilter("approved"); setPage(1); }}
+            className={`cursor-pointer transition-all hover:border-emerald-400 ${filter === "approved" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
           >
-            Review Rejected Entries ({stats.rejected})
-          </Button>
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                <CheckCircle size={24} className="text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">Approved</p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {stats.approved}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            onClick={() => { setFilter("pending"); setPage(1); }}
+            className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
+          >
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+                <Clock size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">Pending</p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {stats.pending}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            onClick={() => { setFilter("rejected"); setPage(1); }}
+            className={`cursor-pointer transition-all hover:border-red-400 ${filter === "rejected" ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/30" : ""}`}
+          >
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
+                <XCircle size={24} className="text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
+                <p className="text-2xl font-extrabold text-red-600">
+                  {stats.rejected}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            onClick={() => { setFilter("all"); setPage(1); }}
+            className={`cursor-pointer transition-all hover:border-blue-400 ${filter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
+          >
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+                <BookOpen size={24} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">Total Templates</p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {stats.total}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
-
-      {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          onClick={() => { setFilter("approved"); setPage(1); }}
-          className={`cursor-pointer transition-all hover:border-emerald-400 ${filter === "approved" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
-        >
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-              <CheckCircle size={24} className="text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Approved</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {stats.approved}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          onClick={() => { setFilter("pending"); setPage(1); }}
-          className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
-        >
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-              <Clock size={24} className="text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Pending</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {stats.pending}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          onClick={() => { setFilter("rejected"); setPage(1); }}
-          className={`cursor-pointer transition-all hover:border-red-400 ${filter === "rejected" ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/30" : ""}`}
-        >
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
-              <XCircle size={24} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
-              <p className="text-2xl font-extrabold text-red-600">
-                {stats.rejected}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          onClick={() => { setFilter("all"); setPage(1); }}
-          className={`cursor-pointer transition-all hover:border-blue-400 ${filter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
-        >
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-              <BookOpen size={24} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Total Templates</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {stats.total}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Filters & Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Filter size={16} />
-              Filters:
-            </div>
-            <div className="flex flex-1 flex-wrap gap-2">
-              {APPROVAL_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => {
-                    setFilter(f.value);
-                    setPage(1);
-                  }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${filter === f.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <div className="w-full lg:w-64">
-              <SearchBar
-                value={q}
-                onChange={(val) => {
-                  setQ(val);
-                  setPage(1);
-                }}
-                placeholder="Search job templates..."
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Split-Screen Master-Detail Layout ──────────────────────── */}
+      <div className={`grid gap-5 transition-all duration-300 lg:grid-cols-12 ${selectedJobId ? "h-[calc(100vh-8.5rem)] min-h-[550px]" : ""}`}>
 
-      {/* Job Templates Table */}
-      <Card>
-        <CardHeader className="pb-6">
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              Job Templates ({filtered.length}{" "}
-              {filtered.length === 1 ? "template" : "templates"})
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
-              ))}
-            </div>
-          ) : paginated.length === 0 ? (
-            <div className="py-12 text-center">
-              <FileText size={48} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">
-                No job templates found
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                {q || filter !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "Get started by creating your first job template"}
-              </p>
+        {/* ── LEFT SIDE: DIRECTORY (Full Cards Grid or Compact Sidebar List) ────── */}
+        <div className={`transition-all duration-300 ${selectedJobId ? "lg:col-span-4 h-full min-h-0" : "lg:col-span-12"}`}>
+
+          {selectedJobId ? (
+            /* ── COMPACT SIDEBAR LIST (When Template Panel is open) ─── */
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl space-y-3 animate-fade-in flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Job Templates</h3>
+                  <p className="text-[11px] text-slate-400">Click template to view specifications</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {isScrolled && (
+                    <button
+                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
+                      title="Scroll to top"
+                    >
+                      ↑ Stats
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSelectedJobId(null)}
+                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+                    title="Expand Grid View"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="space-y-2 shrink-0">
+                <SearchBar
+                  value={q}
+                  onChange={(val) => { setQ(val); setPage(1); }}
+                  placeholder="Search template title..."
+                  className="text-xs"
+                />
+
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold">
+                  {APPROVAL_FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={() => { setFilter(f.value); setPage(1); }}
+                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${filter === f.value
+                        ? "bg-[#111A62] text-white border-[#111A62]"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sidebar Cards */}
+              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
+                {loading ? (
+                  <div className="py-10 text-center text-xs text-slate-400">Loading templates...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">No templates match filter.</div>
+                ) : (
+                  filtered.map((j) => {
+                    const isSelected = j.id === selectedJobId;
+                    const jlId = `JL-${String(j.id).padStart(3, "0")}`;
+
+                    return (
+                      <div
+                        key={j.id}
+                        onClick={() => setSelectedJobId(j.id)}
+                        className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
+                          ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                            {jlId}
+                          </span>
+                          <Badge tone={APPROVAL_TONE[j.approval_status] || "default"} className="text-[9px] px-1.5 py-0.2 capitalize">
+                            {j.approval_status}
+                          </Badge>
+                        </div>
+
+                        <p className={`text-xs font-extrabold mt-1.5 truncate ${isSelected ? "text-[#111A62]" : "text-slate-900"}`}>
+                          {j.job_title}
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 flex items-center justify-between">
+                          <span>{j.job_category || "General"}</span>
+                          <span className="text-slate-400">{j.creator?.name || "HR Admin"}</span>
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {paginated.map((j) => (
-                  <Card
-                    key={j.id}
-                    onClick={() => setViewModal({ open: true, job: j })}
-                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
-                  >
-                    <CardContent className="p-5">
-                      {/* Header */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge tone="default" className="text-xs font-semibold">
-                              JL-{String(j.id).padStart(3, "0")}
-                            </Badge>
-                            <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
-                          </div>
-                          <h3 className="text-lg font-extrabold text-[#111A62]">
-                            {j.job_title}
-                          </h3>
-                        </div>
-                        <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize">
-                          {j.approval_status}
-                        </Badge>
+            /* ── FULL CARDS GRID DIRECTORY (When no template is open) ─ */
+            <div className="space-y-4">
+              {/* Filters & Search Bar */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Filter size={16} />
+                      Filters:
+                    </div>
+                    <div className="flex flex-1 flex-wrap gap-2">
+                      {APPROVAL_FILTERS.map((f) => (
+                        <button
+                          key={f.value}
+                          onClick={() => {
+                            setFilter(f.value);
+                            setPage(1);
+                          }}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${filter === f.value
+                            ? "border-[#111A62] bg-[#111A62] text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="w-full lg:w-64">
+                      <SearchBar
+                        value={q}
+                        onChange={(val) => {
+                          setQ(val);
+                          setPage(1);
+                        }}
+                        placeholder="Search job templates..."
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cards Grid */}
+              <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedJobId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                      <BookOpen className="text-[#111A62]" size={18} /> Job Templates ({filtered.length})
+                    </CardTitle>
+                    {isScrolled && !selectedJobId && (
+                      <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer"
+                        title="Scroll to top"
+                      >
+                        ↑ Show Header & Stats
+                      </button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {[...Array(6)].map((_, i) => (
+                        <Skeleton key={i} className="h-44 rounded-2xl" />
+                      ))}
+                    </div>
+                  ) : paginated.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <FileText size={48} className="mx-auto mb-3 text-slate-300" />
+                      <p className="text-sm font-semibold text-slate-600">No job templates found</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {paginated.map((j) => (
+                          <Card
+                            key={j.id}
+                            onClick={() => setSelectedJobId(j.id)}
+                            className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
+                          >
+                            <CardContent className="p-5">
+                              {/* Header */}
+                              <div className="mb-4 flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge tone="default" className="text-xs font-semibold">
+                                      JL-{String(j.id).padStart(3, "0")}
+                                    </Badge>
+                                    <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
+                                  </div>
+                                  <h3 className="text-lg font-extrabold text-[#111A62]">
+                                    {j.job_title}
+                                  </h3>
+                                </div>
+                                <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize">
+                                  {j.approval_status}
+                                </Badge>
+                              </div>
+
+                              {/* Details Grid */}
+                              <div className="mb-4 grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                  <Briefcase size={16} className="text-slate-400" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500">Category</p>
+                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                      {j.job_category || "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                  <User size={16} className="text-slate-400" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500">Created By</p>
+                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                      {j.creator?.name || "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions Bar */}
+                              <div className="mt-4 border-t border-slate-100 pt-3 flex items-center justify-between">
+                                <span className="text-xs font-extrabold text-[#111A62] group-hover:underline flex items-center gap-1">
+                                  View Specification <ChevronRight size={14} />
+                                </span>
+                                {canEdit && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteModal({ open: true, job: j });
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                                    title="Delete Template"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
 
-                      {/* COO Rejection Feedback Box */}
-                      {j.approval_status === "rejected" && (j.approval_remarks || j.remarks) && (
-                        <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs">
-                          <p className="font-bold text-red-900 flex items-center gap-1.5 mb-1">
-                            <XCircle size={14} className="text-red-600 shrink-0" />
-                            COO Rejection Remarks:
-                          </p>
-                          <p className="text-red-800 line-clamp-2 italic leading-relaxed">
-                            "{j.approval_remarks || j.remarks}"
-                          </p>
+                      {filtered.length > 10 && (
+                        <div className="mt-6 border-t border-slate-100 pt-4">
+                          <Pagination
+                            page={page}
+                            pageSize={pageSize}
+                            total={filtered.length}
+                            onPageChange={setPage}
+                          />
                         </div>
                       )}
-
-                      {/* Details Grid */}
-                      <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Briefcase size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Category</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {j.job_category || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <User size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Created By</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {j.creator?.name || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <DollarSign size={16} className="text-slate-400 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Monthly Salary</p>
-                            {(() => {
-                              const bd = calculateSalaryBreakdown(j.salary_min, j.salary_max, j.salary_type);
-                              if (!bd) return <p className="text-sm font-semibold text-slate-900 truncate">—</p>;
-                              return (
-                                <div>
-                                  <p className="text-sm font-bold text-slate-900 truncate">
-                                    {bd.formatted.monthly}
-                                  </p>
-                                  <p className="text-[10px] text-blue-700 font-medium truncate">
-                                    ~{bd.formatted.daily}/day ({bd.formatted.hourly}/hr)
-                                  </p>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Calendar size={16} className="text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-500">Type</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate capitalize">
-                              {j.employment_type?.replace(/_/g, " ") || "—"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="mt-4 border-t border-slate-100 pt-3">
-                        <div className="mb-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 group-hover:text-blue-500 transition-colors">
-                          <MousePointerClick size={14} />
-                          <span>Click anywhere on card to view details</span>
-                        </div>
-                        <div className="flex gap-2">
-                          {isCOO && j.approval_status === "pending" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setApproveModal({
-                                  open: true,
-                                  job: j,
-                                  status: "approved",
-                                  remarks: "",
-                                });
-                              }}
-                              className="flex-1 gap-1.5 border-green-200 bg-green-50/50 text-green-700 hover:bg-green-100 hover:border-green-300"
-                            >
-                              <Eye size={14} />
-                              Review
-                            </Button>
-                          )}
-                          {canEdit && (
-                            <>
-                              <Button
-                                variant={j.approval_status === "rejected" ? "primary" : "outline"}
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); openEdit(j); }}
-                                className={`flex-1 gap-1.5 ${j.approval_status === "rejected"
-                                    ? "bg-red-600 hover:bg-red-700 text-white font-bold"
-                                    : "border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                                  }`}
-                              >
-                                <Edit size={14} />
-                                {j.approval_status === "rejected" ? "Revise & Resubmit" : "Edit"}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, job: j }); }}
-                                className="flex-1 gap-1.5 border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300"
-                              >
-                                <Trash2 size={14} />
-                                Delete
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Pagination */}
-              <div className="mt-4">
-                <Pagination
-                  page={page}
-                  pageSize={pageSize}
-                  total={total}
-                  onPageChange={setPage}
-                />
-              </div>
-            </>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* ── Create / Edit Modal ── */}
+        {/* ── RIGHT SIDE: JOB TEMPLATE SPECIFICATION PANEL (Smooth Slide In) ── */}
+        {selectedJobId && (
+          <div className="lg:col-span-8 animate-slide-up transition-all duration-300 h-full min-h-0">
+            <JobLibraryViewPanel
+              jobId={selectedJobId}
+              initialJob={jobs.find(j => j.id === selectedJobId)}
+              onClose={() => setSelectedJobId(null)}
+              onUpdated={fetchJobs}
+              onEdit={(job) => openEdit(job)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Form Modal (Create / Edit) */}
       <JobLibraryFormModal
         open={formModal.open}
         mode={formModal.mode}
-        data={formModal.data}
-        form={form}
-        setForm={setForm}
-        onClose={() =>
-          setFormModal({ open: false, mode: "create", data: null })
-        }
-        onSave={handleSave}
+        initialData={formModal.data}
+        onClose={() => setFormModal({ open: false, mode: "create", data: null })}
+        onSave={handleSaveForm}
         saving={saving}
       />
 
-      {/* ── COO Approve/Reject Modal ── */}
+      {/* COO Approve/Reject Modal */}
       <JobLibraryApproveModal
         open={approveModal.open}
         job={approveModal.job}
         status={approveModal.status}
         remarks={approveModal.remarks}
-        onStatusChange={(status) =>
-          setApproveModal({ ...approveModal, status })
-        }
-        onRemarksChange={(remarks) =>
-          setApproveModal({ ...approveModal, remarks })
-        }
         onClose={() =>
-          setApproveModal({
-            open: false,
-            job: null,
-            status: "approved",
-            remarks: "",
-          })
+          setApproveModal({ open: false, job: null, status: "approved", remarks: "" })
         }
+        onRemarksChange={(val) => setApproveModal((prev) => ({ ...prev, remarks: val }))}
         onConfirm={handleApprove}
         saving={saving}
       />
 
-      {/* ── View Modal ── */}
-      <JobLibraryViewModal
-        open={viewModal.open}
-        job={viewModal.job}
-        onClose={() => setViewModal({ open: false, job: null })}
-      />
-
-      {/* ── Delete Confirm Modal ── */}
+      {/* Delete Modal */}
       <JobLibraryDeleteModal
         open={deleteModal.open}
         job={deleteModal.job}
@@ -720,13 +709,13 @@ export default function JobLibrary() {
         onConfirm={handleDelete}
       />
 
-      {/* Alert */}
+      {/* Alert Modal */}
       <AlertModal
         open={alertModal.open}
         variant={alertModal.variant}
         title={alertModal.title}
         message={alertModal.message}
-        onClose={() => setAlertModal({ ...alertModal, open: false })}
+        onClose={() => setAlertModalState({ ...alertModal, open: false })}
       />
     </div>
   );

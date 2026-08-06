@@ -84,4 +84,31 @@ class DashboardController extends Controller
                                         ->where('date', today())->count(),
         ]);
     }
+
+    /**
+     * GET /api/sidebar-counts
+     * Returns real-time counts for sidebar navigation badges.
+     */
+    public function sidebarCounts(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $deptId = $user?->department_id;
+
+        $pendingManpower = ManpowerRequest::where('status', 'pending');
+        if ($user && $user->role === 'department_head' && $deptId) {
+            $pendingManpower->where('department_id', $deptId);
+        }
+
+        $unreadNotifs = $user
+            ? \DB::table('notifications')->where('notifiable_id', $user->id)->whereNull('read_at')->count()
+            : 0;
+
+        return response()->json([
+            'manpower_requests' => $pendingManpower->count(),
+            'applicants'        => Applicant::count(),
+            'job_postings'      => JobPosting::where('status', 'published')->count(),
+            'interviews'        => Interview::whereIn('status', ['scheduled', 'confirmed'])->count(),
+            'notifications'     => $unreadNotifs,
+        ]);
+    }
 }

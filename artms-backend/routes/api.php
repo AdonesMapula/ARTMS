@@ -87,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role:super_admin');
     Route::get('dashboard/department-head', [DashboardController::class, 'departmentHeadStats'])
         ->middleware('role:department_head');
+    Route::get('sidebar-counts', [DashboardController::class, 'sidebarCounts']);
 
     // ── Users  (Super Admin only) ────────────────────────────────────────────
     Route::middleware('role:super_admin')->group(function () {
@@ -123,6 +124,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('employees', EmployeeController::class);
         Route::patch('employees/{employee}/terminate', [EmployeeController::class, 'terminate']);
         Route::patch('employees/{employee}/clearance', [EmployeeController::class, 'clearance']);
+        Route::post('employees/{employee}/documents', [EmployeeController::class, 'uploadDocument']);
+        Route::get('employees/{employee}/documents/{document}/download', [EmployeeController::class, 'downloadDocument']);
+        Route::patch('employees/{employee}/documents/{document}/status', [EmployeeController::class, 'updateDocumentStatus']);
+        Route::get('employees/{employee}/history', [EmployeeController::class, 'getEditHistory']);
     });
 
     // ── Job Library  (HR Admin creates; COO approves) ───────────────────────
@@ -160,7 +165,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('applicants/{applicant}', [ApplicantController::class, 'update']);
         Route::patch('applicants/{applicant}/ready-for-interview', [ApplicantController::class, 'readyForInterview']);
         Route::patch('applicants/{applicant}/hire', [ApplicantController::class, 'hire']);
+        Route::post('applicants/{applicant}/hire', [ApplicantController::class, 'hire']);
         Route::patch('applicants/{applicant}/reject', [ApplicantController::class, 'reject']);
+        Route::delete('applicants/{applicant}', [ApplicantController::class, 'destroy']);
         Route::post('applicants/{applicant}/notes', [ApplicantController::class, 'addNote']);
     });
 

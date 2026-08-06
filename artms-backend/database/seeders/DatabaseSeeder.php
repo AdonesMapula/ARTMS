@@ -89,5 +89,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(ManpowerRequestSeeder::class);
         $this->call(JobPostingSeeder::class);
+        $this->call(EmployeeSeeder::class);
     }
 }

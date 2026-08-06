@@ -12,6 +12,12 @@ class JobPostingSeeder extends Seeder
 {
     public function run(): void
     {
+        // Clean out old job postings & library entries to prevent old stale jobs from showing
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        JobPosting::truncate();
+        JobLibrary::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
         $hrAdmin = User::where('email', 'hradmin@artms.com')->first();
         $coo     = User::where('email', 'coo@artms.com')->first();
 

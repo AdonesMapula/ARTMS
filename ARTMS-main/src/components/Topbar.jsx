@@ -53,7 +53,14 @@ export default function Topbar({ title, subtitle, right }) {
     fetchNotifications();
     // Poll every 8 seconds for real-time alert updates
     const interval = setInterval(fetchNotifications, 8000);
-    return () => clearInterval(interval);
+
+    const handleRefresh = () => fetchNotifications();
+    window.addEventListener("artms-refresh-notifications", handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("artms-refresh-notifications", handleRefresh);
+    };
   }, [fetchNotifications]);
 
   const handleMarkAsRead = async (id, link) => {

@@ -42,7 +42,7 @@ export default function DepartmentHeadLayout() {
     
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },
-    { label: "Notifications", to: "/department-head/notifications", icon: <FiBell />, badge: "3" },
+    { label: "Notifications", to: "/department-head/notifications", icon: <FiBell /> },
   ];
 
   return (

@@ -11,6 +11,22 @@ use Illuminate\Support\Str;
 class NotificationService
 {
     /**
+     * Dispatch email execution asynchronously after HTTP response is sent.
+     */
+    protected static function dispatchAsyncMail(callable $mailCallback): void
+    {
+        if (function_exists('defer')) {
+            defer($mailCallback);
+        } else {
+            try {
+                $mailCallback();
+            } catch (\Throwable $e) {
+                \Log::error("Async mail execution failed: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
      * Notify a specific User (In-App Database Notification + Email).
      */
     public static function notifyUser(User $user, string $title, string $message, string $link = '/', string $category = 'alert'): void
@@ -19,7 +35,7 @@ class NotificationService
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $fullActionUrl = str_starts_with($link, 'http') ? $link : rtrim($frontendUrl, '/') . '/' . ltrim($link, '/');
 
-        // 1. Create persistent in-app notification
+        // 1. Create persistent in-app notification (instant DB insert)
         DB::table('notifications')->insert([
             'id'              => $uuid,
             'type'            => 'App\\Notifications\\SystemNotification',
@@ -38,13 +54,15 @@ class NotificationService
             'updated_at'      => now(),
         ]);
 
-        // 2. Dispatch Email notification
+        // 2. Dispatch Email notification asynchronously (non-blocking)
         if ($user->email) {
-            try {
-                Mail::to($user->email)->send(new SystemNotificationMail($title, $message, $fullActionUrl, $category));
-            } catch (\Throwable $e) {
-                \Log::error("Failed to send notification email to {$user->email}: " . $e->getMessage());
-            }
+            self::dispatchAsyncMail(function () use ($user, $title, $message, $fullActionUrl, $category) {
+                try {
+                    Mail::to($user->email)->send(new SystemNotificationMail($title, $message, $fullActionUrl, $category));
+                } catch (\Throwable $e) {
+                    \Log::error("Failed to send notification email to {$user->email}: " . $e->getMessage());
+                }
+            });
         }
     }
 
@@ -62,7 +80,7 @@ class NotificationService
     }
 
     /**
-     * Send email directly to an email address (e.g. candidates/applicants).
+     * Send email directly to an email address (e.g. candidates/applicants) asynchronously.
      */
     public static function notifyEmail(string $email, string $title, string $message, ?string $link = null, string $category = 'alert'): void
     {
@@ -71,15 +89,17 @@ class NotificationService
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $fullActionUrl = $link ? (str_starts_with($link, 'http') ? $link : rtrim($frontendUrl, '/') . '/' . ltrim($link, '/')) : null;
 
-        try {
-            Mail::to($email)->send(new SystemNotificationMail($title, $message, $fullActionUrl, $category));
-        } catch (\Throwable $e) {
-            \Log::error("Failed to send candidate email to {$email}: " . $e->getMessage());
-        }
+        self::dispatchAsyncMail(function () use ($email, $title, $message, $fullActionUrl, $category) {
+            try {
+                Mail::to($email)->send(new SystemNotificationMail($title, $message, $fullActionUrl, $category));
+            } catch (\Throwable $e) {
+                \Log::error("Failed to send candidate email to {$email}: " . $e->getMessage());
+            }
+        });
     }
 
     /**
-     * Send a polite automated screening rejection email to an applicant.
+     * Send a polite automated screening rejection email to an applicant asynchronously.
      */
     public static function sendScreeningRejectionEmail(\App\Models\Applicant $applicant, ?string $remarks = null): void
     {
@@ -89,22 +109,24 @@ class NotificationService
             ?? $applicant->jobPosting?->description
             ?? 'Job Position';
 
-        try {
-            Mail::send('emails.screening_rejection', [
-                'applicant' => $applicant,
-                'job_title' => $jobTitle,
-                'remarks'   => $remarks,
-            ], function ($mail) use ($applicant) {
-                $mail->to($applicant->email)
-                     ->subject('Application Status Update — ARTMS Recruitment');
-            });
-        } catch (\Throwable $e) {
-            \Log::error("Failed to send screening rejection email to {$applicant->email}: " . $e->getMessage());
-        }
+        self::dispatchAsyncMail(function () use ($applicant, $jobTitle, $remarks) {
+            try {
+                Mail::send('emails.screening_rejection', [
+                    'applicant' => $applicant,
+                    'job_title' => $jobTitle,
+                    'remarks'   => $remarks,
+                ], function ($mail) use ($applicant) {
+                    $mail->to($applicant->email)
+                         ->subject('Application Status Update — ARTMS Recruitment');
+                });
+            } catch (\Throwable $e) {
+                \Log::error("Failed to send screening rejection email to {$applicant->email}: " . $e->getMessage());
+            }
+        });
     }
 
     /**
-     * Send an AI-recommended alternative role email to an applicant who failed screening.
+     * Send an AI-recommended alternative role email to an applicant who failed screening asynchronously.
      */
     public static function sendAlternativeRoleRecommendationEmail(\App\Models\Applicant $applicant, \Illuminate\Support\Collection $recommendedJobs, ?string $remarks = null): void
     {
@@ -114,18 +136,20 @@ class NotificationService
             ?? $applicant->jobPosting?->description
             ?? 'Job Position';
 
-        try {
-            \Illuminate\Support\Facades\Mail::send('emails.alternative_role_recommendation', [
-                'applicant' => $applicant,
-                'job_title' => $jobTitle,
-                'remarks'   => $remarks,
-                'recommendedJobs' => $recommendedJobs
-            ], function ($mail) use ($applicant) {
-                $mail->to($applicant->email)
-                     ->subject('Application Status Update — ARTMS Recruitment');
-            });
-        } catch (\Throwable $e) {
-            \Log::error("Failed to send alternative role recommendation email to {$applicant->email}: " . $e->getMessage());
-        }
+        self::dispatchAsyncMail(function () use ($applicant, $jobTitle, $remarks, $recommendedJobs) {
+            try {
+                Mail::send('emails.alternative_role_recommendation', [
+                    'applicant' => $applicant,
+                    'job_title' => $jobTitle,
+                    'remarks'   => $remarks,
+                    'recommendedJobs' => $recommendedJobs
+                ], function ($mail) use ($applicant) {
+                    $mail->to($applicant->email)
+                         ->subject('Application Status Update — ARTMS Recruitment');
+                });
+            } catch (\Throwable $e) {
+                \Log::error("Failed to send alternative role recommendation email to {$applicant->email}: " . $e->getMessage());
+            }
+        });
     }
 }

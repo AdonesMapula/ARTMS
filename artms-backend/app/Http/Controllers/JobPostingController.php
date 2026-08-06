@@ -95,6 +95,17 @@ class JobPostingController extends Controller
             $message = 'Job posting submitted for COO approval (requirements were modified).';
         }
 
+        // Check if an active posting for this job library template and department already exists
+        $existing = JobPosting::where('job_library_id', $data['job_library_id'])
+            ->where('department_id', $data['department_id'])
+            ->whereNotIn('status', ['closed', 'cancelled'])
+            ->first();
+
+        if ($existing) {
+            $existing->update($data);
+            return response()->json(['message' => 'Existing active job posting updated successfully.', 'posting' => $existing], 200);
+        }
+
         $posting = JobPosting::create($data);
         AuditLog::record('create', 'job_posting', "Created job posting ID {$posting->id}");
 
