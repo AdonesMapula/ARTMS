@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import applicantService from "../services/applicantService";
+import BirthDatePicker from "../components/ui/BirthDatePicker";
+import Select from "../components/ui/Select";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -309,13 +311,19 @@ export default function ApplyModal({ open, job, onClose }) {
               </div>
             </div>
 
-            {/* ── Step 2: Personal Information ───────────────────── */}
             <div>
               <SectionHeader icon={<User className="h-4 w-4" />} title="Personal Information" subtitle={<>Fields marked <span className="text-red-500">*</span> are required.</>} />
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+
+              {/* Row 1: First / Middle / Last — 3-column grid */}
+              <div className="mt-3 grid gap-4 sm:grid-cols-3">
                 <Field label="First Name" required error={fieldErrors.firstName}>
                   <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
                     <input value={form.firstName} onChange={set("firstName")} className={inputCls(fieldErrors.firstName)} required />
+                  </InlineInput>
+                </Field>
+                <Field label="Middle Name" error={fieldErrors.middleName}>
+                  <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
+                    <input value={form.middleName} onChange={set("middleName")} className={inputCls(fieldErrors.middleName)} />
                   </InlineInput>
                 </Field>
                 <Field label="Last Name" required error={fieldErrors.lastName}>
@@ -323,11 +331,10 @@ export default function ApplyModal({ open, job, onClose }) {
                     <input value={form.lastName} onChange={set("lastName")} className={inputCls(fieldErrors.lastName)} required />
                   </InlineInput>
                 </Field>
-                <Field label="Middle Name" error={fieldErrors.middleName} className="sm:col-span-2">
-                  <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.middleName} onChange={set("middleName")} className={inputCls(fieldErrors.middleName)} />
-                  </InlineInput>
-                </Field>
+              </div>
+
+              {/* Row 2: remaining fields — 2-column grid */}
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field label="Email Address" required error={fieldErrors.email}>
                   <InlineInput icon={<Mail className="h-4 w-4 text-slate-400" />}>
                     <input type="email" value={form.email} onChange={set("email")} className={inputCls(fieldErrors.email)} required />
@@ -339,19 +346,29 @@ export default function ApplyModal({ open, job, onClose }) {
                   </InlineInput>
                 </Field>
                 <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
-                  <InlineInput icon={<Calendar className="h-4 w-4 text-slate-400" />}>
-                    <input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} className={inputCls(fieldErrors.dateOfBirth)} />
-                  </InlineInput>
+                  <BirthDatePicker
+                    value={form.dateOfBirth}
+                    onChange={(val) => setForm((f) => ({ ...f, dateOfBirth: val }))}
+                    placeholder="Select date of birth"
+                  />
                 </Field>
                 <Field label="Gender" error={fieldErrors.gender}>
-                  <select value={form.gender} onChange={set("gender")} className={selectCls(fieldErrors.gender)}>
-                    {GENDERS.map((g) => <option key={g} value={g}>{g || "Select gender"}</option>)}
-                  </select>
+                  <Select
+                    value={form.gender}
+                    onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                    options={GENDERS.map((g) => ({ value: g, label: g || "Select gender" }))}
+                    placeholder="Select gender"
+                    error={fieldErrors.gender}
+                  />
                 </Field>
                 <Field label="Civil Status" error={fieldErrors.civilStatus}>
-                  <select value={form.civilStatus} onChange={set("civilStatus")} className={selectCls(fieldErrors.civilStatus)}>
-                    {CIVIL_STATUSES.map((s) => <option key={s} value={s}>{s || "Select civil status"}</option>)}
-                  </select>
+                  <Select
+                    value={form.civilStatus}
+                    onChange={(e) => setForm((f) => ({ ...f, civilStatus: e.target.value }))}
+                    options={CIVIL_STATUSES.map((s) => ({ value: s, label: s || "Select civil status" }))}
+                    placeholder="Select civil status"
+                    error={fieldErrors.civilStatus}
+                  />
                 </Field>
                 <Field label="Nationality" error={fieldErrors.nationality}>
                   <InlineInput icon={<Globe className="h-4 w-4 text-slate-400" />}>

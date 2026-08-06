@@ -24,6 +24,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import Select from "../../components/ui/Select";
+import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -376,9 +377,10 @@ export default function ManpowerRequest() {
           title="Position &amp; Schedule"
           icon={<FiBriefcase size={18} />}
         >
-          <div className="grid gap-6 sm:grid-cols-2">
+          {/* 3-Column grid: Position Needed | Date Needed | Number of Headcount */}
+          <div className="grid gap-6 sm:grid-cols-3">
 
-            {/* Position dropdown from Job Library */}
+            {/* Position Needed */}
             <div>
               <label className={labelClass}>
                 <div className="flex items-center gap-2">
@@ -471,6 +473,7 @@ export default function ManpowerRequest() {
               </div>
             )}
 
+            {/* Date Needed */}
             <div>
               <label className={labelClass}>
                 <div className="flex items-center gap-2">
@@ -478,14 +481,15 @@ export default function ManpowerRequest() {
                   <span>Date Needed</span>
                 </div>
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={form.needed_by}
-                onChange={(e) => set("needed_by", e.target.value)}
-                className={inputClass}
+                onChange={(val) => set("needed_by", val)}
+                placeholder="Pick a date…"
+                disablePast
               />
             </div>
 
+            {/* Number of Headcount */}
             <div>
               <label className={labelClass}>
                 <div className="flex items-center gap-2">
@@ -501,7 +505,82 @@ export default function ManpowerRequest() {
                 className={inputClass}
               />
             </div>
+
           </div>
+
+          {/* Selected Job Preview Card — appears below the 3-column grid */}
+          {selectedJob && (
+            <div className="mt-4 group relative overflow-hidden rounded-xl border border-[#111A62]/30 bg-gradient-to-br from-[#111A62]/10 via-[#111A62]/5 to-transparent p-5 shadow-md transition-all duration-300 hover:shadow-xl">
+              <div className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full bg-[#111A62]/10 blur-2xl" />
+
+              <div className="relative">
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111A62] text-white shadow-lg">
+                    <FiCheckCircle size={14} />
+                  </div>
+                  <p className="text-xs font-black uppercase tracking-wider text-[#111A62]">
+                    Selected Position Preview
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900">{selectedJob.job_title}</h4>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      {selectedJob.job_category && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
+                          <FiTarget size={12} />
+                          {selectedJob.job_category}
+                        </span>
+                      )}
+                      {selectedJob.employment_type && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
+                          <FiBriefcase size={12} />
+                          {selectedJob.employment_type?.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {(() => {
+                        const bd = calculateSalaryBreakdown(selectedJob.salary_min, selectedJob.salary_max, selectedJob.salary_type);
+                        if (!bd) return null;
+                        return (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 shadow-xs text-xs">
+                            <FiAward size={12} />
+                            {bd.formatted.monthly} / month
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    {selectedJob.job_description && (
+                      <p className="mt-3 text-sm leading-relaxed text-slate-700 line-clamp-2">
+                        {selectedJob.job_description}
+                      </p>
+                    )}
+                  </div>
+
+                  {(() => {
+                    const bd = calculateSalaryBreakdown(selectedJob.salary_min, selectedJob.salary_max, selectedJob.salary_type);
+                    if (!bd) return null;
+                    return (
+                      <div className="grid grid-cols-3 gap-2 text-center self-start">
+                        <div className="rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs">
+                          <span className="block text-[10px] font-semibold uppercase text-slate-500">Weekly</span>
+                          <span className="font-bold text-slate-800 text-xs mt-0.5 block">{bd.formatted.weekly}</span>
+                        </div>
+                        <div className="rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs">
+                          <span className="block text-[10px] font-semibold uppercase text-slate-500">Daily</span>
+                          <span className="font-bold text-slate-800 text-xs mt-0.5 block">{bd.formatted.daily}</span>
+                        </div>
+                        <div className="rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs">
+                          <span className="block text-[10px] font-semibold uppercase text-slate-500">Hourly</span>
+                          <span className="font-bold text-[#111A62] text-xs mt-0.5 block">{bd.formatted.hourly}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6">
             <label className={labelClass}>
