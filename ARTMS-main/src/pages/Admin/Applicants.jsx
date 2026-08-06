@@ -307,139 +307,146 @@ export default function Applicants() {
           </Button>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <Users size={24} className="text-blue-600" />
+        {/* ── Side-by-Side Cards Layout (Stats 2x2 + Top AI Leaderboard Card) ── */}
+        <div className="grid gap-4 lg:grid-cols-12 items-stretch">
+          {/* Left Side: 4 Statistics Cards (2x2 Grid) */}
+          <div className="lg:col-span-5 grid gap-3 sm:grid-cols-2">
+            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                <Users size={22} className="text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Total Applicants</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-500 truncate">Total Applicants</p>
+                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.total}</p>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
 
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <Clock size={24} className="text-amber-600" />
+            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                <Clock size={22} className="text-amber-600" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">In Screening</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.screening}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-500 truncate">In Screening</p>
+                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.screening}</p>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
 
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
-                <UserCheck size={24} className="text-purple-600" />
+            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-100">
+                <UserCheck size={22} className="text-purple-600" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">In Interview</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.interview}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-500 truncate">In Interview</p>
+                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.interview}</p>
               </div>
-            </CardContent>
-          </Card>
+            </Card>
 
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-                <CheckCircle size={24} className="text-emerald-600" />
+            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+                <CheckCircle size={22} className="text-emerald-600" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Hired</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.hired}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-500 truncate">Hired</p>
+                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.hired}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </Card>
+          </div>
 
-        {/* ── Top AI-Ranked Candidates Leaderboard Card ────────────────────────── */}
-        {rankedCandidates.length > 0 && (
-          <Card className="border-indigo-100 bg-gradient-to-r from-slate-900 via-[#111A62] to-[#1a257c] text-white shadow-xl overflow-hidden relative">
-            <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-            <CardHeader className="pb-3 border-b border-white/10">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30">
-                    <Trophy size={18} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-black text-white flex items-center gap-2">
-                      Top AI-Ranked Candidates <Sparkles size={14} className="text-amber-400" />
-                    </CardTitle>
-                    <p className="text-xs text-slate-300">
-                      Screened applicants auto-ranked by AI match score & fit classification
-                      {selectedPosition !== "all" && ` • ${positionsList.find(p => String(p.id) === String(selectedPosition))?.title || selectedPosition}`}
-                    </p>
-                  </div>
-                </div>
-                <Badge tone="accent" className="bg-amber-400/20 text-amber-300 border-amber-400/30 px-3 py-1 font-bold text-xs shrink-0">
-                  {rankedCandidates.length} Screened Matches
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {rankedCandidates.slice(0, 3).map((a, index) => {
-                  const scoreVal = Math.round(Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0));
-                  const fitLabel = a.ai_evaluation?.fit_label || a.fit_category || "high";
-                  const name = `${a.first_name || ""} ${a.last_name || ""}`;
-                  const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
-                  const rankText = index === 0 ? "🥇 #1 Top Rank" : index === 1 ? "🥈 #2 High Rank" : "🥉 #3 Ranked";
-                  const rankStyle = index === 0 
-                    ? "bg-amber-400/20 text-amber-300 border-amber-400/30" 
-                    : index === 1 
-                    ? "bg-slate-200/20 text-slate-200 border-slate-300/30" 
-                    : "bg-amber-700/20 text-amber-400 border-amber-600/30";
-
-                  return (
-                    <div
-                      key={a.id}
-                      onClick={() => setSelectedApplicantId(a.id)}
-                      className="group rounded-2xl bg-white/10 p-3.5 border border-white/10 hover:border-amber-400/50 hover:bg-white/15 transition duration-200 cursor-pointer flex flex-col justify-between space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-sm font-black text-white ring-1 ring-white/20">
-                            {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-extrabold text-white truncate group-hover:text-amber-300 transition">
-                              {name}
-                            </p>
-                            <p className="text-xs text-slate-300 truncate">{pos}</p>
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${rankStyle} shrink-0`}>
-                          {rankText}
-                        </span>
+          {/* Right Side: Top AI-Ranked Candidates Leaderboard Card */}
+          <div className="lg:col-span-7 flex">
+            {rankedCandidates.length > 0 ? (
+              <Card className="w-full h-full border-indigo-100 bg-gradient-to-r from-slate-900 via-[#111A62] to-[#1a257c] text-white shadow-xl overflow-hidden relative flex flex-col justify-between">
+                <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+                <CardHeader className="pb-3 border-b border-white/10 shrink-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30">
+                        <Trophy size={18} />
                       </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-black text-amber-300 bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/20 font-mono">
-                            {scoreVal}%
-                          </span>
-                          <Badge tone={FIT_TONE[fitLabel] || "success"} className="text-[10px] uppercase font-extrabold capitalize">
-                            {FIT_LABEL[fitLabel] || fitLabel}
-                          </Badge>
-                        </div>
-                        <span className="text-xs font-bold text-white group-hover:translate-x-0.5 transition flex items-center gap-1">
-                          View Profile <ChevronRight size={13} />
-                        </span>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base font-black text-white flex items-center gap-2 truncate">
+                          Top AI-Ranked Candidates <Sparkles size={14} className="text-amber-400 shrink-0" />
+                        </CardTitle>
+                        <p className="text-xs text-slate-300 truncate">
+                          Auto-ranked by AI match score
+                          {selectedPosition !== "all" && ` • ${positionsList.find(p => String(p.id) === String(selectedPosition))?.title || selectedPosition}`}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    <Badge tone="accent" className="bg-amber-400/20 text-amber-300 border-amber-400/30 px-2.5 py-1 font-bold text-xs shrink-0 self-start sm:self-center">
+                      {rankedCandidates.length} Screened Matches
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-3 pb-4 flex-1 flex flex-col justify-center">
+                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {rankedCandidates.slice(0, 3).map((a, index) => {
+                      const scoreVal = Math.round(Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0));
+                      const fitLabel = a.ai_evaluation?.fit_label || a.fit_category || "high";
+                      const name = `${a.first_name || ""} ${a.last_name || ""}`;
+                      const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
+                      const rankText = index === 0 ? "🥇 #1 Top" : index === 1 ? "🥈 #2 High" : "🥉 #3 Rank";
+                      const rankStyle = index === 0 
+                        ? "bg-amber-400/20 text-amber-300 border-amber-400/30" 
+                        : index === 1 
+                        ? "bg-slate-200/20 text-slate-200 border-slate-300/30" 
+                        : "bg-amber-700/20 text-amber-400 border-amber-600/30";
+
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => setSelectedApplicantId(a.id)}
+                          className="group rounded-2xl bg-white/10 p-3 border border-white/10 hover:border-amber-400/50 hover:bg-white/15 transition duration-200 cursor-pointer flex flex-col justify-between space-y-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-xs font-black text-white ring-1 ring-white/20">
+                                {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-extrabold text-white truncate group-hover:text-amber-300 transition">
+                                  {name}
+                                </p>
+                                <p className="text-[10px] text-slate-300 truncate">{pos}</p>
+                              </div>
+                            </div>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border ${rankStyle} shrink-0`}>
+                              {rankText}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-black text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 font-mono">
+                                {scoreVal}%
+                              </span>
+                              <Badge tone={FIT_TONE[fitLabel] || "success"} className="text-[9px] uppercase font-extrabold capitalize px-1.5 py-0.2">
+                                {FIT_LABEL[fitLabel] || fitLabel}
+                              </Badge>
+                            </div>
+                            <span className="text-[11px] font-bold text-white group-hover:translate-x-0.5 transition flex items-center gap-0.5">
+                              View <ChevronRight size={12} />
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="w-full h-full border-slate-200 bg-white p-5 flex flex-col items-center justify-center text-center shadow-2xs">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 mb-2">
+                  <Trophy size={22} />
+                </div>
+                <p className="text-xs font-extrabold text-slate-800">Top AI-Ranked Leaderboard</p>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                  Run AI Resume Screening to score applicants and view top-ranked candidates here.
+                </p>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Error banner */}
