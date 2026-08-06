@@ -75,10 +75,11 @@ export default function ConfirmationModal({
             description={description}
             footer={
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>
+                    <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                         {cancelText}
                     </Button>
                     <Button
+                        type="button"
                         variant={current.buttonVariant}
                         onClick={handleConfirm}
                         disabled={loading}

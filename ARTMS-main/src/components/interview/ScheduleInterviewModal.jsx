@@ -261,13 +261,23 @@ export default function ScheduleInterviewModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-3xl bg-white p-7 shadow-2xl border border-slate-200 relative my-8">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm overflow-y-auto cursor-pointer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
+      <div
+        className="w-full max-w-4xl rounded-3xl bg-white p-7 shadow-2xl border border-slate-200 relative my-8 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 transition"
+          className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+          title="Close Modal"
         >
           <FiX className="h-6 w-6" />
         </button>

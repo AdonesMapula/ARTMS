@@ -58,7 +58,12 @@ export default function Modal({
               ) : null}
             </div>
             <button
-              onClick={onClose}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose?.();
+              }}
               aria-label="Close"
               className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 cursor-pointer"
             >
@@ -76,7 +81,12 @@ export default function Modal({
         ) : (
           <div className="relative z-30">
             <button
-              onClick={onClose}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose?.();
+              }}
               aria-label="Close"
               className="absolute right-4 top-4 group flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-600 shadow-md backdrop-blur-sm transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:scale-105 active:scale-95 cursor-pointer"
             >

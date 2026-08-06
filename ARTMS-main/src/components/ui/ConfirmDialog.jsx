@@ -10,26 +10,36 @@ export default function ConfirmDialog({
   tone = "primary",
   onConfirm,
   onClose,
+  confirmText,
+  cancelText,
+  variant,
+  onCancel,
 }) {
+  const handleClose = onClose || onCancel || (() => {});
+  const finalConfirmText = confirmText || confirmLabel || "Confirm";
+  const finalCancelText = cancelText || cancelLabel || "Cancel";
+  const finalTone = variant === "danger" ? "danger" : (tone === "danger" ? "danger" : "primary");
+
   return (
     <Modal
       open={open}
       title={title}
       description={description}
-      onClose={onClose}
+      onClose={handleClose}
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            {cancelLabel}
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {finalCancelText}
           </Button>
           <Button
-            variant={tone === "danger" ? "danger" : "primary"}
+            type="button"
+            variant={finalTone}
             onClick={() => {
               onConfirm?.();
-              onClose?.();
+              handleClose();
             }}
           >
-            {confirmLabel}
+            {finalConfirmText}
           </Button>
         </div>
       }
