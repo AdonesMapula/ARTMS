@@ -4,6 +4,7 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import DatePicker from "../components/ui/DatePicker";
 
 const URGENCY_OPTIONS = [
   { value: "low", label: "Low" },
@@ -207,10 +208,11 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
 
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Date Needed By</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.needed_by}
-                onChange={(e) => setForm({ ...form, needed_by: e.target.value })}
+                onChange={(val) => setForm({ ...form, needed_by: val })}
+                placeholder="Select date needed"
+                disablePast
               />
             </div>
           </div>

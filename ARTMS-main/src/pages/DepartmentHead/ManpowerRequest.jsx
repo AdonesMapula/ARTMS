@@ -29,6 +29,7 @@ import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { GraduationCap, List, Plus, Trash2, Edit, FileCheck, X } from "lucide-react";
+import AlertModal from "../../components/ui/AlertModal";
 
 const EMPLOYMENT_STATUS_OPTIONS = [
   { value: "probationary", label: "Probationary" },
