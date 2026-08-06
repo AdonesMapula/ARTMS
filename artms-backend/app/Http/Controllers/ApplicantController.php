@@ -315,7 +315,7 @@ class ApplicantController extends Controller
         ]);
 
         $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? "Position";
-        $deptId   = $applicant->jobPosting?->department_id;
+        $deptId   = $applicant->jobPosting?->department_id ?? \App\Models\Department::first()?->id ?? 1;
 
         // 1. Mark Applicant as Hired
         $applicant->update(['status' => 'hired']);
@@ -325,6 +325,8 @@ class ApplicantController extends Controller
         if (!$user) {
             $user = User::create([
                 'name'          => "{$applicant->first_name} {$applicant->last_name}",
+                'first_name'    => $applicant->first_name,
+                'last_name'     => $applicant->last_name,
                 'email'         => $applicant->email,
                 'password'      => Hash::make(Str::random(12)),
                 'role'          => 'employee',
@@ -338,7 +340,7 @@ class ApplicantController extends Controller
         if (!$employee) {
             $employee = Employee::create([
                 'user_id'                  => $user->id,
-                'department_id'            => $deptId ?? 1,
+                'department_id'            => $deptId,
                 'position'                 => $jobTitle,
                 'date_hired'               => $request->date_hired ?? now()->toDateString(),
                 'salary'                   => $request->salary ?? ($applicant->jobPosting?->jobLibrary?->salary_min ?? 0),

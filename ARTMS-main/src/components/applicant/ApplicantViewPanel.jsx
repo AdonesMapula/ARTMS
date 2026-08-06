@@ -67,7 +67,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
       await loadApplicant();
       onUpdated?.();
     } catch (err) {
-      toast.error("Failed to update status.");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update status.");
     } finally {
       setActionLoading(null);
     }
@@ -83,7 +83,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
       await loadApplicant();
       onUpdated?.();
     } catch (err) {
-      toast.error("Failed to update status.");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update status.");
     } finally {
       setActionLoading(null);
     }
@@ -97,7 +97,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
       await loadApplicant();
       onUpdated?.();
     } catch (err) {
-      toast.error("Failed to hire applicant.");
+      toast.error(err?.response?.data?.message || err?.message || "Failed to hire applicant.");
     } finally {
       setActionLoading(null);
     }

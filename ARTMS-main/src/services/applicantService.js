@@ -16,12 +16,14 @@ const applicantService = {
 
   /** Update applicant status/details */
   update: (id, data) => api.patch(`/applicants/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/applicants/${id}`, { status }),
 
   /** Mark applicant as ready for interview and send email */
   readyForInterview: (id, data) => api.patch(`/applicants/${id}/ready-for-interview`, data),
 
-  /** Hire applicant */
-  hire: (id) => api.patch(`/applicants/${id}/hire`),
+  /** Hire applicant (supports both .hire and .hireApplicant method names) */
+  hire: (id, data = {}) => api.patch(`/applicants/${id}/hire`, data),
+  hireApplicant: (id, data = {}) => api.patch(`/applicants/${id}/hire`, data),
 
   /** Reject applicant */
   reject: (id, data) => api.patch(`/applicants/${id}/reject`, data),
