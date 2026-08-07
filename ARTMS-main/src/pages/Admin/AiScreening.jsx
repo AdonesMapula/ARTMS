@@ -3,11 +3,15 @@ import {
   FiAlertCircle, FiCheckCircle, FiCpu, FiInbox,
   FiLoader, FiRefreshCw, FiSearch, FiXCircle,
 } from "react-icons/fi";
+import { SlidersHorizontal, RefreshCw } from "lucide-react";
 import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
+import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import { useToast } from "../../context/ToastContext";
+import ScreeningLoadingModal from "../../components/ui/ScreeningLoadingModal";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const FIT_TONE  = { high: "success", medium: "warning", low: "danger" };
@@ -154,9 +158,19 @@ export default function AiScreening() {
   const low    = screened.filter(r => r.ai_evaluation?.fit_label === "low").length;
   const loading = tab === "pending" ? loadingP : loadingS;
 
+  // derive the applicant name being screened for the loading modal
+  const screeningApplicant = screening
+    ? (pending.find(r => r.id === screening) ?? screened.find(r => r.id === screening))
+    : null;
+
   // ── render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
+
+      {/* ── AI Screening Loading Modal — blocks all interaction ── */}
+      {screening && (
+        <ScreeningLoadingModal applicant={screeningApplicant} />
+      )}
 
       {/* Page heading */}
       <div>
@@ -202,25 +216,34 @@ export default function AiScreening() {
               </div>
 
               {/* Controls */}
-              <div className="flex gap-2">
-                <div className="relative">
-                  <FiSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input value={search} onChange={e => handleSearch(e.target.value)}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="w-48 sm:w-52">
+                  <SearchBar
+                    value={search}
+                    onChange={handleSearch}
                     placeholder="Search applicant…"
-                    className="rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20" />
+                    className="h-9 text-xs"
+                  />
                 </div>
                 {tab === "screened" && (
-                  <select value={filterFit} onChange={e => handleFilter(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20">
-                    <option value="">All Fits</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
+                  <div className="w-36 sm:w-40">
+                    <Select
+                      icon={SlidersHorizontal}
+                      size="sm"
+                      value={filterFit}
+                      onChange={e => handleFilter(e.target.value)}
+                      buttonClassName="bg-slate-50 hover:bg-white"
+                    >
+                      <option value="">All Fits</option>
+                      <option value="high">High Fit</option>
+                      <option value="medium">Medium Fit</option>
+                      <option value="low">Low Fit</option>
+                    </Select>
+                  </div>
                 )}
                 <button onClick={() => { loadPending(search); loadScreened(search, filterFit); }} title="Refresh"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">
-                  <FiRefreshCw size={13} className={(loadingP || loadingS) ? "animate-spin" : ""} />
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition shrink-0">
+                  <RefreshCw size={14} className={(loadingP || loadingS) ? "animate-spin" : ""} />
                 </button>
               </div>
             </div>
@@ -535,7 +558,6 @@ export default function AiScreening() {
   );
 }
 
-// ── sub-components ────────────────────────────────────────────────────────────
 
 function SummaryCard({ label, value, bg, text }) {
   return (

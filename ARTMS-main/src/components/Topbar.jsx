@@ -237,9 +237,13 @@ export default function Topbar({ title, subtitle, right }) {
               className="flex items-center gap-2 rounded-xl border border-[var(--artms-border)] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none"
             >
               {/* Avatar */}
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--artms-primary)] text-xs font-bold text-white">
-                {initials}
-              </span>
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="h-7 w-7 rounded-full object-cover border border-slate-200" />
+              ) : (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--artms-primary)] text-xs font-bold text-white">
+                  {initials}
+                </span>
+              )}
               <span className="hidden max-w-[120px] truncate sm:block">{user?.name ?? "User"}</span>
               <FiChevronDown size={14} className="text-slate-400" />
             </button>

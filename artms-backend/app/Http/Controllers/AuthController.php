@@ -50,6 +50,7 @@ class AuthController extends Controller
                 'id'            => $user->id,
                 'name'          => $user->name,
                 'email'         => $user->email,
+                'avatar'        => $user->avatar,
                 'role'          => $user->role,
                 'department_id' => $user->department_id,
                 'employee_id'   => $user->employee_id,
@@ -193,5 +194,64 @@ class AuthController extends Controller
         AuditLog::record('account_setup', 'auth', "Account setup completed for {$user->email}.");
 
         return response()->json(['message' => 'Account setup completed successfully.']);
+    }
+
+    /**
+     * POST /api/me/avatar
+     */
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+            $path = $file->store('avatars', 'public');
+            $url = url('storage/' . $path);
+            $user->update(['avatar' => $url]);
+        } elseif ($request->filled('avatar')) {
+            $user->update(['avatar' => $request->input('avatar')]);
+        } else {
+            return response()->json(['message' => 'No image or image data provided.'], 422);
+        }
+
+        AuditLog::record('update_avatar', 'user', "Updated avatar for user: {$user->email}");
+
+        return response()->json([
+            'message' => 'Profile photo updated successfully.',
+            'user'    => $user->fresh()->load('department', 'employee'),
+        ]);
+    }
+
+    /**
+     * PUT /api/me/profile
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'first_name'  => 'sometimes|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name'   => 'sometimes|string|max:255',
+            'name'        => 'sometimes|string|max:255',
+            'email'       => 'sometimes|email|unique:users,email,' . $user->id,
+            'phone'       => 'nullable|string|max:50',
+        ]);
+
+        if (isset($validated['first_name']) || isset($validated['last_name'])) {
+            $fn = $validated['first_name'] ?? $user->first_name ?? '';
+            $mn = $validated['middle_name'] ?? $user->middle_name ?? '';
+            $ln = $validated['last_name'] ?? $user->last_name ?? '';
+            $validated['name'] = trim($fn . ' ' . $mn . ' ' . $ln);
+        }
+
+        $user->update($validated);
+        
+        AuditLog::record('update_profile', 'user', "Updated profile details for user: {$user->email}");
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user'    => $user->fresh()->load('department', 'employee'),
+        ]);
     }
 }

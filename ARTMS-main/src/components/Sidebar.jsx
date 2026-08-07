@@ -249,9 +249,13 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         {/* User info + logout */}
         <div className="border-t border-[var(--artms-border)] px-4 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--artms-primary)] text-sm font-bold text-white">
-              {initials}
-            </span>
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--artms-primary)] text-sm font-bold text-white">
+                {initials}
+              </span>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-extrabold text-[#111A62]">{user?.name ?? "User"}</p>
               <p className="truncate text-xs text-slate-500">

@@ -1,28 +1,43 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FiUsers,
-  FiClock,
-  FiClipboard,
-  FiActivity,
-  FiCalendar,
-  FiLayers,
-  FiCheckCircle,
-  FiBriefcase,
-  FiArrowRight,
-} from "react-icons/fi";
+  Users, Clock, Clipboard, Activity, Calendar, Layers, CheckCircle2,
+  Briefcase, ArrowRight, RefreshCw, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon, TrendingUp,
+  Cpu, FileText, ChevronRight
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Skeleton from "../../components/ui/Skeleton";
 import dashboardService from "../../services/dashboardService";
 import attendanceService from "../../services/attendanceService";
+import { cn } from "../../utils/cn";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, Legend
+} from 'recharts';
+
+// ── COLOR PALETTE TOKENS ───────────────────────────────────────────────────────
+const COLORS = {
+  navy: "#111A62",
+  orange: "#E15B1D",
+  amber: "#F59E0B",
+  teal: "#0D9488",
+  indigo: "#4F46E5",
+  purple: "#7C3AED",
+  rose: "#E11D48",
+  emerald: "#10B981",
+  slate: "#64748B",
+  blue: "#3B82F6",
+};
 
 export default function AdminDashboard() {
-  const [stats, setStats]                 = useState(null);
+  const [stats, setStats] = useState(null);
   const [attendanceSummary, setAttendanceSummary] = useState(null);
-  const [loading, setLoading]             = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
+    setRefreshing(true);
     Promise.all([
       dashboardService.getAdminStats().catch(() => null),
       attendanceService.getSummary().catch(() => null),
@@ -31,277 +46,433 @@ export default function AdminDashboard() {
       if (attRes?.data?.summary) setAttendanceSummary(attRes.data.summary);
     }).finally(() => {
       setLoading(false);
+      setRefreshing(false);
     });
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  if (loading) return <DashboardSkeleton />;
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse pb-12">
+        <Skeleton className="h-12 w-80 rounded-2xl bg-slate-200/80" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-12">
+          <Skeleton className="h-96 lg:col-span-8 rounded-3xl" />
+          <Skeleton className="h-96 lg:col-span-4 rounded-3xl" />
+        </div>
+        <Skeleton className="h-96 rounded-3xl mt-6" />
+      </div>
+    );
+  }
 
   // Data state with fallback to live system backend structure
   const data = stats || {
-    total_employees: 12,
+    total_employees: 142,
     total_departments: 6,
-    total_users: 8,
-    open_job_postings: 4,
-    total_applicants: 48,
+    total_users: 156,
+    open_job_postings: 12,
+    total_applicants: 348,
     pending_leaves: 3,
-    interviews_this_month: 14,
-    hired_this_month: 6,
-    manpower_requests: 5,
+    interviews_this_month: 28,
+    hired_this_month: 14,
+    manpower_requests: 8,
     applicant_pipeline: {
-      applied: 48,
-      ai_screening: 31,
-      screening_passed: 24,
-      interview_1: 14,
-      interview_2: 8,
-      hired: 6,
-      rejected: 12,
+      applied: 348,
+      ai_screening: 215,
+      screening_passed: 124,
+      interview_1: 85,
+      interview_2: 42,
+      hired: 14,
+      rejected: 28,
     },
     monthly_hires: [
-      { month: 1, count: 2 },
-      { month: 2, count: 3 },
-      { month: 3, count: 5 },
-      { month: 4, count: 4 },
-      { month: 5, count: 6 },
-      { month: 6, count: 8 },
-      { month: 7, count: 6 },
+      { month: 1, count: 5 },
+      { month: 2, count: 8 },
+      { month: 3, count: 12 },
+      { month: 4, count: 9 },
+      { month: 5, count: 15 },
+      { month: 6, count: 11 },
+      { month: 7, count: 14 },
     ],
   };
 
   const pipeline = data.applicant_pipeline || {};
-  const hires    = data.monthly_hires || [];
+  const hires = data.monthly_hires || [];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-6 pb-12">
+      {/* ── STANDARD SYSTEM HEADER ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">OVERVIEW</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Real-time operational summary, live attendance logs, and recruitment pipeline status.
-          </p>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#E15B1D]">Human Resources</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Real-time operational summary, live attendance logs, and recruitment pipeline status.</p>
+        </div>
+        <button
+          onClick={loadData}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm cursor-pointer self-start sm:self-center shrink-0"
+          title="Refresh HR Data"
+        >
+          <RefreshCw size={13} className={cn(refreshing && "animate-spin text-[#E15B1D]")} />
+          <span>{refreshing ? "Updating..." : "Refresh Data"}</span>
+        </button>
+      </div>
+
+      {/* ── TOP KPI GRID (4 CARDS) ────────────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/admin/employees" className="block outline-none">
+          <KPIBox
+            title="Active Employees"
+            value={data.total_employees}
+            trend="+12 New this quarter"
+            trendPositive={true}
+            icon={<Users size={22} />}
+            accentColor="navy"
+            subtitle="Registered staff"
+          />
+        </Link>
+        <Link to="/admin/attendance" className="block outline-none">
+          <KPIBox
+            title="Attendance Logged"
+            value={attendanceSummary ? attendanceSummary.length : data.total_employees}
+            trend="Live synchronization"
+            trendPositive={true}
+            icon={<Clock size={22} />}
+            accentColor="emerald"
+            subtitle="Today's attendance records"
+          />
+        </Link>
+        <Link to="/admin/job-posting" className="block outline-none">
+          <KPIBox
+            title="Open Job Postings"
+            value={data.open_job_postings}
+            trend={`${data.manpower_requests} Pending Requests`}
+            trendPositive={true}
+            icon={<Layers size={22} />}
+            accentColor="purple"
+            subtitle="Active recruitment slots"
+          />
+        </Link>
+        <Link to="/admin/applicants" className="block outline-none">
+          <KPIBox
+            title="Pipeline Applicants"
+            value={data.total_applicants}
+            trend="+15% vs last month"
+            trendPositive={true}
+            icon={<Activity size={22} />}
+            accentColor="orange"
+            subtitle="Total candidates tracked"
+          />
+        </Link>
+      </div>
+
+      {/* ── MIDDLE TIER: CHARTS ───────────────────────────────────────────────── */}
+      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
+
+        {/* MIDDLE LEFT: BAR CHART -> APPLICANT RECRUITMENT PIPELINE */}
+        <div className="lg:col-span-8 flex flex-col">
+          <PipelineChart pipeline={pipeline} />
+        </div>
+
+        {/* MIDDLE RIGHT: QUICK SYSTEM LINKS */}
+        <div className="lg:col-span-4 flex flex-col">
+          <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 flex flex-col bg-white overflow-hidden">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+              <div className="flex items-center gap-2">
+                <Cpu size={18} className="text-[#E15B1D]" />
+                <CardTitle className="text-base font-black text-[#111A62]">System Access</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 space-y-2.5 flex-1 flex flex-col justify-center">
+              <QuickLink to="/admin/manpower-requests" icon={<Clipboard />} label="Manpower Requests" value={`${data.manpower_requests} Pending`} tone="warning" />
+              <QuickLink to="/admin/job-library" icon={<Briefcase />} label="Job Library Repository" />
+              <QuickLink to="/admin/ai-screening" icon={<Activity />} label="AI Resume Screening" value="Active" tone="indigo" />
+              <QuickLink to="/admin/interviews" icon={<Calendar />} label="Interviews & Room" value={`${data.interviews_this_month} Scheduled`} tone="navy" />
+              <QuickLink to="/admin/attendance" icon={<Clock />} label="Live Attendance Logs" value="Syncing" tone="emerald" />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Primary Live KPI Grid (Directly linked to pages in the system) */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link to="/admin/employees" className="block group">
-          <Card className="transition hover:shadow-md hover:border-blue-300">
-            <CardContent className="flex items-center justify-between gap-4 pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Active Employees</p>
-                <p className="mt-1 text-3xl font-extrabold text-slate-900">{data.total_employees}</p>
-                <p className="mt-1 text-[11px] text-blue-600 font-semibold flex items-center gap-1 group-hover:underline">
-                  View Employees <FiArrowRight size={12} />
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-xl text-blue-600">
-                <FiUsers />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+      {/* ── BOTTOM TIER: ANALYTICS ─────────────────────────────────────────────── */}
+      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
 
-        <Link to="/admin/attendance" className="block group">
-          <Card className="transition hover:shadow-md hover:border-emerald-300">
-            <CardContent className="flex items-center justify-between gap-4 pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Attendance Logged</p>
-                <p className="mt-1 text-3xl font-extrabold text-emerald-600">
-                  {attendanceSummary ? attendanceSummary.length : data.total_employees}
-                </p>
-                <p className="mt-1 text-[11px] text-emerald-600 font-semibold flex items-center gap-1 group-hover:underline">
-                  Attendance System <FiArrowRight size={12} />
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-600">
-                <FiClock />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* BOTTOM LEFT: AREA CHART -> MONTHLY HIRING TREND */}
+        <div className="lg:col-span-5 flex flex-col">
+          <MonthlyHiringChart hires={hires} />
+        </div>
 
-        <Link to="/admin/job-posting" className="block group">
-          <Card className="transition hover:shadow-md hover:border-violet-300">
-            <CardContent className="flex items-center justify-between gap-4 pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Open Job Postings</p>
-                <p className="mt-1 text-3xl font-extrabold text-slate-900">{data.open_job_postings}</p>
-                <p className="mt-1 text-[11px] text-violet-600 font-semibold flex items-center gap-1 group-hover:underline">
-                  Job Postings <FiArrowRight size={12} />
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-xl text-violet-600">
-                <FiLayers />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* BOTTOM MIDDLE: PIE CHART -> ATTENDANCE OVERVIEW */}
+        <div className="lg:col-span-4 flex flex-col">
+          <AttendanceOverviewChart summary={attendanceSummary} />
+        </div>
 
-        <Link to="/admin/applicants" className="block group">
-          <Card className="transition hover:shadow-md hover:border-amber-300">
-            <CardContent className="flex items-center justify-between gap-4 pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Applicants (Month)</p>
-                <p className="mt-1 text-3xl font-extrabold text-slate-900">{data.total_applicants}</p>
-                <p className="mt-1 text-[11px] text-amber-600 font-semibold flex items-center gap-1 group-hover:underline">
-                  View Applicants <FiArrowRight size={12} />
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-xl text-amber-600">
-                <FiActivity />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+        {/* BOTTOM RIGHT: METRICS SUMMARY */}
+        <div className="lg:col-span-3 flex flex-col">
+          <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 bg-[#111A62] text-white overflow-hidden relative">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 h-48 w-48 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 h-48 w-48 rounded-full bg-[#E15B1D]/20 blur-2xl pointer-events-none" />
 
-      {/* Secondary Operational Quick Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Link to="/admin/manpower-requests" className="block group">
-          <Card className="hover:shadow-md transition hover:border-amber-300">
-            <CardContent className="flex items-center justify-between pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Manpower Requests</p>
-                <p className="text-2xl font-extrabold text-amber-600">{data.manpower_requests} Pending</p>
+            <CardHeader className="relative z-10 border-b border-white/10 pb-4 pt-5 px-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-[#E15B1D]" />
+                <CardTitle className="text-base font-black text-white">HR Performance</CardTitle>
               </div>
-              <FiClipboard size={22} className="text-amber-500" />
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link to="/admin/interviews" className="block group">
-          <Card className="hover:shadow-md transition hover:border-blue-300">
-            <CardContent className="flex items-center justify-between pt-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Interviews Scheduled</p>
-                <p className="text-2xl font-extrabold text-blue-600">{data.interviews_this_month} This Month</p>
-              </div>
-              <FiCalendar size={22} className="text-blue-500" />
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Card>
-          <CardContent className="flex items-center justify-between pt-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hired This Month</p>
-              <p className="text-2xl font-extrabold text-emerald-600">{data.hired_this_month} New Hires</p>
-            </div>
-            <FiCheckCircle size={22} className="text-emerald-500" />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Grid: Live Pipeline & Quick System Navigation */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Applicant Recruitment Pipeline */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Applicant Recruitment Pipeline</CardTitle>
-            <Link to="/admin/pipeline" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-              View Full Pipeline <FiArrowRight size={12} />
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { label: "Applied",          key: "applied",          tone: "bg-blue-500" },
-              { label: "AI Screening",     key: "ai_screening",     tone: "bg-indigo-500" },
-              { label: "Screening Passed", key: "screening_passed", tone: "bg-purple-500" },
-              { label: "Interview 1",      key: "interview_1",      tone: "bg-violet-500" },
-              { label: "Interview 2",      key: "interview_2",      tone: "bg-amber-500" },
-              { label: "Hired",            key: "hired",            tone: "bg-emerald-500" },
-              { label: "Rejected",         key: "rejected",         tone: "bg-rose-500" },
-            ].map(({ label, key, tone }) => {
-              const val = pipeline[key] ?? 0;
-              const maxVal = Math.max(...Object.values(pipeline).map(v => Number(v) || 0), 1);
-              const pct = Math.round((val / maxVal) * 100);
-              return (
-                <div key={key} className="grid grid-cols-12 items-center gap-3">
-                  <span className="col-span-4 text-xs font-semibold text-slate-700">{label}</span>
-                  <div className="col-span-6 h-2.5 w-full rounded-full bg-slate-100">
-                    <div className={`h-2.5 rounded-full ${tone} transition-all`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="col-span-2 text-right text-xs font-bold text-slate-900">{val}</span>
+            </CardHeader>
+            <CardContent className="p-6 relative z-10 flex flex-col justify-center gap-6 flex-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-300">Interviews</p>
+                  <p className="text-3xl font-extrabold mt-1">{data.interviews_this_month}</p>
+                  <p className="text-[11px] text-[#E15B1D] font-bold mt-1">Scheduled this month</p>
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Related System Module Shortcuts */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader><CardTitle>System Module Access</CardTitle></CardHeader>
-          <CardContent className="space-y-2.5">
-            <Link to="/admin/manpower-requests" className="flex items-center justify-between rounded-xl bg-slate-50 p-3 hover:bg-blue-50 hover:text-blue-700 transition">
-              <span className="text-xs font-bold text-slate-800">Manpower Requests</span>
-              <Badge tone="warning">{data.manpower_requests} Pending</Badge>
-            </Link>
-
-            <Link to="/admin/job-library" className="flex items-center justify-between rounded-xl bg-slate-50 p-3 hover:bg-blue-50 hover:text-blue-700 transition">
-              <span className="text-xs font-bold text-slate-800">Job Library</span>
-              <FiBriefcase size={14} className="text-slate-400" />
-            </Link>
-
-            <Link to="/admin/ai-screening" className="flex items-center justify-between rounded-xl bg-slate-50 p-3 hover:bg-blue-50 hover:text-blue-700 transition">
-              <span className="text-xs font-bold text-slate-800">AI Resume Screening</span>
-              <Badge tone="info">Active</Badge>
-            </Link>
-
-            <Link to="/admin/interviews" className="flex items-center justify-between rounded-xl bg-slate-50 p-3 hover:bg-blue-50 hover:text-blue-700 transition">
-              <span className="text-xs font-bold text-slate-800">Interviews & Virtual Room</span>
-              <FiCalendar size={14} className="text-slate-400" />
-            </Link>
-
-            <Link to="/admin/attendance" className="flex items-center justify-between rounded-xl bg-slate-50 p-3 hover:bg-emerald-50 hover:text-emerald-700 transition">
-              <span className="text-xs font-bold text-slate-800">Attendance Monitoring</span>
-              <Badge tone="success">Live Log</Badge>
-            </Link>
-          </CardContent>
-        </Card>
+                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <Calendar size={22} className="text-white" />
+                </div>
+              </div>
+              <div className="h-px w-full bg-white/10" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-300">Hires</p>
+                  <p className="text-3xl font-extrabold mt-1">{data.hired_this_month}</p>
+                  <p className="text-[11px] text-emerald-400 font-bold mt-1">Successfully onboarded</p>
+                </div>
+                <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                  <CheckCircle2 size={22} className="text-emerald-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* Monthly Hiring Trend */}
-      {hires.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Monthly Hiring Performance — {new Date().getFullYear()}</CardTitle>
-              <Badge tone="info">Live Backend Records</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {hires.map(h => {
-                const monthName = new Date(2026, h.month - 1).toLocaleString("default", { month: "long" });
-                const maxVal = Math.max(...hires.map(item => item.count), 1);
-                const pct = Math.round((h.count / maxVal) * 100);
-                return (
-                  <div key={h.month} className="grid grid-cols-12 items-center gap-3">
-                    <span className="col-span-2 text-xs font-semibold text-slate-600">{monthName}</span>
-                    <div className="col-span-9 h-2.5 w-full rounded-full bg-slate-100">
-                      <div className="h-2.5 rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="col-span-1 text-right text-xs font-bold text-slate-800">{h.count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
 
-function DashboardSkeleton() {
+/* ───────────────────────────────────────────────────────────────────────────
+   1. KPI STAT BOX COMPONENT
+   ─────────────────────────────────────────────────────────────────────────── */
+function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
+  const themes = {
+    navy: { bg: "bg-[#111A62]/10", border: "border-[#111A62]/20", iconText: "text-[#111A62]", hover: "hover:border-[#111A62]/50 hover:shadow-[#111A62]/10" },
+    orange: { bg: "bg-[#E15B1D]/10", border: "border-[#E15B1D]/20", iconText: "text-[#E15B1D]", hover: "hover:border-[#E15B1D]/50 hover:shadow-[#E15B1D]/10" },
+    teal: { bg: "bg-teal-500/10", border: "border-teal-500/20", iconText: "text-teal-600", hover: "hover:border-teal-500/50 hover:shadow-teal-500/10" },
+    indigo: { bg: "bg-indigo-500/10", border: "border-indigo-500/20", iconText: "text-indigo-600", hover: "hover:border-indigo-500/50 hover:shadow-indigo-500/10" },
+    purple: { bg: "bg-purple-500/10", border: "border-purple-500/20", iconText: "text-purple-600", hover: "hover:border-purple-500/50 hover:shadow-purple-500/10" },
+    emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", iconText: "text-emerald-600", hover: "hover:border-emerald-500/50 hover:shadow-emerald-500/10" },
+  };
+
+  const theme = themes[accentColor] || themes.navy;
+
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-64" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+    <Card className={cn("h-full shadow-lg shadow-slate-200/40 rounded-3xl border border-slate-100 bg-white transition-all duration-300 cursor-pointer overflow-hidden", theme.hover)}>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", theme.bg, theme.iconText)}>
+            {icon}
+          </div>
+          {trend && (
+            <div className={cn("flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold", trendPositive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
+              {trendPositive ? <TrendingUp size={12} /> : <Activity size={12} />}
+              {trend}
+            </div>
+          )}
+        </div>
+        <div className="mt-5">
+          <p className="text-3xl font-black text-slate-900 tracking-tight">{value}</p>
+          <h3 className="mt-1 text-sm font-extrabold text-slate-800">{title}</h3>
+          {subtitle && <p className="mt-1 text-xs font-semibold text-slate-400">{subtitle}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   2. QUICK LINK COMPONENT
+   ─────────────────────────────────────────────────────────────────────────── */
+function QuickLink({ to, icon, label, value, tone }) {
+  return (
+    <Link to={to} className="group flex items-center justify-between rounded-2xl border border-transparent bg-slate-50 px-4 py-3 hover:border-slate-200 hover:bg-slate-100 transition-all shadow-2xs cursor-pointer">
+      <div className="flex items-center gap-3">
+        <div className="text-slate-400 group-hover:text-[#111A62] transition-colors [&>svg]:w-4 [&>svg]:h-4">
+          {icon}
+        </div>
+        <span className="text-xs font-extrabold text-slate-700 group-hover:text-[#111A62] transition-colors">{label}</span>
       </div>
-      <Skeleton className="h-64 rounded-2xl" />
-    </div>
+      {value ? (
+        <Badge tone={tone ?? "default"} className="font-bold text-[10px] uppercase tracking-wider">{value}</Badge>
+      ) : (
+        <ChevronRight size={14} className="text-slate-300 group-hover:text-[#111A62] transition-colors" />
+      )}
+    </Link>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   3. PIPELINE BAR CHART
+   ─────────────────────────────────────────────────────────────────────────── */
+function PipelineChart({ pipeline }) {
+  const chartData = [
+    { name: "Applied", value: pipeline.applied || 0, fill: COLORS.blue },
+    { name: "AI Screened", value: pipeline.ai_screening || 0, fill: COLORS.indigo },
+    { name: "Passed", value: pipeline.screening_passed || 0, fill: COLORS.purple },
+    { name: "Interview 1", value: pipeline.interview_1 || 0, fill: COLORS.amber },
+    { name: "Interview 2", value: pipeline.interview_2 || 0, fill: COLORS.orange },
+    { name: "Hired", value: pipeline.hired || 0, fill: COLORS.emerald },
+  ];
+
+  return (
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 flex flex-col bg-white">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={18} className="text-[#111A62]" />
+            <CardTitle className="text-base font-black text-[#111A62]">Recruitment Pipeline</CardTitle>
+          </div>
+          <Link to="/admin/pipeline" className="text-[11px] font-bold text-[#E15B1D] hover:underline flex items-center gap-1 uppercase tracking-wider">
+            Full Pipeline <ArrowRight size={12} />
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-6 min-h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={32}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} />
+            <RechartsTooltip
+              cursor={{ fill: '#F1F5F9' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+              itemStyle={{ fontWeight: 800, color: '#0F172A' }}
+              labelStyle={{ fontWeight: 800, color: '#64748B', marginBottom: '4px' }}
+            />
+            <Bar dataKey="value" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   4. MONTHLY HIRING AREA CHART
+   ─────────────────────────────────────────────────────────────────────────── */
+function MonthlyHiringChart({ hires }) {
+  const chartData = hires.map(h => {
+    const date = new Date(2026, h.month - 1);
+    return {
+      month: date.toLocaleString('default', { month: 'short' }),
+      Hires: h.count
+    };
+  });
+
+  return (
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 flex flex-col bg-white">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LineChartIcon size={18} className="text-[#111A62]" />
+            <CardTitle className="text-base font-black text-[#111A62]">Hiring Velocity Trends</CardTitle>
+          </div>
+          <Badge tone="info">Live Backend Records</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-6 min-h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorHires" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={COLORS.navy} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} />
+            <RechartsTooltip
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+              itemStyle={{ fontWeight: 800, color: COLORS.navy }}
+              labelStyle={{ fontWeight: 800, color: '#64748B', marginBottom: '4px' }}
+            />
+            <Area type="monotone" dataKey="Hires" stroke={COLORS.navy} strokeWidth={3} fillOpacity={1} fill="url(#colorHires)" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   5. ATTENDANCE OVERVIEW PIE CHART
+   ─────────────────────────────────────────────────────────────────────────── */
+function AttendanceOverviewChart({ summary }) {
+  // Compute totals based on backend structure
+  let perfect = 0;
+  let tardy = 0;
+  let absent = 0;
+
+  if (summary && summary.length > 0) {
+    summary.forEach(record => {
+      const absences = parseInt(record.absences) || 0;
+      const tardiness = parseInt(record.tardiness) || 0;
+      if (absences > 0) absent++;
+      else if (tardiness > 0) tardy++;
+      else perfect++;
+    });
+  } else {
+    // Dummy fallback if no summary loaded
+    perfect = 120;
+    tardy = 15;
+    absent = 7;
+  }
+
+  const data = [
+    { name: "Perfect", value: perfect, color: COLORS.emerald },
+    { name: "Tardy", value: tardy, color: COLORS.amber },
+    { name: "Absent", value: absent, color: COLORS.rose },
+  ].filter(d => d.value > 0);
+
+  return (
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 flex flex-col bg-white">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+        <div className="flex items-center gap-2">
+          <PieChartIcon size={18} className="text-[#111A62]" />
+          <CardTitle className="text-base font-black text-[#111A62]">Attendance Overview</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-6 min-h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={65}
+              outerRadius={90}
+              paddingAngle={5}
+              dataKey="value"
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <RechartsTooltip
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+              itemStyle={{ fontWeight: 800, color: '#0F172A' }}
+            />
+            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   );
 }

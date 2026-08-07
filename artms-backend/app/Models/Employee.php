@@ -11,25 +11,44 @@ class Employee extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        // New schema columns
+        'employee_id',
         'user_id',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'email',
+        'phone',
         'department_id',
-        'position',
+        'job_title',
         'employment_status',
-        'date_hired',
-        'salary',
-        'employment_type',
+        'hire_date',
+        'birth_date',
+        'gender',
         'address',
-        'contact_number',
         'emergency_contact_name',
+        'emergency_contact_phone',
+        'basic_salary',
+        'avatar',
+        'documents_status',
+        // Legacy columns (kept for backward compatibility)
+        'position',
+        'salary',
+        'date_hired',
+        'contact_number',
         'emergency_contact_number',
+        'employment_type',
         'date_terminated',
         'termination_reason',
         'clearance_processed',
     ];
 
     protected $casts = [
+        'hire_date'           => 'date',
+        'birth_date'          => 'date',
         'date_hired'          => 'date',
         'date_terminated'     => 'date',
+        'basic_salary'        => 'decimal:2',
         'salary'              => 'decimal:2',
         'clearance_processed' => 'boolean',
     ];
@@ -75,13 +94,13 @@ class Employee extends Model
     }
 
     /**
-     * Generate standard employee number format: EMP-YYYY-XXXXX
+     * Generate standard employee number format: EMP-XXXX
+     * as defined in DATABASE_SCHEMA.md (e.g., EMP-001)
      */
     public function generateEmployeeNumber(): string
     {
-        $year = now()->year;
-        $paddedId = str_pad($this->id, 5, '0', STR_PAD_LEFT);
-        return "EMP-{$year}-{$paddedId}";
+        $paddedId = str_pad($this->id, 4, '0', STR_PAD_LEFT);
+        return "EMP-{$paddedId}";
     }
 
     /**

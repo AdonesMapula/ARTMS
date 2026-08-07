@@ -164,6 +164,9 @@ class JobPostingSeeder extends Seeder
         foreach ($jobs as $job) {
             $dept = $job['department'];
 
+            // Determine salary_type per new schema (exact or range)
+            $salaryType = ($job['salary_min'] !== null && $job['salary_max'] !== null) ? 'range' : 'exact';
+
             // Create job library entry (approved)
             $lib = JobLibrary::create([
                 'job_title'        => $job['job_title'],
@@ -188,6 +191,7 @@ class JobPostingSeeder extends Seeder
                 ],
                 'job_category'     => $job['job_category'],
                 'employment_type'  => $job['employment_type'],
+                'salary_type'      => $salaryType,
                 'salary_min'       => $job['salary_min'],
                 'salary_max'       => $job['salary_max'],
                 'approval_status'  => 'approved',

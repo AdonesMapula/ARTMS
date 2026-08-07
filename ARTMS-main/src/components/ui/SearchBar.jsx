@@ -1,4 +1,4 @@
-import { FiSearch, FiX } from "react-icons/fi";
+import { Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 export default function SearchBar({
@@ -10,18 +10,18 @@ export default function SearchBar({
   return (
     <div
       className={cn(
-        "search-pulse-border group flex h-11 items-center gap-2.5 rounded-xl border border-[var(--artms-border)] bg-slate-50 px-3.5 transition-all duration-300",
-        "hover:bg-white focus-within:bg-white",
+        "search-pulse-border group flex h-10 items-center gap-2 rounded-xl border border-[var(--artms-border)] bg-slate-50 px-3 transition-all duration-300",
+        "hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#111A62]",
         className
       )}
     >
-      <FiSearch
-        className="shrink-0 text-slate-400 transition-colors duration-200 group-hover:text-[#F97316] group-focus-within:text-[#F97316]"
-        size={18}
+      <Search
+        className="shrink-0 text-slate-400 transition-colors duration-200 group-hover:text-[#111A62] group-focus-within:text-[#111A62]"
+        size={16}
         aria-hidden="true"
       />
       <input
-        className="h-full w-full min-w-0 appearance-none border-0 bg-transparent text-base text-slate-900 placeholder:text-slate-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 sm:text-sm"
+        className="h-full w-full min-w-0 appearance-none border-0 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
@@ -33,11 +33,11 @@ export default function SearchBar({
           type="button"
           onClick={() => onChange?.("")}
           aria-label="Clear search"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-600"
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
         >
-          <FiX size={14} aria-hidden="true" />
+          <X size={13} aria-hidden="true" />
         </button>
       )}
     </div>
   );
-}
+}
