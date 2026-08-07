@@ -15,7 +15,15 @@ export function AuthProvider({ children }) {
         .me()
         .then((freshUser) => {
           setUser(freshUser);
-          localStorage.setItem('artms_user', JSON.stringify(freshUser));
+          try {
+            const storageUser = { ...freshUser };
+            if (typeof storageUser.avatar === 'string' && storageUser.avatar.startsWith('data:image/')) {
+              delete storageUser.avatar;
+            }
+            localStorage.setItem('artms_user', JSON.stringify(storageUser));
+          } catch (e) {
+            console.warn('Failed to save user to localStorage:', e);
+          }
         })
         .catch(() => {
           // Token is invalid/expired — clear storage
@@ -44,7 +52,15 @@ export function AuthProvider({ children }) {
     setUser((prev) => {
       const next = typeof updatedData === 'function' ? updatedData(prev) : { ...prev, ...updatedData };
       if (next) {
-        localStorage.setItem('artms_user', JSON.stringify(next));
+        try {
+          const storageUser = { ...next };
+          if (typeof storageUser.avatar === 'string' && storageUser.avatar.startsWith('data:image/')) {
+            delete storageUser.avatar;
+          }
+          localStorage.setItem('artms_user', JSON.stringify(storageUser));
+        } catch (err) {
+          console.warn('Failed to save user to localStorage:', err);
+        }
       }
       return next;
     });

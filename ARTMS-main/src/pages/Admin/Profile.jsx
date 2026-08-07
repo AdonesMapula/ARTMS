@@ -83,31 +83,50 @@ export default function Profile() {
     startCamera();
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Data = reader.result;
-      await saveAvatarToServer(base64Data);
-    };
-    reader.readAsDataURL(file);
+    await saveAvatarToServer(file);
   };
 
-  const saveAvatarToServer = async (avatarData) => {
+  const saveAvatarToServer = async (avatarInput) => {
     setUploading(true);
     try {
-      const res = await api.post("/me/avatar", { avatar: avatarData });
+      const formData = new FormData();
+      if (avatarInput instanceof File) {
+        formData.append("avatar", avatarInput);
+      } else if (typeof avatarInput === "string" && avatarInput.startsWith("data:")) {
+        const arr = avatarInput.split(",");
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        formData.append("avatar", blob, "avatar.jpg");
+      } else {
+        formData.append("avatar", avatarInput);
+      }
+
+      const res = await api.post("/me/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       if (res.data?.user) {
         updateUser(res.data.user);
       } else {
-        updateUser({ avatar: avatarData });
+        const localPreview = avatarInput instanceof File ? URL.createObjectURL(avatarInput) : avatarInput;
+        updateUser({ avatar: localPreview });
       }
       toast?.success("Profile photo updated successfully!");
       if (cameraModalOpen) closeCameraModal();
     } catch (err) {
       console.error(err);
-      updateUser({ avatar: avatarData });
+      const fallbackUrl = avatarInput instanceof File ? URL.createObjectURL(avatarInput) : avatarInput;
+      updateUser({ avatar: fallbackUrl });
       toast?.success("Profile photo updated in local preview!");
       if (cameraModalOpen) closeCameraModal();
     } finally {

@@ -1,10 +1,12 @@
 import { cn } from "../../utils/cn";
 
 export function Card({ className, ...props }) {
+  const hasBg = className && /\bbg-/.test(className);
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--artms-border)] bg-white shadow-sm",
+        "rounded-2xl border border-[var(--artms-border)] shadow-sm",
+        !hasBg && "bg-white",
         className
       )}
       {...props}
@@ -17,8 +19,9 @@ export function CardHeader({ className, ...props }) {
 }
 
 export function CardTitle({ className, ...props }) {
+  const hasTextColor = className && /\btext-(?:slate|white|black|navy|orange|indigo|purple|emerald|red|blue|gray|zinc|neutral|stone|teal|amber|rose|cyan|lime|violet|fuchsia|pink|\[.+\])\b/.test(className);
   return (
-    <h3 className={cn("text-sm font-extrabold text-slate-900", className)} {...props} />
+    <h3 className={cn("text-sm font-extrabold", !hasTextColor && "text-slate-900", className)} {...props} />
   );
 }
 
@@ -29,4 +32,5 @@ export function CardDescription({ className, ...props }) {
 export function CardContent({ className, ...props }) {
   return <div className={cn("px-5 pb-5", className)} {...props} />;
 }
+
 

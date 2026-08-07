@@ -574,51 +574,57 @@ export default function JobLibrary() {
                           <Card
                             key={j.id}
                             onClick={() => setSelectedJobId(j.id)}
-                            className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer"
+                            className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer flex flex-col h-full"
                           >
-                            <CardContent className="p-5">
-                              {/* Header */}
-                              <div className="mb-4 flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge tone="default" className="text-xs font-semibold">
-                                      JL-{String(j.id).padStart(3, "0")}
-                                    </Badge>
-                                    <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
+                            <CardContent className="p-5 flex flex-col flex-1 justify-between">
+                              {/* Top Content */}
+                              <div>
+                                {/* Header */}
+                                <div className="mb-3 flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Badge tone="default" className="text-xs font-semibold">
+                                        JL-{String(j.id).padStart(3, "0")}
+                                      </Badge>
+                                      <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
+                                    </div>
+                                    <h3
+                                      className="text-base font-extrabold text-[#111A62] line-clamp-2 min-h-[2.75rem] flex items-center leading-snug"
+                                      title={j.job_title}
+                                    >
+                                      {j.job_title}
+                                    </h3>
                                   </div>
-                                  <h3 className="text-lg font-extrabold text-[#111A62]">
-                                    {j.job_title}
-                                  </h3>
+                                  <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize shrink-0">
+                                    {j.approval_status}
+                                  </Badge>
                                 </div>
-                                <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize">
-                                  {j.approval_status}
-                                </Badge>
+
+                                {/* Details Grid */}
+                                <div className="mb-4 grid grid-cols-2 gap-2.5">
+                                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                    <Briefcase size={16} className="text-slate-400 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Category</p>
+                                      <p className="text-xs font-bold text-slate-900 truncate">
+                                        {j.job_category || "—"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                    <User size={16} className="text-slate-400 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Created By</p>
+                                      <p className="text-xs font-bold text-slate-900 truncate">
+                                        {j.creator?.name || "—"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Details Grid */}
-                              <div className="mb-4 grid grid-cols-2 gap-3">
-                                <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                  <Briefcase size={16} className="text-slate-400" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-slate-500">Category</p>
-                                    <p className="text-sm font-semibold text-slate-900 truncate">
-                                      {j.job_category || "—"}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                  <User size={16} className="text-slate-400" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-slate-500">Created By</p>
-                                    <p className="text-sm font-semibold text-slate-900 truncate">
-                                      {j.creator?.name || "—"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Actions Bar */}
-                              <div className="mt-4 border-t border-slate-100 pt-3 flex items-center justify-between">
+                              {/* Actions Bar (Anchored at Bottom) */}
+                              <div className="mt-auto border-t border-slate-100 pt-3 flex items-center justify-between">
                                 <span className="text-xs font-extrabold text-[#111A62] group-hover:underline flex items-center gap-1">
                                   View Specification <ChevronRight size={14} />
                                 </span>

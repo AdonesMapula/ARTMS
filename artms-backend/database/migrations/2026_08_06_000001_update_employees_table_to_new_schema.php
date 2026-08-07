@@ -71,16 +71,20 @@ return new class extends Migration
             WHERE e.first_name IS NULL
         ");
 
-        // Update employment_status enum to new schema values
+        // Update employment_status enum safely by temporarily expanding to varchar first
+        DB::statement("
+            ALTER TABLE employees MODIFY COLUMN employment_status
+            VARCHAR(50) NOT NULL DEFAULT 'regular'
+        ");
+
+        // Map old status values to new ones
+        DB::statement("UPDATE employees SET employment_status = 'regular' WHERE employment_status IN ('active', 'on_leave') OR employment_status IS NULL OR employment_status = ''");
+
         DB::statement("
             ALTER TABLE employees MODIFY COLUMN employment_status
             ENUM('regular', 'probationary', 'contractual', 'project_based', 'ojt', 'resigned', 'terminated')
             NOT NULL DEFAULT 'regular'
         ");
-
-        // Map old status values to new ones
-        DB::statement("UPDATE employees SET employment_status = 'regular' WHERE employment_status = 'active'");
-        DB::statement("UPDATE employees SET employment_status = 'regular' WHERE employment_status = 'on_leave'");
     }
 
     public function down(): void
