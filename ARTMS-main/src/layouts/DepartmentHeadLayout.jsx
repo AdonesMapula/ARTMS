@@ -7,6 +7,7 @@ import {
   FiClock,
   FiHome,
   FiBell,
+  FiUser,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
@@ -43,6 +44,7 @@ export default function DepartmentHeadLayout() {
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },
     { label: "Notifications", to: "/department-head/notifications", icon: <FiBell /> },
+    { label: "Profile", to: "/department-head/profile", icon: <FiUser /> },
   ];
 
   return (

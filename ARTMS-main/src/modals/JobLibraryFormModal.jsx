@@ -23,8 +23,10 @@ export default function JobLibraryFormModal({
   saving = false,
 }) {
   const toast = useToast();
-  const isRejected = mode === "edit" && data?.approval_status === "rejected";
-  const remarksText = data?.approval_remarks || data?.remarks;
+  const targetData = data || initialData;
+  const isRejected = mode === "edit" && targetData?.approval_status === "rejected";
+  const isRevised = mode === "edit" && targetData?.approval_status === "revised";
+  const remarksText = targetData?.approval_remarks || targetData?.remarks;
 
   const [internalForm, setInternalForm] = useState({
     job_title: "",
@@ -198,10 +200,10 @@ export default function JobLibraryFormModal({
             <Button variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button variant={isRejected ? "primary" : "primary"} onClick={() => onSave(form)} disabled={saving} className={isRejected ? "bg-red-600 hover:bg-red-700 font-bold" : ""}>
+            <Button variant={isRejected || isRevised ? "primary" : "primary"} onClick={() => onSave(form)} disabled={saving} className={isRejected ? "bg-red-600 hover:bg-red-700 font-bold" : isRevised ? "bg-amber-600 hover:bg-amber-700 font-bold" : ""}>
               {saving
                 ? "Saving..."
-                : isRejected
+                : isRejected || isRevised
                   ? "Revise & Resubmit to COO"
                   : mode === "create"
                     ? "Submit for Approval"
@@ -212,7 +214,7 @@ export default function JobLibraryFormModal({
       >
         <form onSubmit={(e) => { e.preventDefault(); onSave(form); }} className="space-y-6">
           {/* COO Feedback Banner for Rejected Entries */}
-          {isRejected && remarksText && (
+          {isRejected && (
             <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-amber-50/60 p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
@@ -220,13 +222,35 @@ export default function JobLibraryFormModal({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-red-900">
-                    COO Rejection Feedback & Revision Instructions
+                    COO Rejection Remarks & Feedback
                   </h4>
                   <p className="mt-1 text-sm font-medium text-red-800 whitespace-pre-wrap">
-                    "{remarksText}"
+                    {remarksText || "No specific feedback or remarks provided by the COO."}
                   </p>
                   <p className="mt-2 text-xs font-semibold text-red-700">
                     💡 Modify the qualifications, responsibilities, or details below to address the COO's feedback, then click "Revise & Resubmit to COO".
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* COO Revision Feedback Banner */}
+          {isRevised && (
+            <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-600">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                    Action Required: COO Revision Feedback
+                  </h4>
+                  <p className="mt-1 text-sm font-medium text-amber-800 whitespace-pre-wrap">
+                    {remarksText || "No specific revision details provided by the COO."}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-amber-700">
+                    💡 Please apply the requested changes below, then click "Revise & Resubmit to COO".
                   </p>
                 </div>
               </div>

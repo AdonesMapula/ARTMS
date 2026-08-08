@@ -161,13 +161,16 @@ class JobPostingSeeder extends Seeder
 
         $summary = [];
 
-        foreach ($jobs as $job) {
+        $statuses = ['pending', 'approved', 'revised', 'pending', 'rejected', 'approved', 'pending', 'approved', 'revised'];
+
+        foreach ($jobs as $idx => $job) {
             $dept = $job['department'];
+            $appStatus = $statuses[$idx % count($statuses)];
 
             // Determine salary_type per new schema (exact or range)
             $salaryType = ($job['salary_min'] !== null && $job['salary_max'] !== null) ? 'range' : 'exact';
 
-            // Create job library entry (approved)
+            // Create job library entry
             $lib = JobLibrary::create([
                 'job_title'        => $job['job_title'],
                 'job_description'  => $job['job_description'],
@@ -194,32 +197,35 @@ class JobPostingSeeder extends Seeder
                 'salary_type'      => $salaryType,
                 'salary_min'       => $job['salary_min'],
                 'salary_max'       => $job['salary_max'],
-                'approval_status'  => 'approved',
-                'approved_by'      => $coo?->id,
-                'approved_at'      => now()->subDays(rand(5, 20)),
+                'approval_status'  => $appStatus,
+                'approved_by'      => $appStatus === 'approved' ? $coo?->id : null,
+                'approved_at'      => $appStatus === 'approved' ? now()->subDays(rand(5, 20)) : null,
+                'approval_remarks' => $appStatus === 'revised' ? 'Please adjust the salary max range and update responsibilities.' : null,
                 'created_by'       => $hrAdmin->id,
                 'is_active'        => true,
             ]);
 
-            // Create published job posting
-            JobPosting::create([
-                'job_library_id'       => $lib->id,
-                'department_id'        => $dept?->id,
-                'requested_by'         => $hrAdmin->id,
-                'vacancies_count'      => $job['vacancies'],
-                'posting_date'         => now()->subDays(rand(1, 10))->toDateString(),
-                'closing_date'         => now()->addDays(rand(14, 45))->toDateString(),
-                'status'               => 'published',
-                'approval_status'      => 'approved',
-                'approved_by'          => $coo?->id,
-                'approved_at'          => now()->subDays(rand(1, 5)),
-                'is_published'         => true,
-                'location'             => $job['location'],
-                'description'          => $job['job_description'],
-                'qualifications'       => $lib->qualifications,
-                'responsibilities'     => $lib->responsibilities,
-                'is_modified_from_prf' => false,
-            ]);
+            // Create published job posting if approved
+            if ($appStatus === 'approved') {
+                JobPosting::create([
+                    'job_library_id'       => $lib->id,
+                    'department_id'        => $dept?->id ?? 1,
+                    'requested_by'         => $hrAdmin?->id ?? 2,
+                    'vacancies_count'      => $job['vacancies'],
+                    'posting_date'         => now()->subDays(rand(1, 10))->toDateString(),
+                    'closing_date'         => now()->addDays(rand(14, 45))->toDateString(),
+                    'status'               => 'published',
+                    'approval_status'      => 'approved',
+                    'approved_by'          => $coo?->id,
+                    'approved_at'          => now()->subDays(rand(1, 5)),
+                    'is_published'         => true,
+                    'location'             => $job['location'],
+                    'description'          => $job['job_description'],
+                    'qualifications'       => $lib->qualifications,
+                    'responsibilities'     => $lib->responsibilities,
+                    'is_modified_from_prf' => false,
+                ]);
+            }
 
             $summary[] = [
                 $job['job_title'],

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, User, Calendar, Briefcase, Target, ShieldCheck, X, CheckCircle, XCircle, AlertCircle, Loader } from "lucide-react";
+import { Building2, User, Calendar, Briefcase, Target, ShieldCheck, X, CheckCircle, XCircle, AlertCircle, Loader, RefreshCw } from "lucide-react";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 import manpowerService from "../../services/manpowerService";
@@ -12,7 +12,7 @@ const fmt = (d) =>
 const URGENCY_TONE = { low: "default", medium: "info", high: "warning", critical: "danger" };
 const STATUS_TONE = { pending: "warning", approved: "success", rejected: "danger", revised: "warning", needs_revision: "warning" };
 
-export default function ManpowerViewPanel({ requestId, onClose, onUpdated }) {
+export default function ManpowerViewPanel({ requestId, onClose, onEdit, onUpdated }) {
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -48,6 +48,7 @@ export default function ManpowerViewPanel({ requestId, onClose, onUpdated }) {
   const departmentName = request?.department?.name || request?.department?.department_name || request?.department_name || "—";
   const requesterName = request?.requester?.name || request?.requested_by || "—";
   const employmentType = request?.employment_type ? request.employment_type.replace('_', ' ').toUpperCase() : "FULL TIME";
+  const remarksText = request?.approval_remarks || request?.remarks;
 
   const qualifications = Array.isArray(request?.qualifications)
     ? request.qualifications
@@ -72,7 +73,7 @@ export default function ManpowerViewPanel({ requestId, onClose, onUpdated }) {
                 {prfId}
               </span>
               <Badge tone={STATUS_TONE[request?.status] ?? "default"} className="capitalize">
-                {request?.status || "Pending"}
+                {request?.status === "revised" || request?.status === "needs_revision" ? "Needs Revision" : request?.status || "Pending"}
               </Badge>
               <Badge tone={URGENCY_TONE[request?.urgency] ?? "default"} className="capitalize">
                 Urgency: {request?.urgency || "normal"}
@@ -85,6 +86,16 @@ export default function ManpowerViewPanel({ requestId, onClose, onUpdated }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {onEdit && (request?.status === "revised" || request?.status === "needs_revision") && (
+              <button
+                onClick={() => onEdit(request)}
+                className="flex items-center gap-1.5 rounded-xl border border-amber-400 bg-amber-500 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 hover:border-amber-500 transition cursor-pointer"
+                title="Edit & Resubmit PRF"
+              >
+                <RefreshCw size={15} />
+                <span>Edit & Resubmit</span>
+              </button>
+            )}
             {onClose && (
               <button
                 onClick={onClose}
@@ -101,6 +112,27 @@ export default function ManpowerViewPanel({ requestId, onClose, onUpdated }) {
 
       {/* ── Content Body ──────────────────────────────────────────── */}
       <div className="p-6 flex-1 min-h-0 overflow-y-auto bg-slate-50/50 space-y-6">
+        {(request?.status === "revised" || request?.status === "needs_revision") && remarksText && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-5 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="mt-0.5 rounded-full bg-amber-100 p-2.5 text-amber-700">
+                <RefreshCw size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-extrabold uppercase tracking-wider text-amber-900">
+                  COO Revision Instructions & Remarks
+                </h4>
+                <p className="mt-2 text-[15px] font-medium text-amber-900 whitespace-pre-wrap leading-relaxed">
+                  "{remarksText}"
+                </p>
+                <p className="mt-3 text-xs font-semibold text-amber-800">
+                  💡 Click "Edit & Resubmit" at the top right to make these changes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
             <Loader size={32} className="animate-spin text-[#111A62]" />

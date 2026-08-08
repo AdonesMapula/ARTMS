@@ -90,6 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role:super_admin');
     Route::get('dashboard/department-head', [DashboardController::class, 'departmentHeadStats'])
         ->middleware('role:department_head');
+    Route::get('dashboard/coo', [DashboardController::class, 'cooStats'])
+        ->middleware('role:coo');
     Route::get('sidebar-counts', [DashboardController::class, 'sidebarCounts']);
 
     // ── Users  (Super Admin only) ────────────────────────────────────────────

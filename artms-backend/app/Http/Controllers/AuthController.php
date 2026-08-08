@@ -230,12 +230,13 @@ class AuthController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'first_name'  => 'sometimes|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name'   => 'sometimes|string|max:255',
-            'name'        => 'sometimes|string|max:255',
-            'email'       => 'sometimes|email|unique:users,email,' . $user->id,
-            'phone'       => 'nullable|string|max:50',
+            'first_name'    => 'sometimes|string|max:255',
+            'middle_name'   => 'nullable|string|max:255',
+            'last_name'     => 'sometimes|string|max:255',
+            'name'          => 'sometimes|string|max:255',
+            'email'         => 'sometimes|email|unique:users,email,' . $user->id,
+            'phone'         => 'nullable|string|max:50',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         if (isset($validated['first_name']) || isset($validated['last_name'])) {

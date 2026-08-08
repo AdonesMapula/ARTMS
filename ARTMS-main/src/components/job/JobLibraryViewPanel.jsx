@@ -130,13 +130,25 @@ export default function JobLibraryViewPanel({ jobId, initialJob, onClose, onUpda
             )}
 
             {/* COO Rejection Feedback Box */}
-            {job?.approval_status === "rejected" && (job?.approval_remarks || job?.remarks) && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 space-y-1">
+            {job?.approval_status === "rejected" && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 space-y-1 shadow-sm mb-4">
                 <div className="flex items-center gap-2 text-red-900 font-extrabold text-xs">
                   <XCircle size={16} className="text-red-600" /> COO Rejection Remarks & Feedback:
                 </div>
-                <p className="text-xs text-red-800 leading-relaxed font-medium">
-                  {job.approval_remarks || job.remarks}
+                <p className="text-xs text-red-800 leading-relaxed font-medium mt-1">
+                  {job.approval_remarks || job.remarks || "No specific feedback or remarks provided by the COO."}
+                </p>
+              </div>
+            )}
+
+            {/* COO Revision Feedback Box */}
+            {job?.approval_status === "revised" && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-1 shadow-sm mb-4">
+                <div className="flex items-center gap-2 text-amber-900 font-extrabold text-xs">
+                  <AlertTriangle size={16} className="text-amber-600" /> Action Required: COO Revision Feedback
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed font-medium mt-1">
+                  {job.approval_remarks || job.remarks || "No specific revision details provided by the COO."}
                 </p>
               </div>
             )}

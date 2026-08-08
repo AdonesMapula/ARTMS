@@ -9,6 +9,8 @@ import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Skeleton from "../../components/ui/Skeleton";
 import Pagination from "../../components/ui/Pagination";
+import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import dashboardService from "../../services/dashboardService";
 import { cn } from "../../utils/cn";
 
@@ -369,15 +371,22 @@ function TrafficTrendsChart({ totalUsers }) {
             const u = userPts[i];
             return (
               <g key={i} className="group cursor-pointer">
+                {/* Invisible wide hit-area so hover is stable */}
+                <rect x={p.x - 20} y={padY} width="40" height={H - padY * 2} fill="transparent" />
+
                 {/* Vertical hover guidance line */}
-                <line x1={p.x} y1={padY} x2={p.x} y2={H - padY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="2 2" className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                <line x1={p.x} y1={padY} x2={p.x} y2={H - padY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="2 2" className="opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
                 
-                {/* Traffic dot */}
-                <circle cx={p.x} cy={p.y} r="5" fill="#111A62" stroke="white" strokeWidth="2" className="transition-transform group-hover:scale-150 shadow-lg" />
+                {/* Traffic dot — outer glow ring on hover */}
+                <circle cx={p.x} cy={p.y} r="10" fill="#111A62" fillOpacity="0" className="group-hover:fill-[#111A62] group-hover:[fill-opacity:0.15] transition-all duration-200" />
+                <circle cx={p.x} cy={p.y} r="5" fill="#111A62" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
                 
-                {/* User growth dot */}
+                {/* User growth dot — outer glow ring on hover */}
                 {u && (
-                  <circle cx={u.x} cy={u.y} r="5" fill="#E15B1D" stroke="white" strokeWidth="2" className="transition-transform group-hover:scale-150 shadow-lg" />
+                  <>
+                    <circle cx={u.x} cy={u.y} r="10" fill="#E15B1D" fillOpacity="0" className="group-hover:fill-[#E15B1D] group-hover:[fill-opacity:0.15] transition-all duration-200" />
+                    <circle cx={u.x} cy={u.y} r="5" fill="#E15B1D" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
+                  </>
                 )}
 
                 {/* X Axis Label */}
@@ -386,7 +395,7 @@ function TrafficTrendsChart({ totalUsers }) {
                 </text>
 
                 {/* Interactive Tooltip on Hover */}
-                <g className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none drop-shadow-xl" transform={`translate(${p.x > W - 120 ? p.x - 110 : p.x - 30}, ${p.y - 40})`}>
+                <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none drop-shadow-xl" transform={`translate(${p.x > W - 120 ? p.x - 110 : p.x - 30}, ${Math.max(5, p.y - 50)})`}>
                   <rect width="115" height="42" rx="8" fill="#1E293B" stroke="#334155" />
                   <text x="10" y="16" fill="#60A5FA" className="text-[10px] font-extrabold">Ops: {p.value.toLocaleString()}</text>
                   <text x="10" y="32" fill="#FB923C" className="text-[10px] font-extrabold">Users: {u?.value || 0}</text>
@@ -528,7 +537,7 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
         </div>
 
         {/* Interactive Legend List */}
-        <div className="sm:col-span-6 space-y-2.5 max-h-56 overflow-y-auto pr-1">
+        <div className="sm:col-span-6 space-y-2.5 max-h-56 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {currentList.map((item, idx) => (
             <div
               key={idx}
@@ -809,8 +818,8 @@ function CriticalActivityTable({ logs, departments }) {
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between">
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div>
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4 mb-4">
+          <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2">
               <Layers size={18} className="text-[#111A62]" />
               <h3 className="text-base font-extrabold text-slate-900">Recent Critical Activity & Governance</h3>
@@ -818,38 +827,29 @@ function CriticalActivityTable({ logs, departments }) {
             <p className="text-xs font-medium text-slate-500 mt-0.5">Live security events, account authorizations, and RBAC modifications</p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Search Input */}
-            <div className="relative">
-              <input
-                type="text"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full 2xl:w-auto shrink-0">
+            {/* Search Bar Component */}
+            <div className="flex-1 sm:flex-none sm:w-56">
+              <SearchBar
                 value={filterQuery}
-                onChange={(e) => handleFilterChange(e.target.value)}
+                onChange={handleFilterChange}
                 placeholder="Filter logs or users..."
-                className="h-9 w-44 sm:w-52 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 transition"
+                className="h-9 text-xs"
               />
             </div>
 
-            {/* Table Tabs */}
-            <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60">
-              <button
-                onClick={() => handleTabChange("audit")}
-                className={cn(
-                  "px-3 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer",
-                  tab === "audit" ? "bg-[#111A62] text-white shadow-md" : "text-slate-600 hover:text-slate-900"
-                )}
+            {/* Table Tabs as Select */}
+            <div className="w-full sm:w-48 shrink-0">
+              <Select
+                icon={Filter}
+                size="sm"
+                value={tab}
+                onChange={(e) => handleTabChange(e.target.value)}
+                buttonClassName="bg-slate-50 hover:bg-white border-slate-200 h-9"
               >
-                Security Audit Logs
-              </button>
-              <button
-                onClick={() => handleTabChange("signups")}
-                className={cn(
-                  "px-3 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer",
-                  tab === "signups" ? "bg-[#E15B1D] text-white shadow-md" : "text-slate-600 hover:text-slate-900"
-                )}
-              >
-                Recent Accounts
-              </button>
+                <option value="audit">Security Audit Logs</option>
+                <option value="signups">Recent Accounts</option>
+              </Select>
             </div>
           </div>
         </div>

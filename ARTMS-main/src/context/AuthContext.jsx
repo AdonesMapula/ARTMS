@@ -7,13 +7,14 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(() => authService.getStoredUser());
   const [loading, setLoading] = useState(true);
 
-  // On mount, verify the stored token is still valid
+  // On mount, verify the stored token is still valid, and show splash screen for at least 3 seconds
   useEffect(() => {
+    const minDelay = new Promise(resolve => setTimeout(resolve, 3000));
     const token = localStorage.getItem('artms_token');
+
     if (token) {
-      authService
-        .me()
-        .then((freshUser) => {
+      Promise.all([authService.me(), minDelay])
+        .then(([freshUser]) => {
           setUser(freshUser);
           try {
             const storageUser = { ...freshUser };
@@ -33,7 +34,7 @@ export function AuthProvider({ children }) {
         })
         .finally(() => setLoading(false));
     } else {
-      setLoading(false);
+      minDelay.then(() => setLoading(false));
     }
   }, []);
 

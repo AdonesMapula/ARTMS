@@ -180,6 +180,9 @@ export default function JobLibrary() {
         salary_type: job.salary_type || "exact",
         salary_min: job.salary_min ?? "",
         salary_max: job.salary_max ?? "",
+        approval_status: job.approval_status,
+        approval_remarks: job.approval_remarks,
+        remarks: job.remarks,
       },
     });
   };

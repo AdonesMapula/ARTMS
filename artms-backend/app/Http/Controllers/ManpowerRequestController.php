@@ -40,7 +40,11 @@ class ManpowerRequestController extends Controller
             'fit_threshold_medium' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
-        $data['department_id'] = $request->user()->department_id;
+        // Fallback to department 1 if the user has no department (e.g., Super Admin testing)
+        // or if their department_id does not exist in the database.
+        $userDeptId = $request->user()->department_id;
+        $data['department_id'] = $userDeptId && \App\Models\Department::where('id', $userDeptId)->exists() ? $userDeptId : 1;
+        
         $data['requested_by']  = auth()->id();
 
         $req = ManpowerRequest::create($data);
@@ -66,8 +70,8 @@ class ManpowerRequestController extends Controller
 
     public function update(Request $request, ManpowerRequest $manpowerRequest): JsonResponse
     {
-        if ($manpowerRequest->status !== 'pending') {
-            return response()->json(['message' => 'Only pending requests can be edited.'], 409);
+        if (!in_array($manpowerRequest->status, ['pending', 'revised'])) {
+            return response()->json(['message' => 'Only pending or revised requests can be edited.'], 409);
         }
 
         $data = $request->validate([
@@ -79,6 +83,12 @@ class ManpowerRequestController extends Controller
             'needed_by'       => ['nullable', 'date'],
             'urgency'         => ['sometimes', 'in:low,medium,high,critical'],
         ]);
+
+        // If it was marked as revised, resubmitting it sets it back to pending
+        if ($manpowerRequest->status === 'revised') {
+            $data['status'] = 'pending';
+            $data['approval_remarks'] = null; // Clear out the COO's feedback now that it's fixed
+        }
 
         $manpowerRequest->update($data);
 
@@ -114,7 +124,7 @@ class ManpowerRequestController extends Controller
     public function approve(Request $request, ManpowerRequest $manpowerRequest): JsonResponse
     {
         $data = $request->validate([
-            'status'           => ['required', 'in:approved,rejected'],
+            'status'           => ['required', 'in:approved,rejected,revised'],
             'remarks'          => ['nullable', 'string'],   
             'approval_remarks' => ['nullable', 'string'],
             'qualifications'   => ['nullable', 'array'],
@@ -139,14 +149,16 @@ class ManpowerRequestController extends Controller
 
         $manpowerRequest->update($updateData);
 
-        AuditLog::record('approve', 'manpower_request', "Request {$data['status']} ID {$manpowerRequest->id}");
+        AuditLog::record(
+            'update',
+            'manpower_request',
+            "PRF {$manpowerRequest->position_needed} status updated to {$data['status']}"
+        );
 
-        // Dispatch real-time in-app + email notifications based on status
-        $statusText = strtoupper($data['status']);
         $position = $manpowerRequest->position_needed;
 
+        // Send notifications based on the new status
         if ($data['status'] === 'approved') {
-            // Notify requesting Department Head
             if ($manpowerRequest->requester) {
                 NotificationService::notifyUser(
                     $manpowerRequest->requester,
@@ -156,7 +168,6 @@ class ManpowerRequestController extends Controller
                     'alert'
                 );
             }
-            // Notify HR Admins
             NotificationService::notifyRoles(
                 ['hr_admin', 'super_admin'],
                 "PRF Approved by COO",
@@ -164,21 +175,40 @@ class ManpowerRequestController extends Controller
                 '/admin/job-posting',
                 'alert'
             );
-        } else {
-            // Notify requesting Department Head on Rejection
+        } elseif ($data['status'] === 'rejected') {
             if ($manpowerRequest->requester) {
-                $remarks = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
+                $rem = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
                 NotificationService::notifyUser(
                     $manpowerRequest->requester,
                     "PRF Request Rejected by COO",
-                    "Your manpower request for '{$position}' was REJECTED by COO.{$remarks}",
+                    "Your manpower request for '{$position}' was REJECTED by COO.{$rem}",
                     '/department-head/request-history',
                     'alert'
                 );
             }
+        } elseif ($data['status'] === 'revised') {
+            if ($manpowerRequest->requester) {
+                NotificationService::notifyUser(
+                    $manpowerRequest->requester,
+                    "Action Required: PRF Needs Revision",
+                    "The COO requested a revision for the '{$position}' PRF.",
+                    '/department-head/request-history',
+                    'alert'
+                );
+            }
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "Action Required: PRF Needs Revision",
+                "The COO requested a revision for the '{$position}' PRF.",
+                '/admin/manpower-requests',
+                'alert'
+            );
         }
 
-        return response()->json(['message' => "Request {$data['status']}.", 'request' => $manpowerRequest->fresh()]);
+        return response()->json([
+            'message' => 'Manpower request status updated.',
+            'request' => $manpowerRequest
+        ]);
     }
 
     /**

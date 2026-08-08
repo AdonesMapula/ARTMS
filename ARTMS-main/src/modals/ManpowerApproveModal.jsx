@@ -27,8 +27,6 @@ export default function ManpowerApproveModal({
   onUpdateResponsibilities,
   saving = false,
 }) {
-  if (!open || !request) return null;
-
   const [form, setForm] = useState({
     qualifications: [],
     responsibilities: [],
@@ -42,6 +40,8 @@ export default function ManpowerApproveModal({
       });
     }
   }, [open, request]);
+
+  if (!open || !request) return null;
 
   const handleAddBlock = (field) => {
     setForm((prev) => ({
@@ -224,7 +224,7 @@ export default function ManpowerApproveModal({
             Cancel
           </Button>
           <Button
-            variant={status === "approved" ? "primary" : "danger"}
+            variant={status === "approved" ? "primary" : status === "rejected" ? "danger" : "accent"}
             onClick={() => onConfirm(form)}
             disabled={saving || !status}
           >
@@ -234,6 +234,8 @@ export default function ManpowerApproveModal({
               ? "Approve Request"
               : status === "rejected"
               ? "Reject Request"
+              : status === "revised"
+              ? "Request Revision"
               : "Confirm Action"}
           </Button>
         </div>

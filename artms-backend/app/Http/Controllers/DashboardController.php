@@ -86,6 +86,52 @@ class DashboardController extends Controller
     }
 
     /**
+     * GET /api/dashboard/coo
+     */
+    public function cooStats(): JsonResponse
+    {
+        $now  = now();
+        $year = $now->year;
+
+        $total    = ManpowerRequest::count();
+        $pending  = ManpowerRequest::where('status', 'pending')->count();
+        $approved = ManpowerRequest::where('status', 'approved')->count();
+        $rejected = ManpowerRequest::where('status', 'rejected')->count();
+
+        $requestsByDepartment = ManpowerRequest::selectRaw('departments.department_name as name, COUNT(*) as value')
+            ->join('departments', 'manpower_requests.department_id', '=', 'departments.id')
+            ->groupBy('departments.department_name')
+            ->get();
+
+        $requestsByUrgency = ManpowerRequest::selectRaw('urgency as name, COUNT(*) as value')
+            ->groupBy('urgency')
+            ->get();
+
+        $monthlyTrends = ManpowerRequest::whereYear('created_at', $year)
+            ->selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $recentPending = ManpowerRequest::with('department')
+            ->where('status', 'pending')
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'total_requests'         => $total,
+            'pending_requests'       => $pending,
+            'approved_requests'      => $approved,
+            'rejected_requests'      => $rejected,
+            'requests_by_department' => $requestsByDepartment,
+            'requests_by_urgency'    => $requestsByUrgency,
+            'monthly_trends'         => $monthlyTrends,
+            'recent_pending'         => $recentPending,
+        ]);
+    }
+
+    /**
      * GET /api/sidebar-counts
      * Returns real-time counts for sidebar navigation badges.
      */

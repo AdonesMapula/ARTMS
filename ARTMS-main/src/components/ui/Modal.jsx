@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import Button from "./Button";
 
@@ -23,7 +24,7 @@ export default function Modal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className={cn(
         "fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-4 sm:items-center cursor-pointer backdrop-blur-md transition-all duration-200",
@@ -113,6 +114,7 @@ export default function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

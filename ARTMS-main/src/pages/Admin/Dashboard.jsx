@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Skeleton from "../../components/ui/Skeleton";
+import Button from "../../components/ui/Button";
 import dashboardService from "../../services/dashboardService";
 import attendanceService from "../../services/attendanceService";
 import { cn } from "../../utils/cn";
@@ -113,15 +114,15 @@ export default function AdminDashboard() {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">Admin Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500">Real-time operational summary, live attendance logs, and recruitment pipeline status.</p>
         </div>
-        <button
+        <Button
+          variant="outline"
           onClick={loadData}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm cursor-pointer self-start sm:self-center shrink-0"
-          title="Refresh HR Data"
+          className="gap-2 bg-white self-start sm:self-center shrink-0"
         >
-          <RefreshCw size={13} className={cn(refreshing && "animate-spin text-[#E15B1D]")} />
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           <span>{refreshing ? "Updating..." : "Refresh Data"}</span>
-        </button>
+        </Button>
       </div>
 
       {/* ── TOP KPI GRID (4 CARDS) ────────────────────────────────────────────── */}
@@ -182,7 +183,7 @@ export default function AdminDashboard() {
 
         {/* MIDDLE RIGHT: QUICK SYSTEM LINKS */}
         <div className="lg:col-span-4 flex flex-col">
-          <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 border-t-4 border-t-[#E15B1D] flex flex-col bg-white overflow-hidden">
+          <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
             <CardHeader className="border-b border-slate-100 bg-slate-50/60 pb-4 pt-5 px-6">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-[#E15B1D]/10 text-[#E15B1D]">
@@ -326,7 +327,7 @@ function PipelineChart({ pipeline }) {
   ];
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 border-t-4 border-t-[#111A62] flex flex-col bg-white overflow-hidden">
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
       <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -371,7 +372,7 @@ function MonthlyHiringChart({ hires }) {
   });
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 border-t-4 border-t-indigo-500 flex flex-col bg-white overflow-hidden">
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
       <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -437,7 +438,7 @@ function AttendanceOverviewChart({ summary }) {
   ].filter(d => d.value > 0);
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 border-t-4 border-t-emerald-500 flex flex-col bg-white overflow-hidden">
+    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
       <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
         <div className="flex items-center gap-2">
           <PieChartIcon size={18} className="text-[#111A62]" />

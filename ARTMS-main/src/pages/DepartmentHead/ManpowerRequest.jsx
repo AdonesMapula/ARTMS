@@ -300,6 +300,9 @@ export default function ManpowerRequest() {
       position_needed: form.position_needed,
       headcount: Number(form.headcount) || 1,
       justification,
+      employment_status: form.employment_status,
+      plantilla_type: form.plantilla_type,
+      replacement_for: form.replacement_for || null,
       qualifications: form.qualifications,
       responsibilities: form.responsibilities,
       needed_by: form.needed_by || null,
@@ -423,56 +426,7 @@ export default function ManpowerRequest() {
               )}
             </div>
 
-            {/* Job Library preview card - Modernized */}
-            {selectedJob && (
-              <div className="sm:col-span-2 group relative overflow-hidden rounded-xl border border-[#111A62]/30 bg-gradient-to-br from-[#111A62]/10 via-[#111A62]/5 to-transparent p-5 shadow-md transition-all duration-300 hover:shadow-xl">
-                <div className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full bg-[#111A62]/10 blur-2xl" />
 
-                <div className="relative">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111A62] text-white shadow-lg">
-                      <FiCheckCircle size={14} />
-                    </div>
-                    <p className="text-xs font-black uppercase tracking-wider text-[#111A62]">
-                      Selected Position
-                    </p>
-                  </div>
-
-                  <h4 className="text-lg font-bold text-slate-900">{selectedJob.job_title}</h4>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    {selectedJob.job_category && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
-                        <FiTarget size={12} />
-                        {selectedJob.job_category}
-                      </span>
-                    )}
-                    {selectedJob.employment_type && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-medium shadow-sm">
-                        <FiBriefcase size={12} />
-                        {selectedJob.employment_type?.replace(/_/g, " ")}
-                      </span>
-                    )}
-                    {(() => {
-                      const bd = calculateSalaryBreakdown(selectedJob.salary_min, selectedJob.salary_max, selectedJob.salary_type);
-                      if (!bd) return null;
-                      return (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 shadow-xs text-xs">
-                          <FiAward size={12} />
-                          {bd.formatted.monthly} ({bd.formatted.daily}/day, {bd.formatted.hourly}/hr)
-                        </span>
-                      );
-                    })()}
-                  </div>
-
-                  {selectedJob.job_description && (
-                    <p className="mt-3 text-sm leading-relaxed text-slate-700 line-clamp-2">
-                      {selectedJob.job_description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Date Needed */}
             <div>

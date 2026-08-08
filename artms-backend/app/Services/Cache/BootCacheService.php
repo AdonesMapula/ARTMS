@@ -46,9 +46,12 @@ class BootCacheService
         $callback = function () {
             return [
                 'active_jobs' => JobPosting::where('status', 'published')
-                    ->where('is_active', true)
-                    ->with('department:id,department_name,department_code')
-                    ->select(['id', 'title', 'department_id', 'location', 'employment_type', 'created_at'])
+                    ->where('is_published', true)
+                    ->with([
+                        'department:id,department_name,department_code',
+                        'jobLibrary:id,job_title,employment_type'
+                    ])
+                    ->select(['id', 'job_library_id', 'department_id', 'location', 'created_at'])
                     ->orderBy('created_at', 'desc')
                     ->get(),
                 'departments' => Department::where('is_active', true)

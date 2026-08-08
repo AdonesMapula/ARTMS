@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiLogOut, FiChevronDown, FiChevronRight } from "react-icons/fi";
+import ConfirmDialog from "./ui/ConfirmDialog";
 import { cn } from "../utils/cn";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -205,7 +206,9 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
     });
   }, [items, counts]);
 
-  const handleLogout = async () => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleConfirmLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
   };
@@ -263,7 +266,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
               </p>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               title="Sign out"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
               aria-label="Sign out"
@@ -274,6 +277,17 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         </div>
 
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Confirm Logout"
+        description="Are you sure you want to log out of your account?"
+        confirmLabel="Yes, Log out"
+        cancelLabel="No, Cancel"
+        tone="danger"
+        onConfirm={handleConfirmLogout}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </aside>
   );
 }

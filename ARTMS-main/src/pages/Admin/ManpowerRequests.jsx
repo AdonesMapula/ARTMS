@@ -632,19 +632,6 @@ export default function AdminManpowerRequests() {
                                 >
                                   <Eye size={14} /> View Details <ChevronRight size={14} />
                                 </button>
-                                {(r.status === "revised" || r.status === "needs_revision") && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditRequest(r);
-                                    }}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition cursor-pointer"
-                                    title="Edit & Resubmit"
-                                  >
-                                    <Edit size={14} />
-                                  </button>
-                                )}
                               </div>
                             </TD>
                           </tr>
@@ -675,6 +662,7 @@ export default function AdminManpowerRequests() {
             <ManpowerViewPanel
               requestId={selectedRequestId}
               onClose={() => setSelectedRequestId(null)}
+              onEdit={() => setEditRequest(requests.find((r) => r.id === selectedRequestId))}
               onUpdated={loadRequests}
             />
           </div>

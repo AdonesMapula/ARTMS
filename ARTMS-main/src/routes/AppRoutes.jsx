@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
+import { useAuth } from "../context/AuthContext";
+import SplashScreen from "../components/ui/SplashScreen";
 import PublicLayout from "../layouts/PublicLayout";
 import DepartmentHeadLayout from "../layouts/DepartmentHeadLayout";
 import AdminLayout from "../layouts/AdminLayout";
@@ -31,6 +32,7 @@ import DepartmentHeadDashboard from "../pages/DepartmentHead/Dashboard";
 import ManpowerRequest from "../pages/DepartmentHead/ManpowerRequest";
 import RequestHistory from "../pages/DepartmentHead/RequestHistory";
 import DepartmentHeadNotifications from "../pages/DepartmentHead/Notifications";
+import DepartmentHeadProfile from "../pages/DepartmentHead/Profile";
 
 // HR Admin
 import AdminDashboard from "../pages/Admin/Dashboard";
@@ -46,7 +48,7 @@ import Employees from "../pages/Admin/Employees";
 import Reports from "../pages/Admin/Reports";
 import Attendance from "../pages/Admin/Attendance";
 import AdminNotifications from "../pages/Admin/Notifications";
-import Profile from "../pages/Admin/Profile";
+import AdminProfile from "../pages/Admin/Profile";
 import Settings from "../pages/Admin/Settings";
 
 // Video Interview
@@ -59,6 +61,7 @@ import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
 import JobLibraryApprovals from "../pages/Coo/JobLibraryApprovals";
 import JobPostingApprovals from "../pages/Coo/JobPostingApprovals";
 import CooNotifications from "../pages/Coo/Notifications";
+import CooProfile from "../pages/Coo/Profile";
 
 // Super Admin
 import SuperAdminDashboard from "../pages/SuperAdmin/Dashboard";
@@ -67,6 +70,7 @@ import Departments from "../pages/SuperAdmin/Departments";
 import Roles from "../pages/SuperAdmin/Roles";
 import SuperAdminSettings from "../pages/SuperAdmin/Settings";
 import AuditLogs from "../pages/SuperAdmin/AuditLogs";
+import SuperAdminProfile from "../pages/SuperAdmin/Profile";
 import HrManpowerRequests from "../pages/SuperAdmin/HrManpowerRequests";
 import HrJobLibrary from "../pages/SuperAdmin/HrJobLibrary";
 import HrJobPosting from "../pages/SuperAdmin/HrJobPosting";
@@ -82,6 +86,12 @@ import HrAttendance from "../pages/SuperAdmin/HrAttendance";
 import DebugPermissions from "../pages/DebugPermissions";
 
 export default function AppRoutes() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <SplashScreen />;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -136,6 +146,7 @@ export default function AppRoutes() {
             />
             
             <Route path="notifications" element={<DepartmentHeadNotifications />} />
+            <Route path="profile" element={<DepartmentHeadProfile />} />
           </Route>
         </Route>
 
@@ -251,7 +262,7 @@ export default function AppRoutes() {
             />
             
             <Route path="notifications" element={<AdminNotifications />} />
-            <Route path="profile" element={<Profile />} />
+            <Route path="profile" element={<AdminProfile />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Route>
@@ -289,6 +300,7 @@ export default function AppRoutes() {
             />
             
             <Route path="notifications" element={<CooNotifications />} />
+            <Route path="profile" element={<CooProfile />} />
           </Route>
         </Route>
 
@@ -332,7 +344,7 @@ export default function AppRoutes() {
             <Route path="settings" element={<SuperAdminSettings />} />
             <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="notifications" element={<AdminNotifications />} />
-            <Route path="profile" element={<Profile />} />
+            <Route path="profile" element={<SuperAdminProfile />} />
             
             {/* Debug Page (temporary) */}
             <Route path="debug-permissions" element={<DebugPermissions />} />

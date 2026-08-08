@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { FiBell, FiLogOut, FiUser, FiChevronDown, FiCalendar, FiClipboard, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
 import { useNavigate, Link } from "react-router-dom";
 import Button from "./ui/Button";
+import ConfirmDialog from "./ui/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
 import notificationService from "../services/notificationService";
 
@@ -89,7 +90,9 @@ export default function Topbar({ title, subtitle, right }) {
     }
   };
 
-  const handleLogout = async () => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleConfirmLogout = async () => {
     setMenuOpen(false);
     await logout();
     navigate("/login", { replace: true });
@@ -273,7 +276,10 @@ export default function Topbar({ title, subtitle, right }) {
                       <FiUser size={15} /> My Profile
                     </button>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setShowLogoutConfirm(true);
+                      }}
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
                     >
                       <FiLogOut size={15} /> Sign Out
@@ -285,6 +291,17 @@ export default function Topbar({ title, subtitle, right }) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Confirm Logout"
+        description="Are you sure you want to log out of your account?"
+        confirmLabel="Yes, Log out"
+        cancelLabel="No, Cancel"
+        tone="danger"
+        onConfirm={handleConfirmLogout}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </header>
   );
 }

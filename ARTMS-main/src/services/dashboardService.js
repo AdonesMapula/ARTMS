@@ -4,6 +4,7 @@ const dashboardService = {
   getAdminStats: () => api.get('/dashboard/admin'),
   getSuperAdminStats: () => api.get('/dashboard/super-admin'),
   getDepartmentHeadStats: () => api.get('/dashboard/department-head'),
+  getCooStats: () => api.get('/dashboard/coo'),
 };
 
 export default dashboardService;

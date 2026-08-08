@@ -100,6 +100,7 @@ export default function ManpowerApprovals() {
     pending: rows.filter((r) => r.status === "pending").length,
     approved: rows.filter((r) => r.status === "approved").length,
     rejected: rows.filter((r) => r.status === "rejected").length,
+    revised: rows.filter((r) => r.status === "revised" || r.status === "needs_revision").length,
   }), [total, rows]);
 
   // ── Open review panel ───────────────────────────────────────────────────
@@ -174,7 +175,7 @@ export default function ManpowerApprovals() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
@@ -207,6 +208,18 @@ export default function ManpowerApprovals() {
             <div>
               <p className="text-sm font-semibold text-slate-500">Approved</p>
               <p className="text-2xl font-extrabold text-slate-900">{stats.approved}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+              <RefreshCw size={24} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
+              <p className="text-2xl font-extrabold text-slate-900">{stats.revised}</p>
             </div>
           </CardContent>
         </Card>
