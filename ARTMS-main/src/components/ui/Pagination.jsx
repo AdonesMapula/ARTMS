@@ -12,6 +12,24 @@ export default function Pagination({
   const canPrev = page > 1;
   const canNext = page < pageCount;
 
+  const getVisiblePages = (current, total) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, "...", total];
+    }
+    
+    if (current >= total - 3) {
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    }
+    
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
+
+  const pages = getVisiblePages(page, pageCount);
+
   return (
     <div className={cn("flex items-center justify-between gap-3", className)}>
       <p className="text-xs text-slate-500">
@@ -27,6 +45,30 @@ export default function Pagination({
         >
           Prev
         </Button>
+        
+        <div className="hidden sm:flex items-center gap-1">
+          {pages.map((p, idx) => {
+            if (p === "...") {
+              return (
+                <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">
+                  ...
+                </span>
+              );
+            }
+            return (
+              <Button
+                key={p}
+                variant={p === page ? "primary" : "outline"}
+                size="sm"
+                className={cn("w-9 h-9 p-0", p !== page && "text-slate-600")}
+                onClick={() => onPageChange?.(p)}
+              >
+                {p}
+              </Button>
+            );
+          })}
+        </div>
+
         <Button
           variant="outline"
           size="sm"
@@ -39,4 +81,3 @@ export default function Pagination({
     </div>
   );
 }
-

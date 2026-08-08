@@ -11,6 +11,7 @@ import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
 import Skeleton from "../../components/ui/Skeleton";
@@ -54,7 +55,7 @@ export default function JobPosting() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
 
   // Selected Posting ID for Split View Detail & Edit Panel
   const [selectedPostingId, setSelectedPostingId] = useState(null);
@@ -687,16 +688,14 @@ export default function JobPosting() {
                       </tbody>
                     </Table>
 
-                    {filtered.length > 10 && (
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <Pagination
-                          page={page}
-                          pageSize={pageSize}
-                          total={filtered.length}
-                          onPageChange={setPage}
-                        />
-                      </div>
-                    )}
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <Pagination
+                        page={page}
+                        pageSize={pageSize}
+                        total={filtered.length}
+                        onPageChange={setPage}
+                      />
+                    </div>
                   </>
                 )}
               </CardContent>
@@ -747,6 +746,47 @@ export default function JobPosting() {
         message={alertModal.message}
         onClose={() => setAlertModalState({ ...alertModal, open: false })}
       />
+
+      {/* Create Job Posting Modal */}
+      <Modal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        className="max-w-xl"
+        title="Create Job Posting"
+        description="Verify the PRF details and set the work location and closing date for this posting."
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="primary" onClick={handleCreatePosting} className="bg-[#111A62] text-white">Create Posting</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-4">
+          <div>
+            <Input
+              label="Work Location"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="e.g. Cebu City, Philippines"
+            />
+          </div>
+          <div>
+            <DatePicker
+              label="Application Closing Date"
+              value={formData.closing_date}
+              onChange={(val) => setFormData({ ...formData, closing_date: val })}
+              placeholder="Select Date"
+            />
+          </div>
+          
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 mt-2">
+            <h4 className="text-sm font-bold text-blue-900 mb-1 flex items-center gap-1.5"><AlertCircle size={14}/> Note on Requirements</h4>
+            <p className="text-xs text-blue-800 leading-relaxed">
+              The job's qualifications and responsibilities will be automatically inherited from the Job Library / PRF. You can edit them later by clicking "Edit & View Specs" on the created posting.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

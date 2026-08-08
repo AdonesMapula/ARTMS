@@ -258,89 +258,33 @@ export default function AdminDashboard() {
   );
 }
 
-/* ───────────────────────────────────────────────────────────────────────────
-   1. KPI STAT BOX COMPONENT
-   ─────────────────────────────────────────────────────────────────────────── */
 function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
-  if (accentColor === "navy") {
-    return (
-      <Card className="h-full shadow-xl shadow-[#111A62]/15 rounded-3xl border border-white/10 bg-gradient-to-br from-[#111A62] via-[#172273] to-[#0d144d] text-white transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden relative">
-        <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
-        <CardContent className="p-6 relative z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-sm shadow-inner">
-              {icon}
-            </div>
-            {trend && (
-              <div className="flex items-center gap-1 rounded-full bg-emerald-400/20 px-2.5 py-1 text-[10px] font-bold text-emerald-300 backdrop-blur-sm border border-emerald-400/30">
-                {trendPositive ? <TrendingUp size={12} /> : <Activity size={12} />}
-                {trend}
-              </div>
-            )}
-          </div>
-          <div className="mt-5">
-            <p className="text-3xl font-black text-white tracking-tight">{value}</p>
-            <h3 className="mt-1 text-sm font-extrabold text-white/95">{title}</h3>
-            {subtitle && <p className="mt-1 text-xs font-semibold text-slate-300">{subtitle}</p>}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (accentColor === "orange") {
-    return (
-      <Card className="h-full shadow-xl shadow-[#E15B1D]/15 rounded-3xl border border-white/10 bg-gradient-to-br from-[#E15B1D] via-[#e5672d] to-[#cc4c12] text-white transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden relative">
-        <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-white/15 blur-xl pointer-events-none" />
-        <CardContent className="p-6 relative z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-sm shadow-inner">
-              {icon}
-            </div>
-            {trend && (
-              <div className="flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm border border-white/30">
-                {trendPositive ? <TrendingUp size={12} /> : <Activity size={12} />}
-                {trend}
-              </div>
-            )}
-          </div>
-          <div className="mt-5">
-            <p className="text-3xl font-black text-white tracking-tight">{value}</p>
-            <h3 className="mt-1 text-sm font-extrabold text-white/95">{title}</h3>
-            {subtitle && <p className="mt-1 text-xs font-semibold text-orange-100">{subtitle}</p>}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const themes = {
-    emerald: { topBorder: "border-t-4 border-t-emerald-500", bgIcon: "bg-emerald-500/10", iconText: "text-emerald-600" },
-    purple: { topBorder: "border-t-4 border-t-purple-500", bgIcon: "bg-purple-500/10", iconText: "text-purple-600" },
-    teal: { topBorder: "border-t-4 border-t-teal-500", bgIcon: "bg-teal-500/10", iconText: "text-teal-600" },
-    indigo: { topBorder: "border-t-4 border-t-indigo-500", bgIcon: "bg-indigo-500/10", iconText: "text-indigo-600" },
+  const colorMap = {
+    navy: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
+    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
+    purple: { bg: "bg-purple-100", text: "text-purple-600", hover: "hover:border-purple-400" },
+    orange: { bg: "bg-orange-100", text: "text-orange-600", hover: "hover:border-orange-400" },
   };
-
-  const theme = themes[accentColor] || themes.emerald;
+  const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className={cn("h-full shadow-lg shadow-slate-200/50 rounded-3xl border border-slate-100 bg-white transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-slate-200/60 cursor-pointer overflow-hidden", theme.topBorder)}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl shadow-xs", theme.bgIcon, theme.iconText)}>
+    <Card className={`transition-all h-full ${theme.hover} hover:shadow-md bg-white`}>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+          <div className={theme.text}>
             {icon}
           </div>
-          {trend && (
-            <div className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold", trendPositive ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-rose-50 text-rose-700 border border-rose-200/60")}>
-              {trendPositive ? <TrendingUp size={12} /> : <Activity size={12} />}
-              {trend}
-            </div>
-          )}
         </div>
-        <div className="mt-5">
-          <p className="text-3xl font-black text-slate-900 tracking-tight">{value}</p>
-          <h3 className="mt-1 text-sm font-extrabold text-slate-800">{title}</h3>
-          {subtitle && <p className="mt-1 text-xs font-semibold text-slate-400">{subtitle}</p>}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-500 truncate">{title}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+            {trend && (
+              <span className={`text-[10px] font-bold ${trendPositive ? "text-emerald-600" : "text-rose-600"}`}>
+                {trend}
+              </span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -3,7 +3,7 @@ import {
   FiAlertCircle, FiCheckCircle, FiCpu, FiInbox,
   FiLoader, FiRefreshCw, FiSearch, FiXCircle,
 } from "react-icons/fi";
-import { SlidersHorizontal, RefreshCw } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, Clock, CheckCircle, Activity, AlertCircle } from "lucide-react";
 import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -192,10 +192,10 @@ export default function AiScreening() {
 
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-4">
-        <SummaryCard label="Pending"     value={pending.length}  bg="bg-amber-50"   text="text-amber-700"   />
-        <SummaryCard label="High Fit"    value={high}            bg="bg-emerald-50" text="text-emerald-700" />
-        <SummaryCard label="Medium Fit"  value={medium}          bg="bg-blue-50"    text="text-blue-700"    />
-        <SummaryCard label="Low Fit"     value={low}             bg="bg-red-50"     text="text-red-700"     />
+        <SummaryCard label="Pending"     value={pending.length}  color="amber"   icon={Clock}       />
+        <SummaryCard label="High Fit"    value={high}            color="emerald" icon={CheckCircle} />
+        <SummaryCard label="Medium Fit"  value={medium}          color="blue"    icon={Activity}    />
+        <SummaryCard label="Low Fit"     value={low}             color="red"     icon={AlertCircle} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -559,12 +559,25 @@ export default function AiScreening() {
 }
 
 
-function SummaryCard({ label, value, bg, text }) {
+function SummaryCard({ label, value, color, icon: Icon }) {
+  const colorMap = {
+    amber: { bg: "bg-amber-100", text: "text-amber-600", hover: "hover:border-amber-400" },
+    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
+    blue: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
+    red: { bg: "bg-red-100", text: "text-red-600", hover: "hover:border-red-400" },
+  };
+  const theme = colorMap[color] || colorMap.blue;
+
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between gap-3 pt-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
-        <span className={`rounded-xl px-3 py-1 text-lg font-extrabold ${bg} ${text}`}>{value}</span>
+    <Card className={`transition-all ${theme.hover} hover:shadow-md bg-white`}>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+          {Icon && <Icon size={24} className={theme.text} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-500 truncate">{label}</p>
+          <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+        </div>
       </CardContent>
     </Card>
   );

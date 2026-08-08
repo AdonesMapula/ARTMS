@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Briefcase, ChevronDown, RefreshCw, Calendar, Eye } from "lucide-react";
+import { Briefcase, ChevronDown, RefreshCw, Calendar, Eye, Users, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -382,6 +382,13 @@ export default function Pipeline() {
 
   const totalCount = filteredApplicants.length;
 
+  const stats = {
+    applied: stageMap["applied"]?.length || 0,
+    passed: stageMap["screening_passed"]?.length || 0,
+    interviews: (stageMap["interview_1"]?.length || 0) + (stageMap["interview_2"]?.length || 0) + (stageMap["ready_for_interview"]?.length || 0),
+    hired: stageMap["hired"]?.length || 0,
+  };
+
   return (
     <div className="space-y-5 pb-10">
       
@@ -405,6 +412,14 @@ export default function Pipeline() {
             {loading ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
+      </div>
+
+      {/* ── Stats ───────────────────────────────────────────────────── */}
+      <div className="grid gap-3 sm:grid-cols-4">
+        <SummaryCard label="Applied" value={stats.applied} color="blue" icon={Users} />
+        <SummaryCard label="Screening Passed" value={stats.passed} color="emerald" icon={CheckCircle} />
+        <SummaryCard label="In Interviews" value={stats.interviews} color="amber" icon={Calendar} />
+        <SummaryCard label="Hired" value={stats.hired} color="teal" icon={Briefcase} />
       </div>
 
       {/* Filter Toolbar */}
@@ -620,5 +635,29 @@ export default function Pipeline() {
         }}
       />
     </div>
+  );
+}
+
+function SummaryCard({ label, value, color, icon: Icon }) {
+  const colorMap = {
+    amber: { bg: "bg-amber-100", text: "text-amber-600", hover: "hover:border-amber-400" },
+    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
+    blue: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
+    teal: { bg: "bg-teal-100", text: "text-teal-600", hover: "hover:border-teal-400" },
+  };
+  const theme = colorMap[color] || colorMap.blue;
+
+  return (
+    <Card className={`transition-all ${theme.hover} hover:shadow-md bg-white`}>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+          {Icon && <Icon size={24} className={theme.text} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-500 truncate">{label}</p>
+          <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

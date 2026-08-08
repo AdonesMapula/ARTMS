@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiCalendar, FiClock, FiMapPin, FiLink,
-  FiPlus, FiBell, FiClipboard, FiRefreshCw, FiVideo, FiFileText, FiTrash2,
+  FiPlus, FiBell, FiClipboard, FiRefreshCw, FiVideo, FiFileText, FiTrash2, FiUsers, FiCheckCircle
 } from "react-icons/fi";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -162,12 +162,11 @@ export default function Interviews() {
     return name.includes(q) || role.includes(q);
   });
 
-  // ── stats ──────────────────────────────────────────────────────────────
   const stats = [
-    { label: "Scheduled",  count: interviews.filter(i => i.status === "scheduled").length,  tone: "bg-blue-50 text-blue-700"    },
-    { label: "Confirmed",  count: interviews.filter(i => i.status === "confirmed").length,  tone: "bg-emerald-50 text-emerald-700" },
-    { label: "Done",       count: interviews.filter(i => i.status === "done").length,       tone: "bg-slate-100 text-slate-600" },
-    { label: "Total",      count: meta?.total ?? interviews.length,                          tone: "bg-amber-50 text-amber-700"  },
+    { label: "Scheduled", count: interviews.filter(i => i.status === "scheduled").length, color: "blue", icon: FiCalendar },
+    { label: "Confirmed", count: interviews.filter(i => i.status === "confirmed").length, color: "emerald", icon: FiCheckCircle },
+    { label: "Done", count: interviews.filter(i => i.status === "done").length, color: "slate", icon: FiClipboard },
+    { label: "Total", count: meta?.total ?? interviews.length, color: "amber", icon: FiUsers },
   ];
 
   // ── inline status update ───────────────────────────────────────────────
@@ -296,14 +295,7 @@ export default function Interviews() {
       {/* ── Stats ───────────────────────────────────────────────────── */}
       <div className="grid gap-3 sm:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="flex items-center justify-between gap-3 pt-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
-              <span className={`rounded-xl px-3 py-1 text-lg font-extrabold ${s.tone}`}>
-                {s.count}
-              </span>
-            </CardContent>
-          </Card>
+          <SummaryCard key={s.label} label={s.label} value={s.count} color={s.color} icon={s.icon} />
         ))}
       </div>
 
@@ -627,5 +619,29 @@ export default function Interviews() {
         onClose={() => setDeleteConfirm(null)}
       />
     </div>
+  );
+}
+
+function SummaryCard({ label, value, color, icon: Icon }) {
+  const colorMap = {
+    amber: { bg: "bg-amber-100", text: "text-amber-600", hover: "hover:border-amber-400" },
+    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
+    blue: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
+    slate: { bg: "bg-slate-100", text: "text-slate-600", hover: "hover:border-slate-400" },
+  };
+  const theme = colorMap[color] || colorMap.blue;
+
+  return (
+    <Card className={`transition-all ${theme.hover} hover:shadow-md bg-white`}>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+          {Icon && <Icon size={24} className={theme.text} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-500 truncate">{label}</p>
+          <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

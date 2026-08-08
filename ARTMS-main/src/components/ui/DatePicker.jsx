@@ -52,6 +52,7 @@ export default function DatePicker({
   minDate,
   disablePast = false,
   className,
+  label,
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -176,7 +177,12 @@ export default function DatePicker({
   for (let y = endYear; y >= startYear; y--) years.push(y);
 
   return (
-    <div className={cn("relative w-full", className)} ref={containerRef}>
+    <div className={cn("relative w-full flex flex-col", className)} ref={containerRef}>
+      {label && (
+        <label className="mb-1.5 block text-sm font-semibold text-slate-800">
+          {label}
+        </label>
+      )}
       {/* Trigger Button */}
       <button
         type="button"
