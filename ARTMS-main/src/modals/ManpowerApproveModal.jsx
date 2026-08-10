@@ -43,164 +43,53 @@ export default function ManpowerApproveModal({
 
   if (!open || !request) return null;
 
-  const handleAddBlock = (field) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: [
-        ...(prev[field] || []),
-        { id: crypto.randomUUID(), title: "", details: [] },
-      ],
-    }));
-  };
+  // Parse employment_status & plantilla_type from request or justification string
+  let empStatus = request?.employment_status ?? "";
+  let plantType = request?.plantilla_type ?? "";
+  let replFor = request?.replacement_for ?? "";
 
-  const handleRemoveBlock = (field, idx) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== idx),
-    }));
-  };
+  if (!empStatus && request?.justification) {
+    const empMatch = request.justification.match(/Employment Status:\s*([^|]+)/i);
+    if (empMatch) empStatus = empMatch[1].trim();
+  }
+  if (!plantType && request?.justification) {
+    const plantMatch = request.justification.match(/Plantilla Type:\s*([^|]+)/i);
+    if (plantMatch) plantType = plantMatch[1].trim();
+  }
+  if (!replFor && request?.justification) {
+    const replMatch = request.justification.match(/Replacement For:\s*([^|]+)/i);
+    if (replMatch) replFor = replMatch[1].trim();
+  }
 
-  const handleUpdateBlockTitle = (field, idx, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === idx ? { ...b, title: value } : b
-      ),
-    }));
-  };
-
-  const handleAddDetail = (field, blockIdx) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: [
-                ...(b.details || []),
-                { id: crypto.randomUUID(), value: "" },
-              ],
-            }
-          : b
-      ),
-    }));
-  };
-
-  const handleRemoveDetail = (field, blockIdx, detailIdx) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: b.details.filter((_, j) => j !== detailIdx),
-            }
-          : b
-      ),
-    }));
-  };
-
-  const handleUpdateDetailValue = (field, blockIdx, detailIdx, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: prev[field].map((b, i) =>
-        i === blockIdx
-          ? {
-              ...b,
-              details: b.details.map((d, j) =>
-                j === detailIdx ? { ...d, value } : d
-              ),
-            }
-          : b
-      ),
-    }));
-  };
+  // Format strings for display
+  const displayEmpStatus = empStatus ? empStatus.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "—";
+  const displayPlantType = plantType ? plantType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "—";
 
   const renderArrayEditor = (field, label) => {
-    const isPending = request.status === "pending";
-    
+    const items = request[field] || [];
     return (
       <div className="flex flex-col h-full pt-2">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
             {label}
           </p>
-          {isPending && (
-            <button
-              type="button"
-              onClick={() => handleAddBlock(field)}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 transition-colors hover:bg-blue-100 hover:border-blue-300 cursor-pointer"
-            >
-              <Plus size={12} /> Add Group
-            </button>
-          )}
         </div>
 
-        {form[field] && Array.isArray(form[field]) && form[field].length > 0 ? (
-          <div className="space-y-3">
-            {form[field].map((block, idx) => (
-              <div key={block.id || idx} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-200">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  {isPending ? (
-                    <input
-                      type="text"
-                      value={block.title}
-                      onChange={(e) => handleUpdateBlockTitle(field, idx, e.target.value)}
-                      placeholder="Group Title..."
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white"
-                    />
-                  ) : (
-                    <h4 className="text-sm font-bold text-slate-800">{block.title}</h4>
-                  )}
-                  {isPending && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveBlock(field, idx)}
-                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 mt-2">
+        {items && Array.isArray(items) && items.length > 0 ? (
+          <div className="space-y-4">
+            {items.map((block, idx) => (
+              <div key={block.id || idx}>
+                <h4 className="text-sm font-bold text-slate-800 mb-2">{block.title}</h4>
+                <ul className="space-y-1.5 list-none pl-0 m-0">
                   {(block.details || []).map((detail, dIdx) => (
-                    <div key={detail.id || dIdx} className="flex items-start gap-2">
+                    <li key={detail.id || dIdx} className="flex items-start gap-2">
                       <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400 pl-1"></span>
-                      {isPending ? (
-                        <textarea
-                          rows={1}
-                          value={typeof detail === "object" && detail !== null ? (detail.value ?? "") : String(detail ?? "")}
-                          onChange={(e) => handleUpdateDetailValue(field, idx, dIdx, e.target.value)}
-                          placeholder="Add detail..."
-                          className="w-full resize-none rounded-md border border-transparent bg-slate-50 px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
-                        />
-                      ) : (
-                        <span className="text-sm text-slate-600 leading-relaxed">
-                          {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
-                        </span>
-                      )}
-                      {isPending && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDetail(field, idx, dIdx)}
-                          className="mt-0.5 shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
+                      <span className="text-sm text-slate-600 leading-relaxed">
+                        {typeof detail === "object" && detail !== null ? (detail.value ?? detail.title ?? "") : String(detail ?? "")}
+                      </span>
+                    </li>
                   ))}
-                  {isPending && (
-                    <button
-                      type="button"
-                      onClick={() => handleAddDetail(field, idx)}
-                      className="ml-3 mt-1 flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
-                    >
-                      <Plus size={12} /> Add Detail
-                    </button>
-                  )}
-                </div>
+                </ul>
               </div>
             ))}
           </div>
@@ -306,17 +195,26 @@ export default function ManpowerApproveModal({
             </div>
           </div>
 
-          {/* Justification */}
-          {request.justification && (
-            <div className="mb-4 rounded-lg bg-white p-4 border border-slate-200 shadow-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Justification / Details
+          {/* Requirement Status Details */}
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-white p-4 border border-slate-200 shadow-sm">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Employment Status
               </p>
-              <p className="text-sm leading-relaxed text-slate-600">
-                {request.justification}
+              <p className="text-sm font-semibold text-slate-800">
+                {displayEmpStatus}
               </p>
             </div>
-          )}
+            <div className="rounded-lg bg-white p-4 border border-slate-200 shadow-sm">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Plantilla Requirement
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {displayPlantType}
+                {replFor && <span className="text-slate-500 font-normal"> (for {replFor})</span>}
+              </p>
+            </div>
+          </div>
 
           {/* Qualifications & Responsibilities Grid */}
           <div className="grid gap-6 sm:grid-cols-2 pt-2 border-t border-slate-200">

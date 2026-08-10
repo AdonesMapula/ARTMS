@@ -62,6 +62,29 @@ export default function ManpowerViewPanel({ requestId, onClose, onEdit, onUpdate
     ? [{ id: "1", title: "Core Responsibilities", details: [request.responsibilities] }]
     : [];
 
+  // Parse employment_status & plantilla_type
+  let empStatus = request?.employment_status ?? "";
+  let plantType = request?.plantilla_type ?? "";
+  let replFor = request?.replacement_for ?? "";
+
+  const rawJustification = request?.reason || request?.justification || "";
+
+  if (!empStatus && rawJustification) {
+    const empMatch = rawJustification.match(/Employment Status:\s*([^|]+)/i);
+    if (empMatch) empStatus = empMatch[1].trim();
+  }
+  if (!plantType && rawJustification) {
+    const plantMatch = rawJustification.match(/Plantilla Type:\s*([^|]+)/i);
+    if (plantMatch) plantType = plantMatch[1].trim();
+  }
+  if (!replFor && rawJustification) {
+    const replMatch = rawJustification.match(/Replacement For:\s*([^|]+)/i);
+    if (replMatch) replFor = replMatch[1].trim();
+  }
+
+  const displayEmpStatus = empStatus ? empStatus.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "—";
+  const displayPlantType = plantType ? plantType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "—";
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300">
       {/* ── Header Banner ────────────────────────────────────────── */}
@@ -203,13 +226,24 @@ export default function ManpowerViewPanel({ requestId, onClose, onEdit, onUpdate
               </div>
             </div>
 
-            {/* Justification */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-                Justification & Business Reason
-              </h3>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-700 font-medium">
-                {request?.reason || request?.justification || "No justification specified."}
+            {/* Requirement Status Details */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                  Employment Status
+                </h3>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-800 font-bold">
+                  {displayEmpStatus}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                  Plantilla Requirement
+                </h3>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-800 font-bold">
+                  {displayPlantType}
+                  {replFor && <span className="text-slate-500 font-normal"> (for {replFor})</span>}
+                </div>
               </div>
             </div>
 

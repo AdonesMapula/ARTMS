@@ -59,7 +59,6 @@ import InterviewReport from "../pages/Interview/InterviewReport";
 import CooDashboard from "../pages/Coo/Dashboard";
 import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
 import JobLibraryApprovals from "../pages/Coo/JobLibraryApprovals";
-import JobPostingApprovals from "../pages/Coo/JobPostingApprovals";
 import CooNotifications from "../pages/Coo/Notifications";
 import CooProfile from "../pages/Coo/Profile";
 
@@ -287,14 +286,6 @@ export default function AppRoutes() {
               element={
                 <PermissionProtectedRoute permission="view_job_library_approvals">
                   <JobLibraryApprovals />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="job-posting-approvals"
-              element={
-                <PermissionProtectedRoute permission="view_job_posting_approvals">
-                  <JobPostingApprovals />
                 </PermissionProtectedRoute>
               }
             />

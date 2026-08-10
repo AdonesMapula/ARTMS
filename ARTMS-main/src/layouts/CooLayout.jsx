@@ -43,20 +43,15 @@ export default function CooLayout() {
           to: "/coo/job-library-approvals",
           icon: <FiBookOpen />,
         },
-        {
-          label: "Job Postings",
-          to: "/coo/job-posting-approvals",
-          icon: <FiBriefcase />,
-        },
       ],
     },
     
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },
     {
-      label: "Notifications",
+      label: "History Log",
       to: "/coo/notifications",
-      icon: <FiBell />,
+      icon: <FiBookOpen />,
     },
     {
       label: "Profile",

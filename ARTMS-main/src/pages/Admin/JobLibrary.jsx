@@ -157,6 +157,7 @@ export default function JobLibrary() {
     approved: jobs.filter((j) => j.approval_status === "approved").length,
     pending: jobs.filter((j) => j.approval_status === "pending").length,
     rejected: jobs.filter((j) => j.approval_status === "rejected").length,
+    revised: jobs.filter((j) => j.approval_status === "revised" || j.approval_status === "needs_revision").length,
   };
 
   // Open Create Modal
@@ -304,18 +305,18 @@ export default function JobLibrary() {
           </div>
         </div>
 
-        {/* Needs Revision Banner for Rejected Entries */}
-        {stats.rejected > 0 && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+        {/* Needs Revision Banner for Revised Entries */}
+        {stats.revised > 0 && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+              <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-600">
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-red-900">
-                  {stats.rejected} Job {stats.rejected === 1 ? "Entry Needs" : "Entries Need"} Revision & Resubmission
+                <h3 className="text-sm font-bold text-amber-900">
+                  {stats.revised} Job {stats.revised === 1 ? "Entry Needs" : "Entries Need"} Revision & Resubmission
                 </h3>
-                <p className="text-xs text-red-700 mt-0.5">
+                <p className="text-xs text-amber-700 mt-0.5">
                   The COO has reviewed and returned job template(s) with feedback remarks. Click below to view COO comments and edit to resubmit.
                 </p>
               </div>
@@ -323,10 +324,10 @@ export default function JobLibrary() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setFilter("rejected"); setPage(1); }}
-              className="self-start sm:self-center border-red-300 bg-white text-red-700 hover:bg-red-50 hover:border-red-400 font-bold whitespace-nowrap"
+              onClick={() => { setFilter("revised"); setPage(1); }}
+              className="self-start sm:self-center border-amber-300 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-400 font-bold whitespace-nowrap"
             >
-              Review Rejected Entries ({stats.rejected})
+              Review Revised Entries ({stats.revised})
             </Button>
           </div>
         )}
@@ -368,17 +369,17 @@ export default function JobLibrary() {
           </Card>
 
           <Card
-            onClick={() => { setFilter("rejected"); setPage(1); }}
-            className={`cursor-pointer transition-all hover:border-red-400 ${filter === "rejected" ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/30" : ""}`}
+            onClick={() => { setFilter("revised"); setPage(1); }}
+            className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "revised" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
           >
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
-                <XCircle size={24} className="text-red-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+                <AlertTriangle size={24} className="text-amber-600" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
-                <p className="text-2xl font-extrabold text-red-600">
-                  {stats.rejected}
+                <p className="text-2xl font-extrabold text-amber-600">
+                  {stats.revised}
                 </p>
               </div>
             </CardContent>

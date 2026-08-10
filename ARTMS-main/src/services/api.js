@@ -80,34 +80,10 @@ export const clearApiCache = (pattern) => {
 
 /**
  * Auto-clear related caches when a mutation occurs.
+ * We clear everything to guarantee perfectly fresh data across all tables and dashboards.
  */
 const autoInvalidateForUrl = (url = "") => {
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes("applicant")) {
-    clearApiCache("applicant");
-    clearApiCache("dashboard");
-    clearApiCache("sidebar");
-  }
-  if (lowerUrl.includes("interview")) {
-    clearApiCache("interview");
-    clearApiCache("applicant");
-    clearApiCache("dashboard");
-    clearApiCache("sidebar");
-  }
-  if (lowerUrl.includes("manpower")) {
-    clearApiCache("manpower");
-    clearApiCache("dashboard");
-    clearApiCache("sidebar");
-  }
-  if (lowerUrl.includes("job")) {
-    clearApiCache("job");
-    clearApiCache("dashboard");
-    clearApiCache("sidebar");
-  }
-  if (lowerUrl.includes("notification")) {
-    clearApiCache("notification");
-    clearApiCache("sidebar");
-  }
+  clearApiCache(); // Clear everything on any mutation
 };
 
 // ── Wrap api.get for seamless caching ──────────────────────────────────────
