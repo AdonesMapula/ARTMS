@@ -96,6 +96,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Users  (Super Admin only) ────────────────────────────────────────────
     Route::middleware('role:super_admin')->group(function () {
+        Route::get('users/archived', [UserController::class, 'archived']);
+        Route::post('users/{id}/restore', [UserController::class, 'restore']);
+        Route::delete('users/{id}/force', [UserController::class, 'forceDeleteUser']);
         Route::apiResource('users', UserController::class);
         Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
         Route::get('audit-logs', [AuditLogController::class, 'index']);

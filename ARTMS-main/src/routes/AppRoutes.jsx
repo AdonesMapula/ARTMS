@@ -65,6 +65,7 @@ import CooProfile from "../pages/Coo/Profile";
 // Super Admin
 import SuperAdminDashboard from "../pages/SuperAdmin/Dashboard";
 import Users from "../pages/SuperAdmin/Users";
+import ArchivedUsers from "../pages/SuperAdmin/ArchivedUsers";
 import Departments from "../pages/SuperAdmin/Departments";
 import Roles from "../pages/SuperAdmin/Roles";
 import SuperAdminSettings from "../pages/SuperAdmin/Settings";
@@ -312,6 +313,14 @@ export default function AppRoutes() {
               element={
                 <PermissionProtectedRoute permission="view_users">
                   <Users />
+                </PermissionProtectedRoute>
+              }
+            />
+            <Route
+              path="archived-users"
+              element={
+                <PermissionProtectedRoute permission="view_users">
+                  <ArchivedUsers />
                 </PermissionProtectedRoute>
               }
             />

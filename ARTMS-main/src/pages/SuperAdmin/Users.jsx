@@ -172,10 +172,10 @@ export default function Users() {
       setDeleteId(null);
       setDeleteUser(null);
       load();
-      toast.success("User Deleted", `${name} has been permanently deleted.`);
+      toast.success("User Archived", `${name} has been moved to the archive.`);
     } catch (error) {
-      console.error("Failed to delete user:", error);
-      toast.error("Delete Failed", error.response?.data?.message || "Failed to delete user. Please try again.");
+      console.error("Failed to archive user:", error);
+      toast.error("Archive Failed", error.response?.data?.message || "Failed to archive user. Please try again.");
     }
   };
 
@@ -543,12 +543,12 @@ export default function Users() {
         }}
       />
 
-      {/* Delete User Confirm */}
+      {/* Archive User Confirm */}
       <ConfirmDialog
         open={!!deleteId}
-        title="Delete User Permanently?"
-        description={`Are you sure you want to permanently delete ${[deleteUser?.first_name, deleteUser?.middle_name, deleteUser?.last_name].filter(Boolean).join(" ") || deleteUser?.name}? This action cannot be undone and all user data will be removed from the system.`}
-        confirmLabel="Yes, Delete Permanently"
+        title="Archive User?"
+        description={`Are you sure you want to archive ${[deleteUser?.first_name, deleteUser?.middle_name, deleteUser?.last_name].filter(Boolean).join(" ") || deleteUser?.name}? They will be removed from this list, but you can restore them from the Archived Users menu.`}
+        confirmLabel="Yes, Archive User"
         cancelLabel="Cancel"
         tone="danger"
         onConfirm={() => handleDelete(deleteId)}

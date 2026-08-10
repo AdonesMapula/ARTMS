@@ -7,6 +7,9 @@ const userService = {
   update:        (id, data)    => api.put(`/users/${id}`, data),
   delete:        (id)          => api.delete(`/users/${id}`),
   toggleStatus:  (id)          => api.patch(`/users/${id}/toggle-status`),
+  getArchived:   (params = {}) => api.get('/users/archived', { params }),
+  restore:       (id)          => api.post(`/users/${id}/restore`),
+  forceDelete:   (id)          => api.delete(`/users/${id}/force`),
 };
 
 export default userService;

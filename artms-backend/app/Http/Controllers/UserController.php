@@ -130,6 +130,7 @@ class UserController extends Controller
 
     /**
      * DELETE /api/users/{id}
+     * Soft-deletes (archives) the user.
      */
     public function destroy(User $user): JsonResponse
     {
@@ -138,16 +139,16 @@ class UserController extends Controller
             return response()->json(['message' => 'You cannot delete your own account.'], 403);
         }
 
-        AuditLog::record('delete', 'user', "Deleted user: {$user->email}", $user->toArray(), null, User::class, $user->id);
+        AuditLog::record('delete', 'user', "Archived user: {$user->email}", $user->toArray(), null, User::class, $user->id);
 
         // Clean up reset tokens & Sanctum tokens
         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
         $user->tokens()->delete();
 
-        // Permanently delete user from database
-        $user->forceDelete();
+        // Soft delete (archive) the user instead of force delete
+        $user->delete();
 
-        return response()->json(['message' => 'User deleted successfully.']);
+        return response()->json(['message' => 'User archived successfully.']);
     }
 
     /**
@@ -164,5 +165,85 @@ class UserController extends Controller
             'message'   => "User account {$status}.",
             'is_active' => $user->is_active,
         ]);
+    }
+
+    /**
+     * GET /api/users/archived
+     * Fetch all soft-deleted users.
+     */
+    public function archived(Request $request): JsonResponse
+    {
+        $query = User::onlyTrashed()->with('department')
+            ->when($request->search, fn ($q) =>
+                $q->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('email', 'like', "%{$request->search}%")
+            );
+
+        $users = $query->orderBy('deleted_at', 'desc')->paginate($request->per_page ?? 15);
+
+        return response()->json($users);
+    }
+
+    /**
+     * POST /api/users/{id}/restore
+     * Restore a soft-deleted user.
+     */
+    public function restore($id): JsonResponse
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+        $user->restore();
+
+        AuditLog::record('update', 'user', "Restored user: {$user->email}", null, $user->toArray(), User::class, $user->id);
+
+        return response()->json([
+            'message' => 'User restored successfully.',
+            'user'    => $user->load('department'),
+        ]);
+    }
+    /**
+     * DELETE /api/users/{id}/force
+     * Hard-deletes the user. If database constraints block deletion (e.g., they have manpower requests),
+     * it falls back to anonymizing their personal data while keeping the row to maintain referential integrity.
+     */
+    public function forceDeleteUser($id): JsonResponse
+    {
+        $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->id === auth()->id()) {
+            return response()->json(['message' => 'You cannot permanently delete your own account.'], 403);
+        }
+
+        try {
+            // Attempt an actual database row deletion
+            $user->forceDelete();
+            AuditLog::record('delete', 'user', "Permanently deleted user ID: {$id}", null, null, User::class, $id);
+            return response()->json(['message' => 'User permanently deleted.']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // 23000 is the SQLSTATE code for integrity constraint violations
+            if ($e->getCode() == '23000') {
+                // Fallback to Anonymization
+                $user->update([
+                    'first_name'  => 'Deleted',
+                    'middle_name' => null,
+                    'last_name'   => 'User',
+                    'name'        => 'Deleted User',
+                    'email'       => 'deleted_' . \Illuminate\Support\Str::uuid() . '@example.com',
+                    'password'    => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+                    'avatar'      => null,
+                    'is_active'   => false,
+                ]);
+
+                // Ensure they are still soft deleted just in case
+                if (!$user->trashed()) {
+                    $user->delete();
+                }
+
+                AuditLog::record('delete', 'user', "Anonymized user ID: {$id} due to constraints", null, null, User::class, $id);
+                return response()->json(['message' => 'User anonymized permanently (data retained due to relations).']);
+            }
+
+            // Re-throw if it's another error
+            throw $e;
+        }
     }
 }
