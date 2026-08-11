@@ -7,8 +7,8 @@ import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
-  hr_admin:        "HR Admin",
-  coo:             "COO",
+  hr_admin:        "Human Resources Admin",
+  coo:             "Chief Operating Officer",
   department_head: "Department Head",
   employee:        "Employee",
 };

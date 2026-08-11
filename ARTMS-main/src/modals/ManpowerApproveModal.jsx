@@ -228,6 +228,44 @@ export default function ManpowerApproveModal({
           </div>
         </div>
 
+        {/* Resubmitted (Revised) Banner */}
+        {(() => {
+          const rawRemarks = request.approval_remarks || request.remarks;
+          if (rawRemarks && request.status === "pending") {
+            const hasHrUpdate = rawRemarks.includes("| [HR Updated]:");
+            let cooRemarks = rawRemarks;
+            let hrRemarks = null;
+
+            if (hasHrUpdate) {
+              const parts = rawRemarks.split("| [HR Updated]:");
+              cooRemarks = parts[0].replace("[COO Requested]:", "").trim();
+              hrRemarks = parts[1].trim();
+            }
+
+            return (
+              <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4 shadow-sm">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center gap-2">
+                  <RefreshCw size={14} className="text-blue-600" />
+                  Resubmitted After Revision
+                </p>
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-white p-3 border border-blue-100 shadow-2xs">
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Previous COO Instruction</p>
+                    <p className="text-sm font-medium text-slate-700 italic">"{cooRemarks}"</p>
+                  </div>
+                  {hrRemarks && (
+                    <div className="rounded-lg bg-blue-600 p-3 shadow-2xs border border-blue-700">
+                      <p className="text-[10px] font-bold uppercase text-blue-200 mb-1">HR Revision Notes (What they changed)</p>
+                      <p className="text-sm font-medium text-white">{hrRemarks}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {/* Existing Approval Remarks (if viewing an already processed request) */}
         {(request.approval_remarks || request.remarks) && request.status !== "pending" && (
            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">

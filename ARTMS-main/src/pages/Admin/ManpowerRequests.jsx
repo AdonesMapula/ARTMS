@@ -228,6 +228,14 @@ export default function AdminManpowerRequests() {
     rejected: requests.filter((r) => r.status === "rejected").length,
   };
 
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("artms-sidebar-count-update", {
+        detail: { manpower_requests: stats.pending },
+      })
+    );
+  }, [stats.pending]);
+
   return (
     <div className="space-y-6">
       {/* ── Collapsible Title & Stats Container ─────────────────────── */}

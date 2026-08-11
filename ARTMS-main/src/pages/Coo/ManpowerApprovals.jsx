@@ -22,9 +22,10 @@ const fmt  = (d) =>
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending" },
+  { value: "pending", label: "Pending (New)" },
+  { value: "resubmitted", label: "Resubmitted (Revised)" },
+  { value: "revised", label: "Needs Revision (HR)" },
   { value: "approved", label: "Approved" },
-  { value: "revised", label: "Needs Revision" },
   { value: "rejected", label: "Rejected" },
 ];
 
@@ -102,6 +103,14 @@ export default function ManpowerApprovals() {
     rejected: rows.filter((r) => r.status === "rejected").length,
     revised: rows.filter((r) => r.status === "revised" || r.status === "needs_revision").length,
   }), [total, rows]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("artms-sidebar-count-update", {
+        detail: { manpower_requests: stats.pending },
+      })
+    );
+  }, [stats.pending]);
 
   // ── Open review panel ───────────────────────────────────────────────────
   const openReview = (row, act) => {
@@ -334,8 +343,19 @@ export default function ManpowerApprovals() {
                               </p>
                             )}
                           </div>
-                          <Badge tone={STATUS_TONE[r.status] ?? "default"} className="text-xs capitalize">
-                            {r.status}
+                          <Badge 
+                            tone={
+                              r.status === "pending" && (r.approval_remarks || r.remarks)
+                                ? "info"
+                                : STATUS_TONE[r.status] ?? "default"
+                            } 
+                            className="text-xs font-semibold"
+                          >
+                            {r.status === "pending" && (r.approval_remarks || r.remarks) 
+                              ? "Resubmitted (Revised)" 
+                              : r.status === "revised" 
+                              ? "Needs Revision (HR)"
+                              : r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                           </Badge>
                         </div>
 

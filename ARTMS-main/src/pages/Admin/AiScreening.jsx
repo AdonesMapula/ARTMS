@@ -14,14 +14,14 @@ import { useToast } from "../../context/ToastContext";
 import ScreeningLoadingModal from "../../components/ui/ScreeningLoadingModal";
 
 // ── constants ─────────────────────────────────────────────────────────────────
-const FIT_TONE  = { high: "success", medium: "warning", low: "danger" };
-const FIT_LABEL = { high: "High",    medium: "Medium",  low: "Low"    };
+const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
+const FIT_LABEL = { high: "High", medium: "Medium", low: "Low" };
 
 const BREAKDOWN_FIELDS = [
-  { key: "education",  label: "Education",   max: 25, remarkKey: "education_remarks"  },
-  { key: "experience", label: "Experience",  max: 35, remarkKey: "experience_remarks" },
-  { key: "skills",     label: "Skills",      max: 30, remarkKey: "skills_remarks"     },
-  { key: "other",      label: "Other / Lic", max: 10, remarkKey: null                 },
+  { key: "education", label: "Education", max: 25, remarkKey: "education_remarks" },
+  { key: "experience", label: "Experience", max: 35, remarkKey: "experience_remarks" },
+  { key: "skills", label: "Skills", max: 30, remarkKey: "skills_remarks" },
+  { key: "other", label: "Other / Lic", max: 10, remarkKey: null },
 ];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ function scoreColor(pct) {
 }
 
 function fitRingColor(label) {
-  if (label === "high")   return "border-emerald-300 text-emerald-600";
+  if (label === "high") return "border-emerald-300 text-emerald-600";
   if (label === "medium") return "border-amber-300  text-amber-600";
   return "border-red-300 text-red-600";
 }
@@ -40,21 +40,21 @@ function fitRingColor(label) {
 // ── main component ────────────────────────────────────────────────────────────
 export default function AiScreening() {
   const toast = useToast();
-  const [tab,          setTab]          = useState("pending");   // "pending" | "screened"
-  const [pending,      setPending]      = useState([]);
-  const [screened,     setScreened]     = useState([]);
-  const [loadingP,     setLoadingP]     = useState(true);
-  const [loadingS,     setLoadingS]     = useState(true);
-  const [error,        setError]        = useState(null);
-  const [selected,     setSelected]     = useState(null);
-  const [screening,    setScreening]    = useState(null);
-  const [screenError,  setScreenError]  = useState(null);
-  const [search,       setSearch]       = useState("");
-  const [filterFit,    setFilterFit]    = useState("");
-  const [hrForm,       setHrForm]       = useState({ interpretation: "", decision: "" });
-  const [savingHr,     setSavingHr]     = useState(false);
-  const [hrSaved,      setHrSaved]      = useState(false);
-  const searchTimer                     = useRef(null);
+  const [tab, setTab] = useState("pending");   // "pending" | "screened"
+  const [pending, setPending] = useState([]);
+  const [screened, setScreened] = useState([]);
+  const [loadingP, setLoadingP] = useState(true);
+  const [loadingS, setLoadingS] = useState(true);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [screening, setScreening] = useState(null);
+  const [screenError, setScreenError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterFit, setFilterFit] = useState("");
+  const [hrForm, setHrForm] = useState({ interpretation: "", decision: "" });
+  const [savingHr, setSavingHr] = useState(false);
+  const [hrSaved, setHrSaved] = useState(false);
+  const searchTimer = useRef(null);
 
   // ── loaders ────────────────────────────────────────────────────────────────
   const loadPending = useCallback(async (q = search) => {
@@ -75,7 +75,7 @@ export default function AiScreening() {
     setLoadingS(true);
     try {
       const params = { per_page: 50 };
-      if (q)   params.search    = q;
+      if (q) params.search = q;
       if (fit) params.fit_label = fit;
       const res = await aiService.evaluations(params);
       setScreened(res.data?.data ?? []);
@@ -130,7 +130,7 @@ export default function AiScreening() {
     try {
       await aiService.hrReview(active.id, {
         hr_interpretation: hrForm.interpretation,
-        hr_decision:       hrForm.decision,
+        hr_decision: hrForm.decision,
       });
       setHrSaved(true);
       setTimeout(() => setHrSaved(false), 2500);
@@ -145,17 +145,17 @@ export default function AiScreening() {
   };
 
   // ── derived ────────────────────────────────────────────────────────────────
-  const rows   = tab === "pending" ? pending : screened;
+  const rows = tab === "pending" ? pending : screened;
   const active = selected ? screened.find(r => r.id === selected) ?? pending.find(r => r.id === selected) : null;
-  const eval_  = active?.ai_evaluation ?? null;
+  const eval_ = active?.ai_evaluation ?? null;
 
   useEffect(() => {
     if (eval_) setHrForm({ interpretation: eval_.hr_interpretation ?? "", decision: eval_.hr_decision ?? "" });
   }, [selected]); // eslint-disable-line
 
-  const high   = screened.filter(r => r.ai_evaluation?.fit_label === "high").length;
+  const high = screened.filter(r => r.ai_evaluation?.fit_label === "high").length;
   const medium = screened.filter(r => r.ai_evaluation?.fit_label === "medium").length;
-  const low    = screened.filter(r => r.ai_evaluation?.fit_label === "low").length;
+  const low = screened.filter(r => r.ai_evaluation?.fit_label === "low").length;
   const loading = tab === "pending" ? loadingP : loadingS;
 
   // derive the applicant name being screened for the loading modal
@@ -175,7 +175,7 @@ export default function AiScreening() {
       {/* Page heading */}
       <div>
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">AI Screening</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">AI Resume Screening</h1>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">AI Resume Screening</h1>
         <p className="mt-1 text-sm text-slate-500">Parse uploaded resumes and score them against job requirements automatically.</p>
       </div>
 
@@ -192,10 +192,10 @@ export default function AiScreening() {
 
       {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-4">
-        <SummaryCard label="Pending"     value={pending.length}  color="amber"   icon={Clock}       />
-        <SummaryCard label="High Fit"    value={high}            color="emerald" icon={CheckCircle} />
-        <SummaryCard label="Medium Fit"  value={medium}          color="blue"    icon={Activity}    />
-        <SummaryCard label="Low Fit"     value={low}             color="red"     icon={AlertCircle} />
+        <SummaryCard label="Pending" value={pending.length} color="amber" icon={Clock} />
+        <SummaryCard label="High Fit" value={high} color="emerald" icon={CheckCircle} />
+        <SummaryCard label="Medium Fit" value={medium} color="blue" icon={Activity} />
+        <SummaryCard label="Low Fit" value={low} color="red" icon={AlertCircle} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -507,21 +507,19 @@ export default function AiScreening() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setHrForm(f => ({ ...f, decision: "qualified" }))}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition ${
-                        hrForm.decision === "qualified"
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition ${hrForm.decision === "qualified"
                           ? "border-emerald-300 bg-emerald-50 text-emerald-700"
                           : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50/50"
-                      }`}
+                        }`}
                     >
                       <FiCheckCircle size={13} /> Qualified
                     </button>
                     <button
                       onClick={() => setHrForm(f => ({ ...f, decision: "not_qualified" }))}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition ${
-                        hrForm.decision === "not_qualified"
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition ${hrForm.decision === "not_qualified"
                           ? "border-red-300 bg-red-50 text-red-600"
                           : "border-slate-200 bg-white text-slate-600 hover:bg-red-50/50"
-                      }`}
+                        }`}
                     >
                       <FiXCircle size={13} /> Not Qualified
                     </button>
@@ -596,11 +594,10 @@ function TabBtn({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-        active
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active
           ? "bg-white text-[#111A62] shadow-sm"
           : "text-slate-500 hover:text-slate-700"
-      }`}
+        }`}
     >
       {children}
     </button>

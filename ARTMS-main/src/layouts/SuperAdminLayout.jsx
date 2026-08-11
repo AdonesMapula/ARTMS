@@ -25,8 +25,8 @@ import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
-  hr_admin:        "HR Admin",
-  coo:             "COO",
+  hr_admin:        "Human Resources Admin",
+  coo:             "Chief Operating Officer",
   department_head: "Department Head",
   employee:        "Employee",
 };
@@ -42,8 +42,14 @@ export default function SuperAdminLayout() {
 
     // SYSTEM ADMINISTRATION Section
     { label: "SYSTEM ADMINISTRATION", type: "label" },
-    { label: "Users", to: "/superadmin/users", icon: <FiUsers /> },
-    { label: "Archived Users", to: "/superadmin/archived-users", icon: <FiArchive /> },
+    {
+      label: "Users",
+      icon: <FiUsers />,
+      children: [
+        { label: "Active Users", to: "/superadmin/users", icon: <FiUsers /> },
+        { label: "Archived Users", to: "/superadmin/archived-users", icon: <FiArchive /> },
+      ],
+    },
     { label: "Departments", to: "/superadmin/departments", icon: <FiUsers /> },
     { label: "Roles & Permissions", to: "/superadmin/roles", icon: <FiShield /> },
     { label: "Audit Logs", to: "/superadmin/audit-logs", icon: <FiActivity /> },

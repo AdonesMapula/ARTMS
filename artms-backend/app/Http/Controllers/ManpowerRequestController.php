@@ -14,7 +14,17 @@ class ManpowerRequestController extends Controller
     {
         $requests = ManpowerRequest::with(['department', 'requester', 'jobLibrary', 'approver'])
             ->when($request->department_id, fn ($q) => $q->where('department_id', $request->department_id))
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->status, function ($q) use ($request) {
+                if ($request->status === 'resubmitted') {
+                    $q->where('status', 'pending')
+                      ->whereNotNull('approval_remarks');
+                } else if ($request->status === 'pending') {
+                    $q->where('status', 'pending')
+                      ->whereNull('approval_remarks');
+                } else {
+                    $q->where('status', $request->status);
+                }
+            })
             ->when(
                 $request->user()->isDepartmentHead(),
                 fn ($q) => $q->where('department_id', $request->user()->department_id)
@@ -87,7 +97,10 @@ class ManpowerRequestController extends Controller
         // If it was marked as revised, resubmitting it sets it back to pending
         if ($manpowerRequest->status === 'revised') {
             $data['status'] = 'pending';
-            $data['approval_remarks'] = null; // Clear out the COO's feedback now that it's fixed
+            if ($request->has('hr_remarks') && !empty($request->hr_remarks)) {
+                $oldRemarks = $manpowerRequest->approval_remarks ? trim(str_replace('[COO Requested]:', '', explode('| [HR Updated]:', $manpowerRequest->approval_remarks)[0])) : "No remarks";
+                $data['approval_remarks'] = "[COO Requested]: " . $oldRemarks . " | [HR Updated]: " . $request->hr_remarks;
+            }
         }
 
         $manpowerRequest->update($data);

@@ -68,6 +68,7 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
     qualifications: [],
     responsibilities: [],
     job_library_id: null,
+    hr_remarks: "",
   });
 
   const [jobLibrary, setJobLibrary] = useState([]);
@@ -142,6 +143,7 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
         qualifications: normalizeBlocks(request.qualifications),
         responsibilities: normalizeBlocks(request.responsibilities),
         job_library_id: request.job_library_id ?? null,
+        hr_remarks: "",
       });
     }
   }, [request, open]);
@@ -298,7 +300,7 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* COO Feedback Banner */}
           {remarksText && (
-            <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 shadow-sm animate-fade-in">
+            <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-5 shadow-sm animate-fade-in space-y-4">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-700">
                   <RefreshCw size={18} />
@@ -311,9 +313,22 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
                     "{remarksText}"
                   </p>
                   <p className="mt-2 text-xs font-semibold text-amber-800">
-                    💡 Make the requested adjustments below and click "Resubmit PRF to COO".
+                    💡 Make the requested adjustments below and explicitly state what you changed so the COO can review it quickly.
                   </p>
                 </div>
+              </div>
+              <div className="border-t border-amber-200/60 pt-4">
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-bold text-amber-900">
+                  HR Revision Notes (What did you change?) <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  className="w-full resize-none rounded-lg border border-amber-300/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-200"
+                  placeholder="e.g., Updated the headcount to 2 as requested..."
+                  value={form.hr_remarks}
+                  onChange={(e) => setForm({ ...form, hr_remarks: e.target.value })}
+                />
               </div>
             </div>
           )}

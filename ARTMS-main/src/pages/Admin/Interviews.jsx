@@ -39,44 +39,44 @@ import { useToast } from "../../context/ToastContext";
 
 // ── constants ──────────────────────────────────────────────────────────────
 const STAGE_TABS = [
-  { key: "",                     label: "All"                  },
-  { key: "initial_screening",    label: "Initial Screening"    },
+  { key: "", label: "All" },
+  { key: "initial_screening", label: "Initial Screening" },
   { key: "technical_assessment", label: "Technical Assessment" },
-  { key: "hr_interview",         label: "HR Interview"         },
+  { key: "hr_interview", label: "HR Interview" },
   { key: "managerial_interview", label: "Managerial Interview" },
-  { key: "final",                label: "Final Interview"      },
+  { key: "final", label: "Final Interview" },
 ];
 
 const STAGE_TONE = {
-  initial_screening:    "info",
+  initial_screening: "info",
   technical_assessment: "purple",
-  hr_interview:         "warning",
+  hr_interview: "warning",
   managerial_interview: "indigo",
-  final:                "accent",
-  interview_1:          "info",
-  interview_2:          "warning",
+  final: "accent",
+  interview_1: "info",
+  interview_2: "warning",
 };
 
 const STAGE_LABEL = {
-  initial_screening:    "Initial Screening",
+  initial_screening: "Initial Screening",
   technical_assessment: "Technical Assessment",
-  hr_interview:         "HR Interview",
+  hr_interview: "HR Interview",
   managerial_interview: "Managerial Interview",
-  final:                "Final Interview",
-  interview_1:          "Initial Interview",
-  interview_2:          "Second Interview",
+  final: "Final Interview",
+  interview_1: "Initial Interview",
+  interview_2: "Second Interview",
 };
 
 const TYPE_ICON = {
   in_person: <FiMapPin size={11} />,
-  online:    <FiLink   size={11} />,
-  phone:     <FiCalendar size={11} />,
+  online: <FiLink size={11} />,
+  phone: <FiCalendar size={11} />,
 };
 
 const TYPE_LABEL = {
   in_person: "In-Person",
-  online:    "Online",
-  phone:     "Phone",
+  online: "Online",
+  phone: "Phone",
 };
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -104,22 +104,22 @@ export default function Interviews() {
   const toast = useToast();
 
   // ── view state ────────────────────────────────────────────────────────
-  const [view,        setView]       = useState("list");    // "list" | "calendar"
-  const [stageTab,    setStageTab]   = useState("");
-  const [search,      setSearch]     = useState("");
-  const [statusFilter,setStatusFilter] = useState("");
-  const [page,        setPage]       = useState(1);
+  const [view, setView] = useState("list");    // "list" | "calendar"
+  const [stageTab, setStageTab] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   // ── data state ────────────────────────────────────────────────────────
-  const [interviews,  setInterviews] = useState([]);
-  const [meta,        setMeta]       = useState(null);   // pagination meta
-  const [applicants,  setApplicants] = useState([]);
-  const [loading,     setLoading]    = useState(false);
+  const [interviews, setInterviews] = useState([]);
+  const [meta, setMeta] = useState(null);   // pagination meta
+  const [applicants, setApplicants] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState({}); // { [id]: true }
 
   // ── modal state ───────────────────────────────────────────────────────
-  const [scheduleOpen,  setScheduleOpen]  = useState(false);
-  const [evalOpen,      setEvalOpen]      = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [evalOpen, setEvalOpen] = useState(false);
   const [activeInterview, setActiveInterview] = useState(null);
   const [reportModalInterviewId, setReportModalInterviewId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -129,8 +129,8 @@ export default function Interviews() {
     setLoading(true);
     try {
       const params = { page, per_page: 10 };
-      if (stageTab)      params.stage  = stageTab;
-      if (statusFilter)  params.status = statusFilter;
+      if (stageTab) params.stage = stageTab;
+      if (statusFilter) params.status = statusFilter;
       const { data } = await interviewService.getAll(params);
       // Laravel pagination: data.data = rows, data.meta or data.last_page
       const rows = data.data ?? data;
@@ -150,7 +150,7 @@ export default function Interviews() {
     applicantService
       .getAll({ per_page: 200 })
       .then(({ data }) => setApplicants(data.data ?? data))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // ── filtered rows (client-side search) ────────────────────────────────
@@ -158,7 +158,7 @@ export default function Interviews() {
     if (!search) return true;
     const name = `${i.applicant?.first_name ?? ""} ${i.applicant?.last_name ?? ""}`.toLowerCase();
     const role = i.jobPosting?.jobLibrary?.title?.toLowerCase() ?? "";
-    const q    = search.toLowerCase();
+    const q = search.toLowerCase();
     return name.includes(q) || role.includes(q);
   });
 
@@ -240,16 +240,16 @@ export default function Interviews() {
   }
 
   // ── calendar: get days that have interviews this month ─────────────────
-  const now   = new Date();
+  const now = new Date();
   const cYear = now.getFullYear();
-  const cMonth= now.getMonth();
+  const cMonth = now.getMonth();
   const interviewDays = new Set(
     interviews
       .filter(i => fmtYear(i.scheduled_at) === cYear && fmtMonth(i.scheduled_at) === cMonth)
       .map(i => fmtDayOfMonth(i.scheduled_at))
   );
   const firstDayOfMonth = new Date(cYear, cMonth, 1).getDay();
-  const daysInMonth     = new Date(cYear, cMonth + 1, 0).getDate();
+  const daysInMonth = new Date(cYear, cMonth + 1, 0).getDate();
 
   // ── render ─────────────────────────────────────────────────────────────
   return (
@@ -261,7 +261,7 @@ export default function Interviews() {
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
             Recruitment
           </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
             Interview Scheduling
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -273,11 +273,10 @@ export default function Interviews() {
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`rounded-xl border px-4 py-2 text-xs font-bold capitalize transition ${
-                view === v
+              className={`rounded-xl border px-4 py-2 text-xs font-bold capitalize transition ${view === v
                   ? "bg-[var(--artms-primary)] text-white border-[var(--artms-primary)]"
                   : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
+                }`}
             >
               {v === "list" ? (
                 <span className="flex items-center gap-1.5"><FiFileText size={13} /> List</span>
@@ -305,11 +304,10 @@ export default function Interviews() {
           <button
             key={t.key}
             onClick={() => { setStageTab(t.key); setPage(1); }}
-            className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 -mb-px ${
-              stageTab === t.key
+            className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 -mb-px ${stageTab === t.key
                 ? "border-[var(--artms-primary)] text-[var(--artms-primary)] bg-white"
                 : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
+              }`}
           >
             {t.label}
           </button>
@@ -538,11 +536,10 @@ export default function Interviews() {
                                 title={i.reminder_sent ? "Reminder already sent" : "Send Reminder"}
                                 disabled={actionLoading[`r_${i.id}`] || i.reminder_sent}
                                 onClick={() => handleSendReminder(i)}
-                                className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${
-                                  i.reminder_sent
+                                className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${i.reminder_sent
                                     ? "border-slate-100 text-slate-300 cursor-default"
                                     : "border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-600"
-                                }`}
+                                  }`}
                               >
                                 <FiBell size={13} className={actionLoading[`r_${i.id}`] ? "animate-bounce" : ""} />
                               </button>

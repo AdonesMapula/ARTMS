@@ -38,6 +38,7 @@ export default function JobLibraryFormModal({
     salary_type: "exact",
     salary_min: "",
     salary_max: "",
+    hr_remarks: "",
   });
 
   const form = propForm || internalForm;
@@ -77,6 +78,7 @@ export default function JobLibraryFormModal({
         salary_type: init.salary_type || "exact",
         salary_min: init.salary_min ?? "",
         salary_max: init.salary_max ?? "",
+        hr_remarks: "",
       });
     }
   }, [open, initialData, data]);
@@ -237,7 +239,7 @@ export default function JobLibraryFormModal({
 
           {/* COO Revision Feedback Banner */}
           {isRevised && (
-            <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 shadow-sm">
+            <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 p-5 shadow-sm space-y-4">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-600">
                   <AlertTriangle size={18} />
@@ -250,9 +252,22 @@ export default function JobLibraryFormModal({
                     {remarksText || "No specific revision details provided by the COO."}
                   </p>
                   <p className="mt-2 text-xs font-semibold text-amber-700">
-                    💡 Please apply the requested changes below, then click "Revise & Resubmit to COO".
+                    💡 Please apply the requested changes below, then explicitly state what you changed so the COO can review it quickly.
                   </p>
                 </div>
+              </div>
+              <div className="border-t border-amber-200/50 pt-4">
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-bold text-amber-900">
+                  HR Revision Notes (What did you change?) <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  className="w-full resize-none rounded-lg border border-amber-300/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-200"
+                  placeholder="e.g., Updated the salary range and added 2 years of experience required as requested..."
+                  value={form.hr_remarks}
+                  onChange={(e) => setForm({ ...form, hr_remarks: e.target.value })}
+                />
               </div>
             </div>
           )}

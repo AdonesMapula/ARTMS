@@ -17,7 +17,17 @@ class JobLibraryController extends Controller
                 $q->where('job_title', 'like', "%{$request->search}%")
                   ->orWhere('job_category', 'like', "%{$request->search}%")
             )
-            ->when($request->approval_status, fn ($q) => $q->where('approval_status', $request->approval_status))
+            ->when($request->approval_status, function ($q) use ($request) {
+                if ($request->approval_status === 'resubmitted') {
+                    $q->where('approval_status', 'pending')
+                      ->whereNotNull('approval_remarks');
+                } else if ($request->approval_status === 'pending') {
+                    $q->where('approval_status', 'pending')
+                      ->whereNull('approval_remarks');
+                } else {
+                    $q->where('approval_status', $request->approval_status);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);
 
@@ -95,7 +105,11 @@ class JobLibraryController extends Controller
 
         if ($wasNeedsRevision) {
             $data['approval_status'] = 'pending';
-            $data['approval_remarks'] = null;
+            if ($request->has('hr_remarks') && !empty($request->hr_remarks)) {
+                $oldRemarks = $jobLibrary->approval_remarks ? trim(str_replace('[COO Requested]:', '', explode('| [HR Updated]:', $jobLibrary->approval_remarks)[0])) : "No remarks";
+                $data['approval_remarks'] = "[COO Requested]: " . $oldRemarks . " | [HR Updated]: " . $request->hr_remarks;
+            }
+            // If hr_remarks is missing, we still want to keep the old COO remarks intact, so we don't clear it.
         }
 
         $jobLibrary->update($data);

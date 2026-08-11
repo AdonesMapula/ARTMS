@@ -16,8 +16,9 @@ import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
 import Skeleton from "../../components/ui/Skeleton";
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import JobPostingEditPanel from "../../components/job/JobPostingEditPanel";
+import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 import { useToast } from "../../context/ToastContext";
@@ -68,17 +69,6 @@ export default function JobPosting() {
   const [selectedPRF, setSelectedPRF] = useState(null);
   const [selectedPosting, setSelectedPosting] = useState(null);
   const [prfToDelete, setPrfToDelete] = useState(null);
-  const [formData, setFormData] = useState({
-    location: "",
-    qualifications: [],
-    responsibilities: [],
-    closing_date: "",
-  });
-
-  // Block modal state for Create Posting
-  const [createBlockModal, setCreateBlockModal] = useState({ open: false, field: "qualifications", editingId: null });
-  const [createBlockTitle, setCreateBlockTitle] = useState("");
-  const [createBlockDetails, setCreateBlockDetails] = useState([{ id: Date.now(), value: "" }]);
   const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
@@ -129,48 +119,10 @@ export default function JobPosting() {
 
   const openCreateModal = (prf) => {
     setSelectedPRF(prf);
-    setFormData({
-      location: prf.jobLibrary?.location || "",
-      qualifications: prf.qualifications || prf.jobLibrary?.qualifications || [],
-      responsibilities: prf.responsibilities || prf.jobLibrary?.responsibilities || [],
-      closing_date: "",
-    });
     setCreateModalOpen(true);
   };
 
-  // Block handlers for Create modal
-  const openCreateAddBlock = (field) => {
-    setCreateBlockModal({ open: true, field, editingId: null });
-    setCreateBlockTitle("");
-    setCreateBlockDetails([{ id: Date.now(), value: "" }]);
-  };
-  const openCreateEditBlock = (field, block) => {
-    setCreateBlockModal({ open: true, field, editingId: block.id });
-    setCreateBlockTitle(block.title || "");
-    setCreateBlockDetails(
-      block.details && block.details.length > 0
-        ? block.details.map((d) => ({ id: d.id || Date.now() + Math.random(), value: d.value || "" }))
-        : [{ id: Date.now(), value: "" }]
-    );
-  };
-  const handleSaveCreateBlock = () => {
-    const cleanDetails = createBlockDetails.filter((d) => d.value.trim());
-    const newBlock = { id: createBlockModal.editingId || Date.now(), title: createBlockTitle.trim(), details: cleanDetails };
-    setFormData((prev) => {
-      const field = createBlockModal.field;
-      const existing = prev[field] || [];
-      if (createBlockModal.editingId) {
-        return { ...prev, [field]: existing.map((b) => (b.id === createBlockModal.editingId ? newBlock : b)) };
-      }
-      return { ...prev, [field]: [...existing, newBlock] };
-    });
-    setCreateBlockModal({ open: false, field: "qualifications", editingId: null });
-  };
-  const removeCreateBlock = (field, blockId) => {
-    setFormData((prev) => ({ ...prev, [field]: (prev[field] || []).filter((b) => b.id !== blockId) }));
-  };
-
-  const handleCreatePosting = async () => {
+  const handleCreatePosting = async (submittedFormData) => {
     if (!selectedPRF) return;
 
     if (!selectedPRF.job_library_id) {
@@ -186,8 +138,8 @@ export default function JobPosting() {
     }
 
     const isModified =
-      !deepEqual(formData.qualifications, selectedPRF.qualifications || []) ||
-      !deepEqual(formData.responsibilities, selectedPRF.responsibilities || []);
+      !deepEqual(submittedFormData.qualifications, selectedPRF.qualifications || []) ||
+      !deepEqual(submittedFormData.responsibilities, selectedPRF.responsibilities || []);
 
     try {
       await api.post("/job-postings", {
@@ -195,10 +147,11 @@ export default function JobPosting() {
         department_id: selectedPRF.department_id,
         manpower_request_id: selectedPRF.id,
         vacancies_count: selectedPRF.headcount,
-        location: formData.location,
-        closing_date: formData.closing_date || null,
-        qualifications: formData.qualifications,
-        responsibilities: formData.responsibilities,
+        location: submittedFormData.location,
+        closing_date: submittedFormData.closing_date || null,
+        description: submittedFormData.description || null,
+        qualifications: submittedFormData.qualifications,
+        responsibilities: submittedFormData.responsibilities,
         is_modified_from_prf: isModified,
       });
 
@@ -786,273 +739,12 @@ export default function JobPosting() {
       />
 
       {/* Create Job Posting Modal */}
-      <Modal
+      <JobPostingCreateModal
         open={createModalOpen}
+        prf={selectedPRF}
         onClose={() => setCreateModalOpen(false)}
-        className="max-w-3xl"
-        title={
-          <div className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-[#111A62]" />
-            <span>Create Job Posting</span>
-          </div>
-        }
-        description="Review PRF details, set posting information, and edit qualifications or responsibilities before publishing."
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)} className="cursor-pointer">Cancel</Button>
-            <Button type="button" variant="primary" onClick={handleCreatePosting} className="bg-[#111A62] text-white gap-1.5 cursor-pointer">
-              <Save size={14} /> Create Posting
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-5 py-2">
-          {/* PRF / Job Library Info Summary */}
-          {selectedPRF && (
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <Briefcase size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Position</p>
-                  <p className="truncate text-xs font-bold text-slate-900">{selectedPRF.position_needed || selectedPRF.jobLibrary?.job_title || "N/A"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Building2 size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Department</p>
-                  <p className="truncate text-xs font-bold text-slate-900">{selectedPRF.department?.name || "General"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <DollarSign size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Salary Range</p>
-                  <p className="truncate text-xs font-bold text-slate-900">
-                    ₱{(selectedPRF.jobLibrary?.salary_min ?? 0).toLocaleString()} – ₱{(selectedPRF.jobLibrary?.salary_max ?? 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <FileText size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Headcount</p>
-                  <p className="truncate text-xs font-bold text-slate-900">{selectedPRF.headcount} {selectedPRF.headcount === 1 ? "position" : "positions"}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Editable Fields */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Input
-                label="Work Location / Setup"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g. Cebu City, Philippines"
-              />
-            </div>
-            <div>
-              <DatePicker
-                label="Application Closing Date"
-                value={formData.closing_date}
-                onChange={(val) => setFormData({ ...formData, closing_date: val })}
-                placeholder="Select Date"
-              />
-            </div>
-          </div>
-
-          {/* Qualifications & Responsibilities Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 pt-4 border-t border-slate-200">
-            {/* Qualifications */}
-            <div className="flex flex-col">
-              <div className="mb-3 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <GraduationCap size={16} className="text-slate-400" />
-                  Qualifications
-                </label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openCreateAddBlock("qualifications")}
-                  className="h-8 gap-1.5 border border-[#111A62] bg-transparent text-[#111A62] hover:bg-[#111A62]/10 transition-all duration-200 cursor-pointer shadow-2xs font-semibold px-2.5"
-                >
-                  <Plus size={14} /> Add Block
-                </Button>
-              </div>
-              {(!Array.isArray(formData.qualifications) || formData.qualifications.length === 0) ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center">
-                  <p className="text-xs text-slate-500 italic">No qualifications added yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {formData.qualifications.map((block) => (
-                    <div key={block.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-sm font-bold text-slate-800 truncate">{block.title || "Untitled Block"}</h4>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button type="button" onClick={() => openCreateEditBlock("qualifications", block)} className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer" title="Edit Block"><Edit size={14} /></button>
-                          <button type="button" onClick={() => removeCreateBlock("qualifications", block.id)} className="p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Delete Block"><Trash2 size={14} /></button>
-                        </div>
-                      </div>
-                      {block.details && block.details.length > 0 && (
-                        <ul className="mt-2 pl-4 list-disc space-y-1 marker:text-slate-300">
-                          {block.details.map((detail, idx) => (
-                            <li key={detail.id || idx} className="text-xs text-slate-600 leading-relaxed">{detail.value}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Responsibilities */}
-            <div className="flex flex-col sm:border-l sm:border-slate-200 sm:pl-6 max-sm:border-t max-sm:border-slate-200 max-sm:pt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <List size={16} className="text-slate-400" />
-                  Responsibilities
-                </label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openCreateAddBlock("responsibilities")}
-                  className="h-8 gap-1.5 border border-[#111A62] bg-transparent text-[#111A62] hover:bg-[#111A62]/10 transition-all duration-200 cursor-pointer shadow-2xs font-semibold px-2.5"
-                >
-                  <Plus size={14} /> Add Block
-                </Button>
-              </div>
-              {(!Array.isArray(formData.responsibilities) || formData.responsibilities.length === 0) ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center">
-                  <p className="text-xs text-slate-500 italic">No responsibilities added yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {formData.responsibilities.map((block) => (
-                    <div key={block.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-sm font-bold text-slate-800 truncate">{block.title || "Untitled Block"}</h4>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button type="button" onClick={() => openCreateEditBlock("responsibilities", block)} className="p-1 rounded-md text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer" title="Edit Block"><Edit size={14} /></button>
-                          <button type="button" onClick={() => removeCreateBlock("responsibilities", block.id)} className="p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Delete Block"><Trash2 size={14} /></button>
-                        </div>
-                      </div>
-                      {block.details && block.details.length > 0 && (
-                        <ul className="mt-2 pl-4 list-disc space-y-1 marker:text-slate-300">
-                          {block.details.map((detail, idx) => (
-                            <li key={detail.id || idx} className="text-xs text-slate-600 leading-relaxed">{detail.value}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Block Sub-Modal for Create Posting */}
-      <Modal
-        open={createBlockModal.open}
-        containerClassName="z-[110]"
-        onClose={() => setCreateBlockModal({ open: false, field: "qualifications", editingId: null })}
-        className="max-w-xl"
-        title={
-          <div className="flex items-center gap-2">
-            {createBlockModal.field === "qualifications" ? (
-              <GraduationCap className="h-5 w-5 text-blue-600" />
-            ) : (
-              <List className="h-5 w-5 text-blue-600" />
-            )}
-            <span>
-              {createBlockModal.editingId ? "Edit" : "Add"}{" "}
-              {createBlockModal.field === "qualifications" ? "Qualification Block" : "Responsibility Block"}
-            </span>
-          </div>
-        }
-        description={
-          createBlockModal.field === "qualifications"
-            ? "Group qualifications into categories (e.g. Educational Background, Skills) with bullet items."
-            : "Group responsibilities into categories (e.g. Core Duties, Reporting) with bullet items."
-        }
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setCreateBlockModal({ open: false, field: "qualifications", editingId: null })} className="cursor-pointer">Cancel</Button>
-            <Button type="button" variant="primary" onClick={handleSaveCreateBlock} disabled={!createBlockTitle.trim()} className="gap-1.5 cursor-pointer">
-              <FileCheck size={16} /><span>Save Block</span>
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4 py-2">
-          <div>
-            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FileCheck size={14} className="text-slate-400" />
-              Category / Block Title <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={createBlockTitle}
-              onChange={(e) => setCreateBlockTitle(e.target.value)}
-              placeholder={createBlockModal.field === "qualifications" ? "e.g. Educational Background" : "e.g. Core Duties"}
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <List size={14} className="text-slate-400" />
-              Bullet Items
-            </label>
-            <div className="space-y-2">
-              {createBlockDetails.map((detail, idx) => (
-                <div key={detail.id} className="flex items-start gap-2">
-                  <span className="mt-2.5 text-xs text-slate-400 font-bold w-5 text-center shrink-0">{idx + 1}.</span>
-                  <textarea
-                    rows={2}
-                    value={detail.value}
-                    onChange={(e) => {
-                      const updated = [...createBlockDetails];
-                      updated[idx] = { ...updated[idx], value: e.target.value };
-                      setCreateBlockDetails(updated);
-                    }}
-                    placeholder="Enter detail..."
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 leading-relaxed outline-none transition resize-none focus:border-[#111A62] focus:ring-2 focus:ring-[#111A62]/20"
-                  />
-                  {createBlockDetails.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateBlockDetails(createBlockDetails.filter((d) => d.id !== detail.id))}
-                      className="mt-2 p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCreateBlockDetails([...createBlockDetails, { id: Date.now(), value: "" }])}
-                className="flex items-center gap-1 text-xs font-semibold text-[#111A62] hover:text-[#0d1449] transition-colors cursor-pointer mt-1"
-              >
-                <Plus size={14} /> Add Another Item
-              </button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+        onSave={handleCreatePosting}
+      />
     </div>
   );
 }

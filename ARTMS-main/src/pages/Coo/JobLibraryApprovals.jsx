@@ -27,9 +27,10 @@ const fmtMoney = (v) =>
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending" },
+  { value: "pending", label: "Pending (New)" },
+  { value: "resubmitted", label: "Resubmitted (Revised)" },
+  { value: "revised", label: "Needs Revision (HR)" },
   { value: "approved", label: "Approved" },
-  { value: "revised", label: "Needs Revision" },
   { value: "rejected", label: "Rejected" },
 ];
 const PAGE_SIZE = 10;
@@ -148,6 +149,14 @@ export default function JobLibraryApprovals() {
   // ── Stat counts from current full page (best-effort while paginated) ────
   const pendingCount  = rows.filter((r) => r.approval_status === "pending").length;
   const approvedCount = rows.filter((r) => r.approval_status === "approved").length;
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("artms-sidebar-count-update", {
+        detail: { job_library: pendingCount },
+      })
+    );
+  }, [pendingCount]);
 
   return (
     <div className="space-y-4">
@@ -316,8 +325,19 @@ export default function JobLibraryApprovals() {
                               {r.job_title}
                             </h3>
                           </div>
-                          <Badge tone={APPROVAL_TONE[r.approval_status] ?? "default"} className="text-xs capitalize">
-                            {r.approval_status}
+                          <Badge 
+                            tone={
+                              r.approval_status === "pending" && (r.approval_remarks || r.remarks)
+                                ? "info"
+                                : APPROVAL_TONE[r.approval_status] ?? "default"
+                            } 
+                            className="text-xs font-semibold"
+                          >
+                            {r.approval_status === "pending" && (r.approval_remarks || r.remarks) 
+                              ? "Resubmitted (Revised)" 
+                              : r.approval_status === "revised" 
+                              ? "Needs Revision (HR)"
+                              : r.approval_status.charAt(0).toUpperCase() + r.approval_status.slice(1)}
                           </Badge>
                         </div>
 
@@ -420,8 +440,8 @@ export default function JobLibraryApprovals() {
 
       {/* ── Modals & Panels ── */}
       {viewModal.open && viewModal.job && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl">
+        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden">
             <JobLibraryViewPanel
               jobId={viewModal.job.id}
               initialJob={viewModal.job}
