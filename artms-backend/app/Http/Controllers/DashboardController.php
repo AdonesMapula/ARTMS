@@ -64,6 +64,7 @@ class DashboardController extends Controller
             'users_by_role'     => User::selectRaw('role, COUNT(*) as count')->groupBy('role')->get(),
             'departments'       => Department::withCount('employees')->get(),
             'recent_audit_logs' => \App\Models\AuditLog::with('user')->orderByDesc('created_at')->take(20)->get(),
+            'recent_users'      => User::with('department')->orderByDesc('created_at')->take(20)->get(),
         ]);
     }
 

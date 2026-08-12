@@ -53,6 +53,11 @@ return [
         'secret'      => env('LIVEKIT_API_SECRET'),
         'host'        => env('LIVEKIT_HOST', 'wss://artms-8tdvtcz7.livekit.cloud'),
         'webhook_url' => env('LIVEKIT_WEBHOOK_URL'),
+        's3_key'      => env('LIVEKIT_EGRESS_S3_KEY', env('CLOUDFLARE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID'))),
+        's3_secret'   => env('LIVEKIT_EGRESS_S3_SECRET', env('CLOUDFLARE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY'))),
+        's3_bucket'   => env('LIVEKIT_EGRESS_S3_BUCKET', env('AWS_BUCKET', 'artms-interview-recordings')),
+        's3_endpoint' => env('LIVEKIT_EGRESS_S3_ENDPOINT', env('CLOUDFLARE_ENDPOINT_URL', 'https://db3b8c571e7b2bc983841f11e25e2a44.r2.cloudflarestorage.com')),
+        's3_region'   => env('LIVEKIT_EGRESS_S3_REGION', 'auto'),
     ],
 
     'xai' => [

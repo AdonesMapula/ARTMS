@@ -36,6 +36,7 @@ class GenerateAIInterviewReportJob implements ShouldQueue
             'transcripts',
             'applicant',
             'jobPosting.jobLibrary',
+            'behavioralMetric',
         ])->find($this->interviewId);
 
         if (! $interview) {
@@ -64,6 +65,55 @@ class GenerateAIInterviewReportJob implements ShouldQueue
             })->implode("\n");
         }
 
+        $speechMetrics = $interview->behavioralMetric?->speech_metrics ?? [];
+        $behavioralData = $interview->behavioralMetric?->aggregated_metrics ?? [];
+        $isMocked = $interview->behavioralMetric?->is_mocked ?? false;
+
+        $speechSummary = !empty($speechMetrics)
+            ? "Total Words: {$speechMetrics['total_words']}, Applicant Speaking Ratio: {$speechMetrics['applicant_speaking_ratio']}%, Long Pauses (>5s): {$speechMetrics['long_pause_count']}"
+            : "Standard dialogue distribution";
+
+        $behaviorSummary = "No behavioral tracking data available.";
+        if (!empty($behavioralData) && is_array($behavioralData)) {
+            if ($isMocked) {
+                $behaviorSummary = "Historical mock tracking data (standard composure baseline maintained).";
+            } else {
+                $samplesCount = count($behavioralData);
+                $detectedSamples = array_filter($behavioralData, function ($s) {
+                    return !empty($s['faceDetected']);
+                });
+                $detectedCount = count($detectedSamples);
+
+                if ($detectedCount > 0) {
+                    $avgAttentive = array_sum(array_column($detectedSamples, 'attentiveScore')) / $detectedCount;
+                    $avgComposed  = array_sum(array_column($detectedSamples, 'composedScore')) / $detectedCount;
+                    $avgEngaged   = array_sum(array_column($detectedSamples, 'engagedScore')) / $detectedCount;
+
+                    // Eye aspect ratio check for eye contact stability (initial default limit: 0.22)
+                    $eyeContactSamples = array_filter($detectedSamples, function ($s) {
+                        return ($s['eyeOpenness'] ?? 0) >= 0.22;
+                    });
+                    $eyeContactRatio = (count($eyeContactSamples) / $detectedCount) * 100.0;
+
+                    $behaviorSummary = sprintf(
+                        "Observed over %d intervals (%d face-detected samples):\n" .
+                        "- Average Attentiveness Index: %.1f/100\n" .
+                        "- Average Composure Index: %.1f/100\n" .
+                        "- Average Engagement Index: %.1f/100\n" .
+                        "- Consistent Eye Contact Ratio: %.1f%% of face-detected duration",
+                        $samplesCount,
+                        $detectedCount,
+                        $avgAttentive,
+                        $avgComposed,
+                        $avgEngaged,
+                        $eyeContactRatio
+                    );
+                } else {
+                    $behaviorSummary = "Tracking active, but candidate looking away or face was occluded for all samples.";
+                }
+            }
+        }
+
         // ── 2. Determine LLM Provider & Config ──────────────────────────────
         $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
         $aiData = null;
@@ -76,23 +126,27 @@ class GenerateAIInterviewReportJob implements ShouldQueue
             $modelUsed = $isGroq ? 'groq-llama-3.3-70b' : 'grok-4.5';
 
             $prompt = <<<PROMPT
-You are a senior executive HR evaluator. Perform a deep, personalized evaluation of the candidate based strictly on their transcript and job role.
-Note: The interview transcript may contain Philippine dialects and languages (such as Bisaya/Cebuano, Tagalog, Taglish, or Bislish). Evaluate the substance and candidate competence accurately regardless of the dialect or language used.
+You are a senior executive HR evaluator. Perform an objective evaluation of the candidate based on transcript, speech statistics, and behavioral observations.
+IMPORTANT SAFETY & OBJECTIVITY RULE: Use cautious, objective language for behavioral observations. Do NOT claim the applicant is "dishonest", "lying", or "anxious". Instead, state observed indicators such as "Response showed hesitation based on speech pauses" or "Attentiveness maintained during technical questions".
 
 Position: {$positionTitle}
 Candidate Name: {$applicantName}
 Interview Stage: {$interview->interview_stage}
 
+== SPEECH & BEHAVIORAL METRICS ==
+{$speechSummary}
+{$behaviorSummary}
+
 == INTERVIEW TRANSCRIPT ==
 {$dialogue}
 
 == EVALUATION INSTRUCTIONS ==
-1. Carefully analyze what {$applicantName} said in the transcript.
+1. Analyze {$applicantName}'s answers in the transcript.
 2. Determine realistic scores (0-100) for overall performance, communication clarity, and confidence.
-3. List 2 to 4 unique, specific strengths observed in {$applicantName}'s answers.
-4. List 1 to 3 unique, specific weaknesses or areas for improvement for {$applicantName}.
+3. List 2 to 4 unique strengths observed.
+4. List 1 to 3 areas for improvement using cautious, objective phrasing.
 5. Write a personalized hiring recommendation (1-2 paragraphs) for {$applicantName} applying for {$positionTitle}.
-6. Write a detailed score rationale explaining the key factors behind {$applicantName}'s overall score.
+6. Write a detailed score rationale explaining the key factors behind {$applicantName}'s score.
 
 Respond ONLY with valid, raw JSON (no markdown formatting, no code fences). Schema template:
 {
@@ -100,13 +154,12 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code fences). Sche
   "communication_score": 90,
   "confidence_score": 85,
   "strengths": [
-    {"point": "<unique strength observed specifically for {$applicantName}>"},
-    {"point": "<another unique strength>"}
+    {"point": "<unique strength observed specifically for {$applicantName}>"}
   ],
   "weaknesses": [
-    {"point": "<unique area of improvement for {$applicantName}>"}
+    {"point": "<unique objective area of improvement for {$applicantName}>"}
   ],
-  "hiring_recommendation": "<personalized recommendation mentioning {$applicantName} and {$positionTitle}>",
+  "hiring_recommendation": "<personalized recommendation for {$applicantName}>",
   "score_rationale": "<personalized score rationale for {$applicantName}>"
 }
 PROMPT;

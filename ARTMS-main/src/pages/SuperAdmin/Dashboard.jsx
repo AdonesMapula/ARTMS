@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Users, ShieldCheck, Building2, Activity, TrendingUp, AlertTriangle, ShieldAlert,
   FileText, CheckCircle2, Lock, Cpu, Server, RefreshCw, BarChart3, PieChart, LineChart,
@@ -167,7 +168,7 @@ export default function SuperAdminDashboard() {
 
         {/* BOTTOM RIGHT: DATA TABLE -> RECENT CRITICAL ACTIVITY / RECENT SIGN-UPS */}
         <div className="lg:col-span-7 flex flex-col">
-          <CriticalActivityTable logs={auditLogs} departments={departments} />
+          <CriticalActivityTable logs={auditLogs} recentUsers={stats?.recent_users} departments={departments} />
         </div>
       </div>
     </div>
@@ -369,36 +370,87 @@ function TrafficTrendsChart({ totalUsers }) {
           {/* Data Points & X-Axis Labels */}
           {trafficPts.map((p, i) => {
             const u = userPts[i];
+            const stepWidth = (W - padX * 2) / Math.max(dataSets.length - 1, 1);
+            const hitX = Math.max(0, p.x - stepWidth / 2);
+            const hitW = i === 0 || i === dataSets.length - 1 ? stepWidth * 0.8 : stepWidth;
+
+            const minY = u ? Math.min(p.y, u.y) : p.y;
+            const tooltipY = Math.max(10, minY - 52);
+            const tooltipX = p.x > W - 140 ? p.x - 125 : p.x < 70 ? p.x + 10 : p.x - 60;
+
             return (
               <g key={i} className="group cursor-pointer">
-                {/* Invisible wide hit-area so hover is stable */}
-                <rect x={p.x - 20} y={padY} width="40" height={H - padY * 2} fill="transparent" />
+                {/* Wide invisible hit box for smooth column hover */}
+                <rect
+                  x={hitX}
+                  y={0}
+                  width={hitW}
+                  height={H}
+                  fill="transparent"
+                  className="cursor-pointer"
+                />
 
                 {/* Vertical hover guidance line */}
-                <line x1={p.x} y1={padY} x2={p.x} y2={H - padY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="2 2" className="opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                <line
+                  x1={p.x}
+                  y1={padY}
+                  x2={p.x}
+                  y2={H - padY}
+                  stroke="#94A3B8"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                />
                 
-                {/* Traffic dot — outer glow ring on hover */}
-                <circle cx={p.x} cy={p.y} r="10" fill="#111A62" fillOpacity="0" className="group-hover:fill-[#111A62] group-hover:[fill-opacity:0.15] transition-all duration-200" />
-                <circle cx={p.x} cy={p.y} r="5" fill="#111A62" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
+                {/* Traffic dot */}
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r="5"
+                  fill="#111A62"
+                  stroke="white"
+                  strokeWidth="2"
+                  style={{ transformOrigin: `${p.x}px ${p.y}px` }}
+                  className="transition-transform duration-300 ease-out group-hover:scale-[1.6] pointer-events-none shadow-lg"
+                />
                 
                 {/* User growth dot — outer glow ring on hover */}
                 {u && (
-                  <>
-                    <circle cx={u.x} cy={u.y} r="10" fill="#E15B1D" fillOpacity="0" className="group-hover:fill-[#E15B1D] group-hover:[fill-opacity:0.15] transition-all duration-200" />
-                    <circle cx={u.x} cy={u.y} r="5" fill="#E15B1D" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
-                  </>
+                  <circle
+                    cx={u.x}
+                    cy={u.y}
+                    r="5"
+                    fill="#E15B1D"
+                    stroke="white"
+                    strokeWidth="2"
+                    style={{ transformOrigin: `${u.x}px ${u.y}px` }}
+                    className="transition-transform duration-300 ease-out group-hover:scale-[1.6] pointer-events-none shadow-lg"
+                  />
                 )}
 
                 {/* X Axis Label */}
-                <text x={p.x} y={H - 6} textAnchor="middle" fill="#475569" className="text-[11px] font-extrabold select-none">
+                <text
+                  x={p.x}
+                  y={H - 6}
+                  textAnchor="middle"
+                  fill="#475569"
+                  className="text-[11px] font-extrabold select-none transition-colors group-hover:fill-[#111A62]"
+                >
                   {p.label}
                 </text>
 
                 {/* Interactive Tooltip on Hover */}
-                <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none drop-shadow-xl" transform={`translate(${p.x > W - 120 ? p.x - 110 : p.x - 30}, ${Math.max(5, p.y - 50)})`}>
-                  <rect width="115" height="42" rx="8" fill="#1E293B" stroke="#334155" />
-                  <text x="10" y="16" fill="#60A5FA" className="text-[10px] font-extrabold">Ops: {p.value.toLocaleString()}</text>
-                  <text x="10" y="32" fill="#FB923C" className="text-[10px] font-extrabold">Users: {u?.value || 0}</text>
+                <g
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none drop-shadow-xl z-30"
+                  transform={`translate(${tooltipX}, ${tooltipY})`}
+                >
+                  <rect width="125" height="46" rx="10" fill="#0F172A" stroke="#334155" strokeWidth="1" />
+                  <text x="12" y="18" fill="#93C5FD" className="text-[10px] font-extrabold">
+                    Requests: {p.value.toLocaleString()}
+                  </text>
+                  <text x="12" y="34" fill="#FDBA74" className="text-[10px] font-extrabold">
+                    Users: {u?.value || 0}
+                  </text>
                 </g>
               </g>
             );
@@ -442,13 +494,24 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
   }, [usersByRole, totalUsers]);
 
   const statusData = useMemo(() => {
-    const act = Math.round((totalUsers || 25) * 0.88);
-    const idl = Math.round((totalUsers || 25) * 0.08);
-    const rev = (totalUsers || 25) - act - idl;
+    const total = totalUsers > 0 ? totalUsers : 25;
+    let act = Math.floor(total * 0.80);
+    let idl = Math.floor(total * 0.12);
+    let rev = total - act - idl;
+    
+    if (total >= 3 && rev <= 0) {
+      rev = 1;
+      if (act > 1) act -= 1;
+    }
+
+    const actPct = Math.round((act / total) * 100);
+    const idlPct = Math.round((idl / total) * 100);
+    const revPct = Math.max(0, 100 - actPct - idlPct);
+
     return [
-      { name: "Active Verified", count: act, percent: 88, color: { hex: "#10B981", text: "text-emerald-600", bg: "bg-emerald-500" } },
-      { name: "Pending Review", count: idl, percent: 8, color: { hex: "#F59E0B", text: "text-amber-600", bg: "bg-amber-500" } },
-      { name: "Restricted / Offboarded", count: Math.max(0, rev), percent: 4, color: { hex: "#E11D48", text: "text-rose-600", bg: "bg-rose-500" } },
+      { name: "Active Verified", count: act, percent: actPct, color: { hex: "#10B981", text: "text-emerald-600", bg: "bg-emerald-500" } },
+      { name: "Pending Review", count: idl, percent: idlPct, color: { hex: "#F59E0B", text: "text-amber-600", bg: "bg-amber-500" } },
+      { name: "Restricted / Offboarded", count: rev, percent: revPct, color: { hex: "#E11D48", text: "text-rose-600", bg: "bg-rose-500" } },
     ];
   }, [totalUsers]);
 
@@ -537,11 +600,11 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
         </div>
 
         {/* Interactive Legend List */}
-        <div className="sm:col-span-6 space-y-2.5 max-h-56 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="sm:col-span-6 space-y-2 max-h-60 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {currentList.map((item, idx) => (
             <div
               key={idx}
-              className="group flex items-center justify-between p-2.5 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-md transition duration-200 cursor-pointer"
+              className="group flex items-center justify-between py-2 px-2.5 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-md transition duration-200 cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="h-3.5 w-3.5 rounded-lg shrink-0 shadow-sm" style={{ backgroundColor: item.color.hex }} />
@@ -766,44 +829,40 @@ function SecurityAuditChart({ logs, departments }) {
 /* ───────────────────────────────────────────────────────────────────────────
    5. BOTTOM RIGHT: DATA TABLE -> RECENT CRITICAL ACTIVITY / RECENT SIGN-UPS
    ─────────────────────────────────────────────────────────────────────────── */
-function CriticalActivityTable({ logs, departments }) {
+function CriticalActivityTable({ logs, recentUsers, departments }) {
   const [tab, setTab] = useState("audit"); // "audit" or "signups"
   const [filterQuery, setFilterQuery] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
   const filteredLogs = useMemo(() => {
-    let raw = logs && logs.length > 0 ? logs : [
-      { id: 101, action: "SUPERADMIN_LOGIN", module: "Authentication", ip_address: "192.168.1.1", created_at: new Date(Date.now() - 360000).toISOString(), user: { email: "greg@artms.system", name: "Executive Super Admin" }, tone: "success" },
-      { id: 102, action: "ROLE_ASSIGNMENT", module: "RBAC Governance", ip_address: "10.0.4.22", created_at: new Date(Date.now() - 1200000).toISOString(), user: { email: "hr.director@artms.system", name: "HR Director Admin" }, tone: "warning" },
-      { id: 103, action: "PRF_FINAL_APPROVAL", module: "Manpower Requisition", ip_address: "172.16.0.45", created_at: new Date(Date.now() - 2800000).toISOString(), user: { email: "coo@artms.system", name: "COO Executive" }, tone: "info" },
-      { id: 104, action: "201_FILE_EXPORT", module: "Employee Registry", ip_address: "10.0.1.88", created_at: new Date(Date.now() - 4500000).toISOString(), user: { email: "compliance@artms.system", name: "Compliance Officer" }, tone: "danger" },
-      { id: 105, action: "JOB_POSTING_PUBLISH", module: "Recruitment Portal", ip_address: "192.168.2.14", created_at: new Date(Date.now() - 7200000).toISOString(), user: { email: "recruiter@artms.system", name: "Talent Acquisition Lead" }, tone: "success" },
-      { id: 106, action: "PASSWORD_RESET", module: "Authentication", ip_address: "192.168.1.45", created_at: new Date(Date.now() - 9800000).toISOString(), user: { email: "depthead@artms.system", name: "Operations Dept Head" }, tone: "info" },
-      { id: 107, action: "USER_CREATE", module: "User Registry", ip_address: "10.0.2.15", created_at: new Date(Date.now() - 12000000).toISOString(), user: { email: "admin@artms.system", name: "System Admin" }, tone: "success" },
-    ];
+    let raw = logs && Array.isArray(logs) ? logs : [];
     return raw.filter(l => {
       if (!filterQuery) return true;
       const q = filterQuery.toLowerCase();
-      const u = (l.user?.email || "").toLowerCase();
+      const u = (l.user?.email || l.user?.name || "").toLowerCase();
       const act = (l.action || "").toLowerCase();
       const mod = (l.module || "").toLowerCase();
       return u.includes(q) || act.includes(q) || mod.includes(q);
     });
   }, [logs, filterQuery]);
 
-  const signupsList = useMemo(() => [
-    { name: "Maria Santos (Applicant)", dept: "Talent Pool", level: "Candidate Access", status: "Active Verified", date: "Today" },
-    { name: "Juan Dela Cruz (HR Lead)", dept: "Human Resources", level: "HR Admin RBAC", status: "Active Verified", date: "Yesterday" },
-    { name: "Carlos Mendoza (Dept Head)", dept: "Operations & IT", level: "Department Head", status: "Active Verified", date: "2 days ago" },
-    { name: "Elena Gonzales (Auditor)", dept: "Finance & Legal", level: "Read-Only Compliance", status: "Pending Review", date: "3 days ago" },
-    { name: "Roberto Tan (Engineer)", dept: "Operations & IT", level: "Employee Access", status: "Active Verified", date: "4 days ago" },
-    { name: "Anna Reyes (Recruiter)", dept: "Human Resources", level: "HR Staff", status: "Active Verified", date: "5 days ago" },
-  ], []);
+  const filteredUsers = useMemo(() => {
+    let raw = recentUsers && Array.isArray(recentUsers) ? recentUsers : [];
+    return raw.filter((u) => {
+      if (!filterQuery) return true;
+      const q = filterQuery.toLowerCase();
+      const name = (u.name || `${u.first_name || ""} ${u.last_name || ""}`).toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const role = (u.role || "").toLowerCase();
+      const dept = (u.department?.department_name || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || role.includes(q) || dept.includes(q);
+    });
+  }, [recentUsers, filterQuery]);
 
-  const totalItems = tab === "audit" ? filteredLogs.length : signupsList.length;
+  const totalItems = tab === "audit" ? filteredLogs.length : filteredUsers.length;
   const pagedAuditLogs = filteredLogs.slice((page - 1) * pageSize, page * pageSize);
-  const pagedSignups = signupsList.slice((page - 1) * pageSize, page * pageSize);
+  const pagedSignups = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
 
   const handleTabChange = (newTab) => {
     setTab(newTab);
@@ -886,7 +945,7 @@ function CriticalActivityTable({ logs, departments }) {
                       <TD>
                         <div className="flex items-center gap-2.5">
                           <div className="h-8 w-8 rounded-full bg-[#111A62]/10 text-[#111A62] font-black flex items-center justify-center text-xs shrink-0 ring-1 ring-[#111A62]/20 group-hover:bg-[#111A62] group-hover:text-white transition">
-                            {(log.user?.email || "S")[0].toUpperCase()}
+                            {(log.user?.email || log.user?.name || "S")[0].toUpperCase()}
                           </div>
                           <div>
                             <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#111A62] transition-colors">
@@ -941,30 +1000,50 @@ function CriticalActivityTable({ logs, departments }) {
               </tr>
             </THead>
             <tbody>
-              {pagedSignups.map((row, index) => (
-                <tr key={index} className="hover:bg-slate-50/80 transition">
-                  <TD>
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-[#E15B1D]/10 text-[#E15B1D] font-black flex items-center justify-center text-xs shrink-0 ring-1 ring-[#E15B1D]/20">
-                        <UserPlus size={14} />
-                      </div>
-                      <span className="text-xs font-extrabold text-slate-900">{row.name}</span>
-                    </div>
-                  </TD>
-                  <TD><Badge tone="info" className="font-extrabold text-[10px]">{row.dept}</Badge></TD>
-                  <TD className="text-xs font-bold text-slate-700">{row.level}</TD>
-                  <TD>
-                    <Badge tone={row.status.includes("Active") ? "success" : "warning"} className="font-extrabold text-[10px]">
-                      {row.status}
-                    </Badge>
-                  </TD>
-                  <TD className="text-right text-xs font-bold text-slate-500">
-                    <button className="text-[#111A62] hover:text-[#E15B1D] font-extrabold hover:underline transition cursor-pointer text-xs flex items-center gap-1 justify-end w-full">
-                      <span>Inspect</span> <ArrowUpRight size={13} />
-                    </button>
+              {pagedSignups.length === 0 ? (
+                <tr>
+                  <TD colSpan={5} className="py-12 text-center text-slate-400">
+                    No recent user accounts found matching query.
                   </TD>
                 </tr>
-              ))}
+              ) : (
+                pagedSignups.map((u) => {
+                  const roleLabel = (u.role || "user").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+                  const displayName = u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email;
+
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-50/80 transition">
+                      <TD>
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-[#E15B1D]/10 text-[#E15B1D] font-black flex items-center justify-center text-xs shrink-0 ring-1 ring-[#E15B1D]/20">
+                            <UserPlus size={14} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-extrabold text-slate-900">{displayName}</p>
+                            <p className="text-[10px] font-semibold text-slate-400">{u.email}</p>
+                          </div>
+                        </div>
+                      </TD>
+                      <TD>
+                        <Badge tone="info" className="font-extrabold text-[10px]">
+                          {u.department?.department_name || "General Systems"}
+                        </Badge>
+                      </TD>
+                      <TD className="text-xs font-bold text-slate-700">{roleLabel}</TD>
+                      <TD>
+                        <Badge tone={u.is_active ? "success" : "warning"} className="font-extrabold text-[10px]">
+                          {u.is_active ? "Active Verified" : "Pending Review"}
+                        </Badge>
+                      </TD>
+                      <TD className="text-right text-xs font-bold text-slate-500">
+                        <Link to="/super-admin/users" className="text-[#111A62] hover:text-[#E15B1D] font-extrabold hover:underline transition cursor-pointer text-xs inline-flex items-center gap-1 justify-end">
+                          <span>Inspect</span> <ArrowUpRight size={13} />
+                        </Link>
+                      </TD>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </Table>
         )}

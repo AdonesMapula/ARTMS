@@ -14,9 +14,10 @@ import {
   RoomAudioRenderer,
   useTracks,
   useLocalParticipant,
+  useRoomContext,
   VideoTrack,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { RoomEvent, Track, ConnectionState } from "livekit-client";
 import "@livekit/components-styles";
 
 import { cn } from "../../utils/cn";
@@ -24,6 +25,10 @@ import { Globe } from "lucide-react";
 import Button from "../../components/ui/Button";
 import interviewService from "../../services/interviewService";
 import InterviewReportModal from "../../modals/InterviewReportModal";
+
+import { useFaceLandmarker } from "../../hooks/useFaceLandmarker";
+import { evaluateBehavior, estimateHeadPose } from "../../utils/behavioralMetrics";
+import { drawFaceDebugOverlay } from "../../utils/faceDrawing";
 
 // ── SVG Icons ─────────────────────────────────────────────────────────────────
 
@@ -205,9 +210,149 @@ function ApplicantVerificationForm({ onSubmit, loading, error, onCancel }) {
   );
 }
 
+// ── FaceTrackingVideo Component (Runs MediaPipe FaceLandmarker at throttled ~15 FPS) ──
+
+function FaceTrackingVideo({ trackRef, className, isApplicant, onMetricsComputed }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const { landmarker, loading } = useFaceLandmarker();
+  const lastProcessedTimeRef = useRef(0);
+  const headHistoryRef = useRef([]);
+
+  // Attach/detach LiveKit track to HTML5 <video> tag
+  useEffect(() => {
+    const track = trackRef?.track || trackRef?.publication?.track;
+    const videoEl = videoRef.current;
+    if (track && videoEl) {
+      track.attach(videoEl);
+      return () => {
+        track.detach(videoEl);
+      };
+    }
+  }, [trackRef]);
+
+  // Throttled FaceLandmarker loop (caps inference to 15fps to protect system performance)
+  useEffect(() => {
+    if (!landmarker || loading) return;
+
+    let active = true;
+    let animationFrameId;
+
+    const runDetection = () => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      if (!video || video.paused || video.ended || video.readyState < 2) {
+        if (active) {
+          animationFrameId = requestAnimationFrame(runDetection);
+        }
+        return;
+      }
+
+      const now = performance.now();
+      // Throttle interval: 66ms = 15 FPS
+      if (now - lastProcessedTimeRef.current >= 66) {
+        lastProcessedTimeRef.current = now;
+
+        try {
+          const timestamp = video.currentTime * 1000;
+          const result = landmarker.detectForVideo(video, timestamp);
+
+          if (result && result.faceLandmarks && result.faceLandmarks.length > 0) {
+            const landmarks = result.faceLandmarks[0];
+            const blendshapes = result.faceBlendshapes && result.faceBlendshapes.length > 0
+              ? result.faceBlendshapes[0].categories
+              : [];
+
+            // Add head pose to sliding window history for jitter/fidgeting calculation
+            const { yaw, pitch, roll } = estimateHeadPose(landmarks);
+            headHistoryRef.current.push({ yaw, pitch, roll });
+            if (headHistoryRef.current.length > 30) {
+              headHistoryRef.current.shift();
+            }
+
+            const scores = evaluateBehavior(landmarks, blendshapes, headHistoryRef.current);
+
+            if (onMetricsComputed) {
+              onMetricsComputed(scores);
+            }
+
+            // Draw debug overlay if ?debug=true is present in query parameters (HR / Interviewer view only)
+            const isDebug = new URLSearchParams(window.location.search).get("debug") === "true";
+            if (canvas && isDebug && !isApplicant) {
+              if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+                canvas.width = video.clientWidth;
+                canvas.height = video.clientHeight;
+              }
+              drawFaceDebugOverlay(canvas, landmarks);
+            } else if (canvas) {
+              const ctx = canvas.getContext("2d");
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+          } else {
+            // Face lost / not detected
+            if (onMetricsComputed) {
+              onMetricsComputed({
+                faceDetected: false,
+                attentiveScore: 0,
+                composedScore: 0,
+                engagedScore: 0,
+                emotion: "Looking Away",
+              });
+            }
+            if (canvas) {
+              const ctx = canvas.getContext("2d");
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+          }
+        } catch (err) {
+          console.warn("FaceLandmarker detection error:", err);
+        }
+      }
+
+      if (active) {
+        animationFrameId = requestAnimationFrame(runDetection);
+      }
+    };
+
+    runDetection();
+
+    return () => {
+      active = false;
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [landmarker, loading, isApplicant, onMetricsComputed]);
+
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      <video
+        ref={videoRef}
+        className={className}
+        playsInline
+        muted
+        autoPlay
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none absolute inset-0 z-20 h-full w-full"
+      />
+    </div>
+  );
+}
+
 // ── Zoom Video Stage Component (Shared between Applicant & Interviewer) ─────
 
-function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, speechLang, setSpeechLang }) {
+function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, speechLang, setSpeechLang, endingSession, onMetricsComputed }) {
+  const [liveScores, setLiveScores] = useState(null);
+
+  const handleLocalMetrics = useCallback((metrics) => {
+    setLiveScores(metrics);
+    if (onMetricsComputed) {
+      onMetricsComputed(metrics);
+    }
+  }, [onMetricsComputed]);
+
   // Query both camera and screen share tracks across local and remote participants
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
@@ -285,7 +430,16 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
           </div>
         ) : isRemoteVideoActive ? (
           /* Priority 2: Remote Participant Camera Track (Full Stage) */
-          <VideoTrack trackRef={remoteCameraTrack} className="h-full w-full object-cover" />
+          !isApplicant ? (
+            <FaceTrackingVideo
+              trackRef={remoteCameraTrack}
+              className="h-full w-full object-cover"
+              isApplicant={false}
+              onMetricsComputed={handleLocalMetrics}
+            />
+          ) : (
+            <VideoTrack trackRef={remoteCameraTrack} className="h-full w-full object-cover" />
+          )
         ) : (
           /* Priority 3: Connecting / Audio Only Placeholder for Remote Participant */
           <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-slate-900/90 text-slate-400">
@@ -301,10 +455,40 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
           </div>
         )}
 
+        {/* Floating Live AI Evaluation Badge (Interviewer/HR view only) */}
+        {!isApplicant && remoteCameraTrack && liveScores && (
+          <div className="absolute top-4 left-4 z-30 flex items-center gap-2 rounded-xl bg-[#0b0f17]/90 px-3.5 py-2 backdrop-blur-md border border-slate-800/80 shadow-lg">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Live AI Evaluation:</span>
+            <span className={cn(
+              "text-[9px] font-black px-2 py-0.5 rounded border tracking-wide uppercase",
+              liveScores.emotion === "Distracted / Looking Away" && "bg-amber-500/10 border-amber-500/30 text-amber-400",
+              liveScores.emotion === "Hesitant / Tense" && "bg-orange-500/10 border-orange-500/30 text-orange-400",
+              liveScores.emotion === "Engaged & Friendly" && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+              liveScores.emotion === "Composed & Focused" && "bg-indigo-500/10 border-indigo-500/30 text-indigo-400",
+              liveScores.emotion === "Neutral & Attentive" && "bg-slate-700/10 border-slate-500/30 text-slate-300",
+              liveScores.emotion === "No Face Detected" && "bg-red-500/10 border-red-500/30 text-red-400"
+            )}>
+              {liveScores.emotion}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 ml-1">
+              (Composed: {liveScores.composedScore}% • Attentive: {liveScores.attentiveScore}%)
+            </span>
+          </div>
+        )}
+
         {/* Local Participant Picture-in-Picture (Top Right) */}
         <div className="absolute top-4 right-4 z-30 h-36 w-48 overflow-hidden rounded-xl border-2 border-slate-700 bg-slate-900 shadow-2xl transition-all hover:scale-105">
           {isLocalVideoActive ? (
-            <VideoTrack trackRef={localCameraTrack} className="h-full w-full object-cover" />
+            isApplicant ? (
+              <FaceTrackingVideo
+                trackRef={localCameraTrack}
+                className="h-full w-full object-cover"
+                isApplicant={true}
+                onMetricsComputed={handleLocalMetrics}
+              />
+            ) : (
+              <VideoTrack trackRef={localCameraTrack} className="h-full w-full object-cover" />
+            )
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-slate-800 text-slate-400">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white">
@@ -330,8 +514,8 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
       {/* ── Zoom Control Bar (Bottom) ────────────────────────────────────── */}
       <div className="h-16 bg-[#0b0f17] px-6 flex items-center justify-center gap-4 border-t border-slate-800/80 z-40">
         
-        {/* Speech Dialect / Language Selector */}
-        {setSpeechLang && (
+        {/* Speech Dialect / Language Selector (Interviewer Only) */}
+        {!isApplicant && setSpeechLang && (
           <div className="flex items-center gap-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 text-xs text-slate-300 shadow-md">
             <Globe size={14} className="text-blue-400 shrink-0" />
             <select
@@ -387,10 +571,11 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
         {/* Hangup / End Call Button */}
         <button
           onClick={onHangup}
-          className="flex h-11 w-12 items-center justify-center rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg transition-all"
-          title="End Call"
+          disabled={endingSession}
+          className="flex h-11 w-12 items-center justify-center rounded-full bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white shadow-lg transition-all cursor-pointer"
+          title={endingSession ? "Ending Call..." : "End Call"}
         >
-          <HangupIcon />
+          {endingSession ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <HangupIcon />}
         </button>
 
         {/* More Options Button */}
@@ -406,13 +591,132 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
   );
 }
 
-// ── Applicant Layout (Matching Image 1) ──────────────────────────────────────
+// ── Unified Two-Way LiveKit Real-Time Streaming & Persistence Manager ────────
 
-function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
-  const [speechLang, setSpeechLang] = useState("fil-PH");
+function TwoWayTranscriptionManager({
+  interviewId,
+  isApplicant = false,
+  speechLang = "fil-PH",
+  onLiveSegmentProduced,
+  setInterimSpeech,
+}) {
+  const audioTracks = useTracks([Track.Source.Microphone]);
+  const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
+
   const recognitionRef = useRef(null);
+  const isRecognizingRef = useRef(false);
+  const processedHashesRef = useRef(new Map());
+  const isTranscribingRef = useRef(false);
 
-  // Web Speech API for Applicant Speech Transcription
+  // 1. LiveKit WebRTC Data Channel Broadcasting (0ms Latency Transport with ConnectionState Guard)
+  const broadcastData = useCallback((dataObj) => {
+    if (!room || !room.localParticipant) return;
+
+    try {
+      // Verify room connection state to prevent PC manager closed errors
+      const isConnected =
+        room.state === "connected" ||
+        (typeof ConnectionState !== "undefined" && room.state === ConnectionState.Connected);
+
+      if (!isConnected) {
+        console.log(`[LIVEKIT PUBLISH SKIPPED] Room state is '${room.state}'`);
+        return;
+      }
+
+      const bytes = new TextEncoder().encode(JSON.stringify(dataObj));
+      room.localParticipant.publishData(bytes, { reliable: true });
+      console.log(`[LIVEKIT PUBLISH SUCCESS] (${dataObj.type})`);
+    } catch (e) {
+      console.warn("[LIVEKIT PUBLISH NOTICE]", e?.message || e);
+    }
+  }, [room]);
+
+  // 2. Listen for Incoming LiveKit Data Messages from Remote Participant
+  useEffect(() => {
+    if (!room) return;
+
+    const handleDataReceived = (payload) => {
+      try {
+        const textStr = new TextDecoder().decode(payload);
+        const data = JSON.parse(textStr);
+
+        if (data.type === "FINAL_SEGMENT" && data.segment) {
+          console.log(`[WEBRTC RECEIVE] Remote segment (${data.segment.speaker_role}): "${data.segment.text}"`);
+          if (onLiveSegmentProduced) onLiveSegmentProduced(data.segment);
+        } else if (data.type === "INTERIM_SPEECH") {
+          if (setInterimSpeech && data.speaker_role !== (isApplicant ? "applicant" : "hr")) {
+            setInterimSpeech(data.text);
+          }
+        }
+      } catch (e) {}
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+    };
+  }, [room, isApplicant, onLiveSegmentProduced, setInterimSpeech]);
+
+  // 3. Process and Persist Finalized Speech Segment (Instant UI + WebRTC Broadcast + Async DB)
+  const processFinalSegment = useCallback(
+    (text, role, identity) => {
+      const trimmed = text ? text.trim() : "";
+      if (!trimmed || trimmed.length < 2) return;
+
+      const now = Date.now();
+      const textKey = `${role}_${trimmed.toLowerCase()}`;
+
+      // Deduplicate segment within a 4-second window
+      if (processedHashesRef.current.has(textKey)) {
+        const lastSeen = processedHashesRef.current.get(textKey);
+        if (now - lastSeen < 4000) return;
+      }
+      processedHashesRef.current.set(textKey, now);
+
+      const segment = {
+        id: `seg_${role}_${now}_${Math.random().toString(36).substring(2, 6)}`,
+        speaker_role: role,
+        speaker_identity: identity || role,
+        text: trimmed,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        created_at: new Date().toISOString(),
+      };
+
+      const startT = performance.now();
+      console.log(`[STT FINAL +${startT.toFixed(0)}ms] (${role}): "${trimmed}"`);
+
+      // Step A: Instant Local UI Update (0ms) - GUARANTEED
+      try {
+        if (onLiveSegmentProduced) onLiveSegmentProduced(segment);
+      } catch (uiErr) {
+        console.error("UI state update error:", uiErr);
+      }
+
+      // Step B: Instant WebRTC Broadcast over Data Channel (~20ms) - ISOLATED
+      try {
+        broadcastData({ type: "FINAL_SEGMENT", segment });
+      } catch (netErr) {
+        console.warn("Data Channel broadcast warning:", netErr);
+      }
+
+      // Step C: Asynchronous Non-Blocking MySQL Persistence (Background)
+      const persistCall = isApplicant
+        ? interviewService.storePublicTranscript(interviewId, trimmed, role, 0)
+        : interviewService.storeTranscript(interviewId, trimmed, role, 0);
+
+      persistCall.catch((e) => console.warn("Background persistence notice:", e));
+    },
+    [interviewId, isApplicant, onLiveSegmentProduced, broadcastData]
+  );
+
+  // Stable reference for processFinalSegment to prevent dependency re-triggers
+  const processFinalSegmentRef = useRef(processFinalSegment);
+  useEffect(() => {
+    processFinalSegmentRef.current = processFinalSegment;
+  }, [processFinalSegment]);
+
+  // 4. Local Participant Speech Recognition (Web Speech API)
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition || !interviewId) return;
@@ -420,73 +724,249 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
     let isMounted = true;
     let restartTimer = null;
 
+    const myRole = isApplicant ? "applicant" : "hr";
+    const myIdentity = localParticipant?.identity || (isApplicant ? "applicant" : "hr");
+
     try {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = speechLang;
+      recognition.lang = speechLang || "fil-PH";
 
       recognition.onstart = () => {
-        console.log("Applicant speech recognition started", { speechLang });
+        isRecognizingRef.current = true;
       };
 
       recognition.onerror = (event) => {
-        console.warn("Applicant speech recognition error:", event.error);
-        if (!isMounted) return;
-        if (restartTimer) clearTimeout(restartTimer);
-        restartTimer = setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) {}
-        }, 400);
+        if (event.error !== "network" && event.error !== "no-speech") {
+          console.warn("Local speech recognition notice:", event.error);
+        }
+        isRecognizingRef.current = false;
       };
 
       recognition.onend = () => {
+        isRecognizingRef.current = false;
         if (!isMounted) return;
+
         if (restartTimer) clearTimeout(restartTimer);
         restartTimer = setTimeout(() => {
-          try { recognition.start(); } catch (e) {}
-        }, 400);
+          if (isMounted && !isRecognizingRef.current) {
+            try {
+              recognition.start();
+            } catch (e) {}
+          }
+        }, 500);
       };
 
       recognition.onresult = (event) => {
+        let interimText = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const text = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            const text = event.results[i][0].transcript;
-            if (text && text.trim().length > 0) {
-              console.log("Applicant spoke:", text.trim());
-              interviewService.storePublicTranscript(interviewId, text.trim())
-                .then(() => console.log("Applicant transcript successfully saved to DB"))
-                .catch((err) => console.error("Failed to store applicant transcript:", err));
-            }
+            console.log(`[STT EVENT FINAL] (${myRole}): "${text}"`);
+            processFinalSegmentRef.current(text, myRole, myIdentity);
+            if (setInterimSpeech) setInterimSpeech("");
+          } else {
+            interimText += text;
           }
+        }
+        if (interimText) {
+          console.log(`[STT EVENT INTERIM] (${myRole}): "${interimText}"`);
+          if (setInterimSpeech) setInterimSpeech(interimText);
+          broadcastData({ type: "INTERIM_SPEECH", speaker_role: myRole, text: interimText });
         }
       };
 
       recognition.start();
       recognitionRef.current = recognition;
     } catch (e) {
-      console.error("Failed to initialize applicant speech recognition:", e);
+      console.warn("Speech recognition initialization error:", e);
     }
 
     return () => {
       isMounted = false;
+      isRecognizingRef.current = false;
       if (restartTimer) clearTimeout(restartTimer);
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
       }
     };
-  }, [interviewId, speechLang]);
+  }, [interviewId, isApplicant, speechLang, localParticipant, setInterimSpeech, broadcastData]);
+
+  // 5. Remote Participant Audio Track Streamer (Whisper Fallback Engine with Concurrency Lock & Stable Dependencies)
+  useEffect(() => {
+    if (!interviewId) return;
+
+    const remoteTrackEntries = audioTracks.filter(
+      (t) => t.participant && !t.participant.isLocal
+    );
+
+    const activeRecorders = [];
+
+    remoteTrackEntries.forEach((trackEntry) => {
+      const participant = trackEntry.participant;
+      const identity = participant.identity || "";
+      const role = identity.startsWith("hr_") ? "hr" : "applicant";
+
+      const mediaStreamTrack = trackEntry.publication?.track?.mediaStreamTrack;
+      if (!mediaStreamTrack || mediaStreamTrack.readyState !== "live") return;
+
+      try {
+        const stream = new MediaStream([mediaStreamTrack]);
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        let audioChunks = [];
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          if (audioChunks.length === 0) return;
+          const audioBlob = new Blob(audioChunks, { type: mimeType || "audio/webm" });
+          audioChunks = [];
+
+          // Require at least 4KB of audio data and check concurrency lock
+          if (audioBlob.size < 4000 || isTranscribingRef.current) return;
+          isTranscribingRef.current = true;
+
+          const formData = new FormData();
+          formData.append("audio", audioBlob, `speech_${role}.webm`);
+          formData.append("speaker_role", role);
+          formData.append("speaker_identity", identity);
+
+          try {
+            const apiCall = isApplicant
+              ? interviewService.publicTranscribeAudio(interviewId, formData)
+              : interviewService.transcribeAudio(interviewId, formData);
+            const { data } = await apiCall;
+            if (data?.transcript?.text) {
+              processFinalSegmentRef.current(data.transcript.text, role, identity);
+            }
+          } catch (e) {
+            // Whisper fallback notice
+          } finally {
+            isTranscribingRef.current = false;
+          }
+        };
+
+        recorder.start(3000); // Stable 3s recording window
+        activeRecorders.push(recorder);
+      } catch (e) {
+        console.warn("Could not attach recorder to remote track:", e);
+      }
+    });
+
+    return () => {
+      activeRecorders.forEach((rec) => {
+        try {
+          if (rec.state !== "inactive") rec.stop();
+        } catch (e) {}
+      });
+    };
+  }, [audioTracks, interviewId, isApplicant]);
+
+  return null;
+}
+
+// ── Applicant Layout (Matching Image 1) ──────────────────────────────────────
+
+function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSession }) {
+  const metricsRef = useRef([]);
+  const isFlushingRef = useRef(false);
+  const latestComputedMetricsRef = useRef(null);
+
+  // Flush accumulated MediaPipe metrics to backend
+  const flushMetrics = useCallback(async () => {
+    if (!interviewId || isFlushingRef.current || metricsRef.current.length === 0) {
+      return;
+    }
+
+    isFlushingRef.current = true;
+    const itemsToSend = [...metricsRef.current];
+    const sendCount = itemsToSend.length;
+
+    try {
+      await interviewService.savePublicBehavioralMetrics(interviewId, itemsToSend);
+      // Clear only the metrics that were successfully persisted
+      metricsRef.current = metricsRef.current.slice(sendCount);
+    } catch (err) {
+      console.warn("MediaPipe periodic metrics flush notice:", err?.message || err);
+    } finally {
+      isFlushingRef.current = false;
+    }
+  }, [interviewId]);
+
+  // Sample locally every 3s, flush to backend every 15s
+  useEffect(() => {
+    const sampleInterval = setInterval(() => {
+      const latest = latestComputedMetricsRef.current;
+      if (latest && latest.faceDetected) {
+        metricsRef.current.push({
+          timestamp: Math.floor(Date.now() / 1000),
+          faceDetected: true,
+          eyeOpenness: parseFloat(latest.ear.toFixed(4)),
+          mouthMovement: parseFloat(latest.smile.toFixed(4)),
+          headYaw: parseFloat(latest.yaw.toFixed(4)),
+          headPitch: parseFloat(latest.pitch.toFixed(4)),
+          headRoll: parseFloat(latest.roll.toFixed(4)),
+          composedScore: latest.composedScore,
+          engagedScore: latest.engagedScore,
+          attentiveScore: latest.attentiveScore
+        });
+      } else {
+        // Face not detected in this interval
+        metricsRef.current.push({
+          timestamp: Math.floor(Date.now() / 1000),
+          faceDetected: false,
+          eyeOpenness: 0,
+          mouthMovement: 0,
+          headYaw: 0,
+          headPitch: 0,
+          headRoll: 0,
+          composedScore: 0,
+          engagedScore: 0,
+          attentiveScore: 0
+        });
+      }
+    }, 3000);
+
+    const flushInterval = setInterval(() => {
+      flushMetrics();
+    }, 15000);
+
+    return () => {
+      clearInterval(sampleInterval);
+      clearInterval(flushInterval);
+    };
+  }, [flushMetrics]);
+
+  // Final flush during candidate hangup/exit
+  const handleApplicantHangup = useCallback(async () => {
+    await flushMetrics();
+    onHangup();
+  }, [flushMetrics, onHangup]);
 
   return (
     <div className="h-screen w-screen bg-[#111723] flex flex-col justify-between p-4 overflow-hidden">
       <div className="flex-1 w-full max-w-[1400px] mx-auto h-full py-2">
         <ZoomVideoStage
           applicantName={applicantName}
-          onHangup={onHangup}
+          onHangup={handleApplicantHangup}
           isApplicant={true}
-          speechLang={speechLang}
-          setSpeechLang={setSpeechLang}
+          endingSession={endingSession}
+          onMetricsComputed={(metrics) => {
+            latestComputedMetricsRef.current = metrics;
+          }}
         />
       </div>
     </div>
@@ -495,16 +975,11 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup }) {
 
 // ── Interviewer Dashboard Layout (Matching Image 2) ──────────────────────────
 
-function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup }) {
+function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup, endingSession }) {
   const [activeTab, setActiveTab]   = useState("ai_analysis");
   const [notes, setNotes]           = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
-  const [transcripts, setTranscripts] = useState([]);
-  const [interimSpeech, setInterimSpeech] = useState("");
-  const [manualInput, setManualInput]   = useState("");
-  const [manualRole, setManualRole]     = useState("applicant");
-  const [isListening, setIsListening]   = useState(false);
-  const [speechLang, setSpeechLang]     = useState("fil-PH");
+  const [recordingStatus, setRecordingStatus] = useState("Recording initialization...");
 
   const [liveMetrics, setLiveMetrics] = useState({
     confidence_score: 85,
@@ -514,137 +989,49 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
     overall_match: 84,
   });
 
-  const recognitionRef = useRef(null);
-  const transcriptScrollRef = useRef(null);
+  const handleMetricsComputed = useCallback((metrics) => {
+    if (!metrics.faceDetected) return;
+    setLiveMetrics((prev) => ({
+      ...prev,
+      confidence_score: metrics.composedScore,
+      enthusiasm_score: metrics.engagedScore,
+      calmness_score: metrics.attentiveScore,
+    }));
+  }, []);
 
-  // 1. Initial fetch of stored transcripts
+  // Poll backend for actual Egress recording status to prevent false UI claims
   useEffect(() => {
-    if (!interviewId) return;
-    interviewService.getTranscripts(interviewId)
-      .then(({ data }) => {
-        if (data?.transcripts) {
-          setTranscripts(data.transcripts);
-        }
-      })
-      .catch(() => {});
-  }, [interviewId]);
+    let active = true;
 
-  // 2. Web Speech API for HR Speech Transcription
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition || !interviewId) return;
-
-    let isMounted = true;
-    let restartTimer = null;
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = speechLang;
-
-      recognition.onstart = () => {
-        if (isMounted) setIsListening(true);
-      };
-
-      recognition.onerror = (event) => {
-        console.warn("HR speech recognition error:", event.error);
-        if (!isMounted) return;
-        if (restartTimer) clearTimeout(restartTimer);
-        restartTimer = setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) {}
-        }, 400);
-      };
-
-      recognition.onend = () => {
-        if (!isMounted) return;
-        setIsListening(false);
-        if (restartTimer) clearTimeout(restartTimer);
-        restartTimer = setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) {}
-        }, 400);
-      };
-
-      recognition.onresult = (event) => {
-        let currentInterim = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcriptText = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            if (transcriptText && transcriptText.trim().length > 0) {
-              const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const newSegment = {
-                speaker_role: "hr",
-                text: transcriptText.trim(),
-                time: timeStr,
-                created_at: new Date().toISOString(),
-              };
-
-              setTranscripts((prev) => [...prev, newSegment]);
-              setInterimSpeech("");
-
-              // Save transcript to backend DB automatically tagged as HR
-              interviewService.storeTranscript(interviewId, transcriptText.trim(), "hr");
-
-              // Trigger Grok AI live analysis update
-              interviewService.analyzeLive(interviewId)
-                .then(({ data }) => {
-                  if (data && data.confidence_score) setLiveMetrics(data);
-                })
-                .catch(() => {});
+    const fetchStatus = () => {
+      interviewService.getProcessingStatus(interviewId)
+        .then(({ data }) => {
+          if (!active) return;
+          if (data && data.recording) {
+            if (data.recording === 'recording') {
+              setRecordingStatus("Recording Active");
+            } else if (data.recording === 'completed') {
+              setRecordingStatus("Recording Completed");
+            } else if (data.recording === 'failed') {
+              setRecordingStatus("Recording Failed");
+            } else {
+              setRecordingStatus("Waiting for Egress");
             }
-          } else {
-            currentInterim += transcriptText;
           }
-        }
-        if (isMounted) setInterimSpeech(currentInterim);
-      };
+        })
+        .catch(() => {
+          if (active) setRecordingStatus("Recording initialization...");
+        });
+    };
 
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (e) {}
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 6000); // poll every 6s
 
     return () => {
-      isMounted = false;
-      if (restartTimer) clearTimeout(restartTimer);
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
+      active = false;
+      clearInterval(interval);
     };
-  }, [interviewId, speechLang]);
-
-  // 3. Fast 3-second live sync polling for new transcripts & Grok AI updates
-  useEffect(() => {
-    if (!interviewId) return;
-    const interval = setInterval(() => {
-      interviewService.getTranscripts(interviewId)
-        .then(({ data }) => {
-          if (data?.transcripts) {
-            setTranscripts(data.transcripts);
-          }
-        })
-        .catch(() => {});
-
-      interviewService.analyzeLive(interviewId)
-        .then(({ data }) => {
-          if (data && data.confidence_score) setLiveMetrics(data);
-        })
-        .catch(() => {});
-    }, 3000);
-
-    return () => clearInterval(interval);
   }, [interviewId]);
-
-  // Auto-scroll transcript container
-  useEffect(() => {
-    if (transcriptScrollRef.current) {
-      transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
-    }
-  }, [transcripts, interimSpeech]);
 
   // Handle Notes Auto-save
   const handleNotesChange = (text) => {
@@ -652,38 +1039,6 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
     setSavingNotes(true);
     interviewService.saveNotes(interviewId, text)
       .finally(() => setSavingNotes(false));
-  };
-
-  // Handle Manual Speech / Transcript Submit
-  const handleSendManualTranscript = (e) => {
-    e.preventDefault();
-    if (!manualInput || manualInput.trim().length === 0) return;
-
-    const text = manualInput.trim();
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newSegment = {
-      speaker_role: manualRole,
-      text,
-      time: timeStr,
-      created_at: new Date().toISOString(),
-    };
-
-    setTranscripts((prev) => [...prev, newSegment]);
-    setManualInput("");
-
-    // Store to DB
-    if (manualRole === "hr") {
-      interviewService.storeTranscript(interviewId, text, "hr");
-    } else {
-      interviewService.storePublicTranscript(interviewId, text);
-    }
-
-    // Trigger Grok AI analysis
-    interviewService.analyzeLive(interviewId)
-      .then(({ data }) => {
-        if (data && data.confidence_score) setLiveMetrics(data);
-      })
-      .catch(() => {});
   };
 
   return (
@@ -699,9 +1054,8 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
               applicantName={applicantName}
               onHangup={onHangup}
               isApplicant={false}
-              speechLang={speechLang}
-              setSpeechLang={setSpeechLang}
-              latestCaption={transcripts[transcripts.length - 1] || (interimSpeech ? { speaker_role: 'hr', text: interimSpeech } : null)}
+              endingSession={endingSession}
+              onMetricsComputed={handleMetricsComputed}
             />
           </div>
 
@@ -712,16 +1066,16 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  🧠 LIVE SENTIMENT
+                  🧠 SESSION METRICS
                 </span>
-                <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                  xAI Grok + MediaPipe
+                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  ● LIVE RECORDING
                 </span>
               </div>
               <div className="space-y-3.5">
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    <span>CONFIDENCE</span>
+                    <span>CONFIDENCE BASELINE</span>
                     <span>{liveMetrics.confidence_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -731,7 +1085,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
 
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    <span>ENTHUSIASM</span>
+                    <span>ENGAGEMENT</span>
                     <span>{liveMetrics.enthusiasm_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -741,7 +1095,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
 
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    <span>CALMNESS</span>
+                    <span>ATTENTIVENESS</span>
                     <span>{liveMetrics.calmness_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -751,11 +1105,11 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
               </div>
             </div>
 
-            {/* Card 2: Keywords Detected */}
+            {/* Card 2: Position Requirements */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  🏷️ KEYWORDS DETECTED
+                  🏷️ CORE SKILLS EVALUATED
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -782,7 +1136,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
                 <span className="text-3xl font-extrabold text-slate-800">{liveMetrics.overall_match}%</span>
               </div>
               <span className="mt-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                AI MATCH SCORE
+                REQUIREMENT MATCH
               </span>
             </div>
 
@@ -812,16 +1166,15 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
             {/* Navigation Tabs */}
             <div className="space-y-1 mb-6">
               {[
-                { id: "ai_analysis", label: "AI Analysis", icon: "🧠" },
-                { id: "transcript",  label: "Transcript",  icon: "📄" },
-                { id: "notes",       label: "Notes",       icon: "📝" },
-                { id: "scorecard",   label: "Scorecard",   icon: "📋" },
+                { id: "ai_analysis", label: "Recording Status", icon: "🎙️" },
+                { id: "notes",       label: "Notes",            icon: "📝" },
+                { id: "scorecard",   label: "Scorecard",        icon: "📋" },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all",
+                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all cursor-pointer",
                     activeTab === tab.id
                       ? "bg-blue-50/90 text-blue-700 shadow-sm"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
@@ -833,82 +1186,64 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
               ))}
             </div>
 
-            {/* Tab Content: Live Transcript */}
-            {(activeTab === "ai_analysis" || activeTab === "transcript") && (
+            {/* Tab Content: Recording Status */}
+            {activeTab === "ai_analysis" && (
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    LIVE SPEECH TRANSCRIPT
-                  </span>
-                  <span className={cn(
-                    "flex items-center gap-1.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full border",
-                    isListening
-                      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-                      : "text-amber-600 bg-amber-50 border-amber-200"
-                  )}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", isListening ? "bg-emerald-500 animate-ping" : "bg-amber-500")} />
-                    {isListening ? "MIC LISTENING" : "SPEECH ENGINE READY"}
-                  </span>
-                </div>
+                {recordingStatus === "Recording Active" && (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 text-center shadow-2xs">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-xl mx-auto mb-3 animate-pulse">
+                      🎙️
+                    </span>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1">
+                      Recording Active
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      The session audio is being recorded in the background via LiveKit Egress. Transcript, speech metrics, and AI evaluation report will be generated after the session ends.
+                    </p>
+                  </div>
+                )}
 
-                <div ref={transcriptScrollRef} className="space-y-2.5 max-h-[240px] overflow-y-auto pr-1">
-                  {transcripts.length === 0 && !interimSpeech ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center">
-                      <p className="text-xs text-slate-400 font-medium">
-                        No speech recorded yet. Speak into your microphone or use the quick input below to add transcript lines.
-                      </p>
-                    </div>
-                  ) : (
-                    transcripts.map((t, idx) => (
-                      <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-2xs">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                          <span className={cn(t.speaker_role === "hr" ? "text-blue-600" : "text-emerald-600")}>
-                            {t.speaker_role === "hr" ? "INTERVIEWER (HR)" : "APPLICANT"}
-                          </span>
-                          <span className="text-slate-400 font-normal">
-                            {t.time || new Date(t.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-700 leading-relaxed font-sans">{t.text}</p>
-                      </div>
-                    ))
-                  )}
+                {recordingStatus === "Recording Completed" && (
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-center shadow-2xs">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xl mx-auto mb-3">
+                      ✅
+                    </span>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1">
+                      Recording Saved
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      The session audio recording has completed successfully and has been saved to remote cloud storage.
+                    </p>
+                  </div>
+                )}
 
-                  {/* Real-time Interim Speech Preview */}
-                  {interimSpeech && (
-                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 animate-pulse">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
-                        SPEAKING NOW…
-                      </span>
-                      <p className="text-xs text-indigo-900 italic mt-0.5">{interimSpeech}</p>
-                    </div>
-                  )}
-                </div>
+                {recordingStatus === "Recording Failed" && (
+                  <div className="rounded-2xl border border-red-100 bg-red-50/70 p-5 text-center shadow-2xs">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 text-xl mx-auto mb-3">
+                      ⚠️
+                    </span>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1">
+                      Recording Failed
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      Failed to initiate LiveKit Egress recording for this session. Please check connection.
+                    </p>
+                  </div>
+                )}
 
-                {/* Quick Dialogue Line Input */}
-                <form onSubmit={handleSendManualTranscript} className="pt-2 flex items-center gap-2">
-                  <select
-                    value={manualRole}
-                    onChange={(e) => setManualRole(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-[11px] font-bold text-slate-700 focus:bg-white focus:outline-none"
-                  >
-                    <option value="applicant">Applicant</option>
-                    <option value="hr">HR</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    placeholder="Type speech or candidate response…"
-                    className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
-                  >
-                    Send
-                  </button>
-                </form>
+                {(recordingStatus === "Waiting for Egress" || recordingStatus === "Recording initialization...") && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center shadow-2xs animate-pulse">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xl mx-auto mb-3">
+                      ⏳
+                    </span>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1">
+                      Recording Initialization...
+                    </h4>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      Connecting to LiveKit Egress to initiate background recording. Waiting for candidate streams...
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -920,15 +1255,14 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
                     INTERVIEWER EVALUATION NOTES
                   </span>
                   {savingNotes && (
-                    <span className="text-[10px] text-blue-600 animate-pulse font-semibold">Saving…</span>
+                    <span className="text-[10px] text-blue-500 font-semibold animate-pulse">Saving…</span>
                   )}
                 </div>
                 <textarea
-                  rows={8}
                   value={notes}
-                  onChange={handleNotesChange}
-                  placeholder="Type live candidate evaluation notes here… Changes save automatically."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  placeholder="Type candidate evaluation notes here (auto-saved)…"
+                  className="w-full h-44 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-sans"
                 />
               </div>
             )}
@@ -959,9 +1293,17 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup 
           <div className="pt-4 mt-6 border-t border-slate-100">
             <button
               onClick={onHangup}
-              className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-3.5 text-sm font-bold text-red-600 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              disabled={endingSession}
+              className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 disabled:opacity-60 py-3.5 text-sm font-bold text-red-600 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
-              End Interview & Generate AI Report
+              {endingSession ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                  Ending Session & Generating AI Report...
+                </>
+              ) : (
+                "End Interview & Generate AI Report"
+              )}
             </button>
           </div>
 
@@ -984,6 +1326,7 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
   const [consentGiven,    setConsentGiven]    = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [endingSession,   setEndingSession]   = useState(false);
 
   // ── Fetch LiveKit token ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1019,23 +1362,18 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
   }
 
   // ── Session ended handler ────────────────────────────────────────────────
-  const handleSessionEnded = useCallback(async () => {
-    try {
-      if (isApplicant) {
-        await interviewService.endPublicSession(id);
-        setSessionFinished(true);
-      } else {
-        await interviewService.endSession(id);
-        setShowReportModal(true);
-      }
-    } catch (e) {
-      if (isApplicant) {
-        setSessionFinished(true);
-      } else {
-        setShowReportModal(true);
-      }
+  const handleSessionEnded = useCallback(() => {
+    if (endingSession) return;
+    setEndingSession(true);
+
+    if (isApplicant) {
+      setSessionFinished(true);
+      interviewService.endPublicSession(id).catch((e) => console.warn("endPublicSession notice:", e));
+    } else {
+      setShowReportModal(true);
+      interviewService.endSession(id).catch((e) => console.warn("endSession notice:", e));
     }
-  }, [id, isApplicant]);
+  }, [id, isApplicant, endingSession]);
 
   // ── Exit handler ──────────────────────────────────────────────────────────
   function handleExit() {
@@ -1135,6 +1473,7 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
           interviewId={id}
           applicantName={applicantName}
           onHangup={handleSessionEnded}
+          endingSession={endingSession}
         />
       ) : (
         <ZoomInterviewerLayout
@@ -1142,6 +1481,7 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
           applicantName={applicantName}
           jobTitle={jobTitle}
           onHangup={handleSessionEnded}
+          endingSession={endingSession}
         />
       )}
 
