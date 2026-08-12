@@ -25,9 +25,16 @@ const interviewService = {
   /** Fetch the AI report + full transcript for a completed interview */
   getReport:    (id)          => api.get(`/interviews/${id}/report`),
 
+  getProcessingStatus:       (id) => api.get(`/interviews/${id}/processing-status`),
+  getPublicProcessingStatus: (id) => api.get(`/public/interviews/${id}/processing-status`),
+  saveBehavioralMetrics:     (id, metrics) => api.post(`/interviews/${id}/behavioral-metrics`, { metrics }),
+  savePublicBehavioralMetrics: (id, metrics) => api.post(`/public/interviews/${id}/behavioral-metrics`, { metrics }),
+
   // ── Real-time speech transcript & live Grok AI endpoints ──────────────
-  storeTranscript:       (id, text, speakerRole = 'hr', offset = 0) => api.post(`/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
-  storePublicTranscript: (id, text, offset = 0)                     => api.post(`/public/interviews/${id}/transcript`, { text, segment_offset: offset }),
+  storeTranscript:       (id, text, speakerRole = 'hr', offset = 0)        => api.post(`/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
+  storePublicTranscript: (id, text, speakerRole = 'applicant', offset = 0) => api.post(`/public/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
+  transcribeAudio:       (id, formData)                             => api.post(`/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  publicTranscribeAudio: (id, formData)                             => api.post(`/public/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getTranscripts:        (id)                                       => api.get(`/interviews/${id}/transcripts`),
   saveNotes:             (id, notes)                                => api.post(`/interviews/${id}/notes`, { notes }),
   analyzeLive:           (id)                                       => api.post(`/interviews/${id}/analyze-live`),

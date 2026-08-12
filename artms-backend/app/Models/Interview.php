@@ -33,6 +33,11 @@ class Interview extends Model
         'hr_decision',
         'invitation_sent',
         'reminder_sent',
+        'recording_status',
+        'transcription_status',
+        'analysis_status',
+        'report_status',
+        'audio_recording_path',
     ];
 
     protected $casts = [
@@ -70,5 +75,15 @@ class Interview extends Model
     public function aiReport()
     {
         return $this->hasOne(AiInterviewReport::class);
+    }
+
+    public function recordings()
+    {
+        return $this->hasMany(InterviewRecording::class);
+    }
+
+    public function behavioralMetric()
+    {
+        return $this->hasOne(InterviewBehavioralMetric::class);
     }
 }

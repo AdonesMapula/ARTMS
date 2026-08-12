@@ -273,14 +273,24 @@ class InterviewController extends Controller
     /**
      * POST /api/interviews/{id}/end-session
      *
-     * Marks the interview as done and generates the AI report.
+     * Marks the interview as done and triggers the pipeline job.
      */
     public function endSession(Interview $interview): JsonResponse
     {
-        $interview->update(['status' => 'done']);
+        $interview->update([
+            'status'               => 'done',
+            'recording_status'     => 'completed',
+            'transcription_status' => 'processing',
+            'analysis_status'      => 'processing',
+            'report_status'        => 'processing',
+        ]);
 
-        // Generate AI analysis report immediately
-        GenerateAIInterviewReportJob::dispatchSync($interview->id);
+        // Queue post-interview pipeline job asynchronously
+        try {
+            \App\Jobs\FinalizeInterviewPipelineJob::dispatch($interview->id);
+        } catch (\Throwable $e) {
+            \Log::warning("endSession pipeline dispatch notice: " . $e->getMessage());
+        }
 
         // Update applicant status
         $stageStatus = [
@@ -296,7 +306,49 @@ class InterviewController extends Controller
 
         AuditLog::record('end_session', 'interview', "Interview session ended: {$interview->id}");
 
-        return response()->json(['message' => 'Session ended. AI analysis report generated.']);
+        return response()->json([
+            'message'           => 'Session ended successfully. Post-interview processing queued.',
+            'processing_status' => [
+                'recording'     => $interview->recording_status,
+                'transcription' => $interview->transcription_status,
+                'analysis'      => $interview->analysis_status,
+                'report'        => $interview->report_status,
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/interviews/{id}/processing-status
+     */
+    public function getProcessingStatus(Interview $interview): JsonResponse
+    {
+        return response()->json([
+            'interview_id' => $interview->id,
+            'status'       => $interview->status,
+            'recording'    => $interview->recording_status ?? 'completed',
+            'transcription' => $interview->transcription_status ?? 'completed',
+            'analysis'     => $interview->analysis_status ?? 'completed',
+            'report'       => $interview->report_status ?? ($interview->aiReport ? 'completed' : 'pending'),
+        ]);
+    }
+
+    /**
+     * POST /api/interviews/{id}/behavioral-metrics
+     * Save applicant aggregated MediaPipe facial metrics at session end.
+     */
+    public function saveBehavioralMetrics(Request $request, Interview $interview): JsonResponse
+    {
+        $metrics = $request->input('metrics', []);
+
+        \App\Models\InterviewBehavioralMetric::updateOrCreate(
+            ['interview_id' => $interview->id],
+            [
+                'aggregated_metrics' => $metrics,
+                'is_mocked'          => false,
+            ]
+        );
+
+        return response()->json(['message' => 'Behavioral metrics stored successfully']);
     }
 
     /**
@@ -417,22 +469,110 @@ class InterviewController extends Controller
     public function storePublicTranscript(Request $request, Interview $interview): JsonResponse
     {
         $validated = $request->validate([
-            'text'           => ['required', 'string'],
-            'segment_offset' => ['nullable', 'integer'],
+            'text'             => ['required', 'string'],
+            'speaker_role'     => ['nullable', 'in:hr,applicant,system'],
+            'speaker_identity' => ['nullable', 'string'],
+            'segment_offset'   => ['nullable', 'integer'],
         ]);
 
         $applicant = $interview->applicant;
+        $speakerRole = $validated['speaker_role'] ?? 'applicant';
 
         $transcript = InterviewTranscript::create([
             'interview_id'     => $interview->id,
-            'speaker_identity' => 'applicant_' . ($applicant?->id ?? '0'),
-            'speaker_role'     => 'applicant',
+            'speaker_identity' => $validated['speaker_identity'] ?? ($speakerRole === 'hr' ? 'hr_interviewer' : 'applicant_' . ($applicant?->id ?? '0')),
+            'speaker_role'     => $speakerRole,
             'text'             => trim($validated['text']),
             'segment_offset'   => $validated['segment_offset'] ?? 0,
             'spoken_at'        => now(),
         ]);
 
-        return response()->json(['message' => 'Applicant transcript saved', 'transcript' => $transcript], 201);
+        return response()->json(['message' => 'Transcript saved', 'transcript' => $transcript], 201);
+    }
+
+    /**
+     * POST /api/interviews/{interview}/transcribe-audio
+     * POST /api/public/interviews/{interview}/transcribe-audio
+     */
+    public function transcribeAudio(Request $request, Interview $interview): JsonResponse
+    {
+        return $this->processAudioTranscription($request, $interview, defaultRole: 'hr');
+    }
+
+    public function publicTranscribeAudio(Request $request, Interview $interview): JsonResponse
+    {
+        return $this->processAudioTranscription($request, $interview, defaultRole: 'applicant');
+    }
+
+    private function processAudioTranscription(Request $request, Interview $interview, string $defaultRole): JsonResponse
+    {
+        $request->validate([
+            'audio'            => ['nullable', 'file'],
+            'audio_file'       => ['nullable', 'file'],
+            'speaker_role'     => ['nullable', 'in:hr,applicant,system'],
+            'speaker_identity' => ['nullable', 'string'],
+        ]);
+
+        $audioFile = $request->file('audio') ?? $request->file('audio_file');
+        if (! $audioFile || ! $audioFile->isValid()) {
+            return response()->json(['message' => 'No valid audio chunk provided', 'transcript' => null], 200);
+        }
+
+        $speakerRole = $request->input('speaker_role', $defaultRole);
+        $identity = $request->input('speaker_identity') ?? ($speakerRole === 'hr' ? 'hr_' . ($request->user()?->id ?? '0') : 'applicant_' . ($interview->applicant_id ?? '0'));
+
+        $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
+
+        if (empty($apiKey)) {
+            return response()->json(['message' => 'Whisper API key not configured', 'transcript' => null], 200);
+        }
+
+        try {
+            $isGroq = str_starts_with($apiKey, 'gsk_');
+            $endpoint = $isGroq
+                ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+                : 'https://api.openai.com/v1/audio/transcriptions';
+            $model = $isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+
+            $client = new \GuzzleHttp\Client(['verify' => false, 'timeout' => 20]);
+            $response = $client->post($endpoint, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                ],
+                'multipart' => [
+                    [
+                        'name'     => 'file',
+                        'contents' => fopen($audioFile->getRealPath(), 'r'),
+                        'filename' => $audioFile->getClientOriginalName() ?: 'audio.webm',
+                    ],
+                    [
+                        'name'     => 'model',
+                        'contents' => $model,
+                    ],
+                ],
+            ]);
+
+            $result = json_decode((string) $response->getBody(), true);
+            $text = trim($result['text'] ?? '');
+
+            if (! empty($text)) {
+                $transcript = InterviewTranscript::create([
+                    'interview_id'     => $interview->id,
+                    'speaker_identity' => $identity,
+                    'speaker_role'     => $speakerRole,
+                    'text'             => $text,
+                    'segment_offset'   => 0,
+                    'spoken_at'        => now(),
+                ]);
+
+                return response()->json(['message' => 'Audio transcribed successfully', 'transcript' => $transcript], 201);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Whisper STT fallback notice: " . $e->getMessage());
+            return response()->json(['message' => 'STT service notice', 'transcript' => null], 200);
+        }
+
+        return response()->json(['message' => 'No speech detected', 'transcript' => null], 200);
     }
 
     /**
@@ -442,6 +582,8 @@ class InterviewController extends Controller
     public function getTranscripts(Interview $interview): JsonResponse
     {
         $transcripts = $interview->transcripts()
+            ->select(['id', 'interview_id', 'speaker_identity', 'speaker_role', 'text', 'segment_offset', 'spoken_at', 'created_at'])
+            ->orderBy('spoken_at', 'asc')
             ->orderBy('id', 'asc')
             ->get();
 

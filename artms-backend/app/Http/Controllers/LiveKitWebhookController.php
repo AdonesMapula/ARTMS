@@ -44,6 +44,9 @@ class LiveKitWebhookController extends Controller
         Log::info('LiveKit webhook received', ['event' => $eventType]);
 
         return match ($eventType) {
+            'participant_joined'     => $this->handleParticipantJoined($event),
+            'egress_started'         => $this->handleEgressStarted($event),
+            'egress_ended'           => $this->handleEgressEnded($event),
             'transcription_received' => $this->handleTranscription($event),
             'room_finished'          => $this->handleRoomFinished($event),
             default                  => response()->json(['message' => 'Event ignored']),
@@ -51,6 +54,209 @@ class LiveKitWebhookController extends Controller
     }
 
     // ── Event handlers ────────────────────────────────────────────────────
+
+    private function handleParticipantJoined(array $event): JsonResponse
+    {
+        $roomName = $event['room']['name'] ?? null;
+        $identity = $event['participant']['identity'] ?? null;
+
+        Log::info("[LiveKit] participant_joined received: room={$roomName}, participant={$identity}");
+
+        if (!$roomName || !$identity) {
+            Log::warning("[LiveKit] skipped participant_joined: missing room_name or identity");
+            return response()->json(['message' => 'Skipped — missing room_name or identity']);
+        }
+
+        $interview = Interview::where('livekit_room_name', $roomName)->first();
+        if (!$interview || $interview->status === 'done') {
+            Log::warning("[LiveKit] skipped participant_joined: interview not found or done");
+            return response()->json(['message' => 'Skipped — interview not active or not found']);
+        }
+
+        Log::info("[LiveKit] interview found: {$interview->id}");
+
+        $role = $this->resolveRole($identity);
+        if ($role === 'system') {
+            Log::info("[LiveKit] skipped participant_joined: system participant {$identity}");
+            return response()->json(['message' => 'Skipped — system participant']);
+        }
+
+        Log::info("[LiveKit] role: {$role}");
+
+        // Race-safe execution using atomic Cache lock
+        $lockKey = "egress_lock:{$interview->id}:{$identity}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15); // lock for 15 seconds
+
+        if (!$lock->get()) {
+            Log::info("[LiveKit] participant_joined locked (already starting) for {$role}/{$identity}");
+            return response()->json(['message' => 'Egress already starting']);
+        }
+
+        try {
+            // Check if recording already exists in DB
+            $exists = \App\Models\InterviewRecording::where('interview_id', $interview->id)
+                ->where('participant_identity', $identity)
+                ->where('status', 'active')
+                ->exists();
+
+            if ($exists) {
+                Log::info("[LiveKit] active egress already in DB for {$role}/{$identity}");
+                return response()->json(['message' => 'Active egress already running']);
+            }
+
+            Log::info("[LiveKit] duplicate check passed (no active recording in DB)");
+
+            Log::info("[LiveKit] starting participant egress for {$identity}");
+            $liveKit = new \App\Services\LiveKitService();
+            $egressInfo = $liveKit->startParticipantEgress($roomName, $identity, $role);
+
+            if ($egressInfo && method_exists($egressInfo, 'getEgressId')) {
+                $egressId = $egressInfo->getEgressId();
+                Log::info("[LiveKit] egress RPC returned: {$egressId}");
+
+                Log::info("[LiveKit] inserting interview_recordings row");
+                $recordingId = null;
+
+                \Illuminate\Support\Facades\DB::transaction(function () use ($interview, $egressId, $identity, $role, &$recordingId) {
+                    $rec = \App\Models\InterviewRecording::create([
+                        'interview_id'         => $interview->id,
+                        'egress_id'            => $egressId,
+                        'participant_identity' => $identity,
+                        'participant_role'     => $role,
+                        'status'               => 'active',
+                        'started_at'           => now(),
+                    ]);
+                    $recordingId = $rec->id;
+                    $interview->update(['recording_status' => 'recording']);
+                });
+
+                Log::info("[LiveKit] recording row created: ID={$recordingId}");
+                Log::info("[LiveKit] participant_joined processing complete");
+            } else {
+                Log::warning("[LiveKit] startParticipantEgress returned null or invalid EgressInfo for {$role}/{$identity}");
+            }
+        } catch (\Throwable $e) {
+            Log::error("[LiveKit] EXCEPTION in participant_joined: " . $e->getMessage(), [
+                'exception' => get_class($e),
+                'trace'     => $e->getTraceAsString(),
+            ]);
+        } finally {
+            $lock->release();
+        }
+
+        return response()->json(['message' => 'Participant join processed']);
+    }
+
+    private function handleEgressStarted(array $event): JsonResponse
+    {
+        $egressId = $event['egress_id'] ?? $event['egress_info']['egress_id'] ?? null;
+        $roomName = $event['room']['name'] ?? $event['egress_info']['room_name'] ?? null;
+
+        if (! $egressId || ! $roomName) {
+            return response()->json(['message' => 'Skipped — missing egress_id or room_name']);
+        }
+
+        $interview = Interview::where('livekit_room_name', $roomName)->first();
+        if ($interview) {
+            \App\Models\InterviewRecording::updateOrCreate(
+                ['egress_id' => $egressId],
+                [
+                    'interview_id' => $interview->id,
+                    'status'       => 'active',
+                    'started_at'   => now(),
+                ]
+            );
+            $interview->update(['recording_status' => 'recording']);
+        }
+
+        return response()->json(['message' => 'Egress started recorded']);
+    }
+
+    private function handleEgressEnded(array $event): JsonResponse
+    {
+        $egressInfo = $event['egress_info'] ?? $event;
+        $egressId   = $egressInfo['egress_id'] ?? null;
+        $roomName   = $egressInfo['room_name'] ?? null;
+        $fileResults = $egressInfo['file_results'] ?? [];
+
+        if (! $egressId || ! $roomName) {
+            return response()->json(['message' => 'Skipped — missing egress_id or room_name']);
+        }
+
+        $interview = Interview::where('livekit_room_name', $roomName)->first();
+        if (! $interview) {
+            return response()->json(['message' => 'Interview not found'], 404);
+        }
+
+        $filePath = null;
+        $fileUrl = null;
+        $duration = 0;
+
+        if (! empty($fileResults) && is_array($fileResults)) {
+            $firstFile = $fileResults[0];
+            $filePath  = $firstFile['filename'] ?? null;
+            $fileUrl   = $firstFile['download_url'] ?? $firstFile['location'] ?? null;
+            $duration  = (int) (($firstFile['duration'] ?? 0) / (str_contains(json_encode($firstFile), 'duration_ns') ? 1e9 : 1));
+        } elseif (! empty($egressInfo['file'])) {
+            $filePath = $egressInfo['file']['filename'] ?? null;
+            $fileUrl  = $egressInfo['file']['download_url'] ?? $egressInfo['file']['location'] ?? null;
+            $duration = (int) ($egressInfo['file']['duration'] ?? 0);
+        }
+
+        // Parse participant role & identity from file_path if available (e.g. recordings/{room}_{role}_{identity}_{time}.mp3)
+        $parsedRole = 'applicant';
+        $parsedIdentity = null;
+        if (! empty($filePath)) {
+            if (str_contains($filePath, '_hr_')) {
+                $parsedRole = 'hr';
+                if (preg_match('/(hr_\d+)/', $filePath, $matches)) {
+                    $parsedIdentity = $matches[1];
+                }
+            } elseif (str_contains($filePath, '_applicant_')) {
+                $parsedRole = 'applicant';
+                if (preg_match('/(applicant_\d+)/', $filePath, $matches)) {
+                    $parsedIdentity = $matches[1];
+                }
+            }
+        }
+
+        // Check if recording is in error state from LiveKit Cloud
+        $egressStatus = $egressInfo['status'] ?? 'EGRESS_COMPLETE';
+        $isFailed = in_array($egressStatus, ['EGRESS_FAILED', 'EGRESS_ABORTED', 'FAILED']);
+
+        // Idempotent upsert
+        $recordingData = [
+            'interview_id'     => $interview->id,
+            'file_path'        => $filePath,
+            'file_url'         => $fileUrl,
+            'duration_seconds' => $duration,
+            'status'           => $isFailed ? 'failed' : 'completed',
+            'completed_at'     => now(),
+        ];
+
+        if ($parsedIdentity) {
+            $recordingData['participant_identity'] = $parsedIdentity;
+            $recordingData['participant_role']     = $parsedRole;
+        }
+
+        $recording = \App\Models\InterviewRecording::updateOrCreate(
+            ['egress_id' => $egressId],
+            $recordingData
+        );
+
+        // Update recording status on interview
+        $interview->update([
+            'recording_status'     => 'completed',
+            'audio_recording_path' => $filePath ?? $interview->audio_recording_path,
+        ]);
+
+        // Dispatch delayed finalization check safely
+        \App\Jobs\CheckInterviewFinalizationJob::dispatch($interview->id);
+
+        Log::info("LiveKit egress_ended: recording saved & CheckInterviewFinalizationJob dispatched for interview {$interview->id}");
+
+        return response()->json(['message' => 'Egress recording processed']);
+    }
 
     private function handleTranscription(array $event): JsonResponse
     {
@@ -99,10 +305,14 @@ class LiveKitWebhookController extends Controller
 
         $interview = Interview::where('livekit_room_name', $roomName)->first();
 
-        if ($interview && $interview->status === 'active') {
-            $interview->update(['status' => 'done']);
-            \App\Jobs\GenerateAIInterviewReportJob::dispatch($interview->id);
-            Log::info("LiveKit room_finished: queued AI report for interview {$interview->id}");
+        if ($interview && ($interview->status === 'active' || $interview->recording_status !== 'completed')) {
+            $interview->update([
+                'status'           => 'done',
+                'recording_status' => 'completed',
+            ]);
+
+            \App\Jobs\FinalizeInterviewPipelineJob::dispatch($interview->id);
+            Log::info("LiveKit room_finished: queued FinalizeInterviewPipelineJob for interview {$interview->id}");
         }
 
         return response()->json(['message' => 'Room closed']);

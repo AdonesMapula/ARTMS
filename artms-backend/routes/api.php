@@ -37,6 +37,9 @@ Route::prefix('public')->group(function () {
     Route::post('parse-resume', [ResumeParserController::class, 'parse']); // AI resume parser
     Route::match(['get', 'post'], 'interviews/{interview}/livekit-token', [InterviewController::class, 'publicGenerateToken']); // applicant video room token
     Route::post('interviews/{interview}/transcript', [InterviewController::class, 'storePublicTranscript']); // applicant live transcript
+    Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'publicTranscribeAudio']); // applicant audio transcript
+    Route::get('interviews/{interview}/processing-status', [InterviewController::class, 'getProcessingStatus']);
+    Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
     Route::post('interviews/{interview}/end-session', [InterviewController::class, 'endSession']); // applicant end session
     Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [InterviewController::class, 'confirm']); // applicant confirm interview
 });
@@ -194,8 +197,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('interviews/{interview}/send-reminder',  [InterviewController::class, 'sendReminder']);
         Route::post('interviews/{interview}/livekit-token',  [InterviewController::class, 'generateToken']);
         Route::post('interviews/{interview}/end-session',    [InterviewController::class, 'endSession']);
+        Route::get('interviews/{interview}/processing-status', [InterviewController::class, 'getProcessingStatus']);
+        Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
         Route::get('interviews/{interview}/report',          [InterviewController::class, 'report']);
         Route::post('interviews/{interview}/transcript',     [InterviewController::class, 'storeTranscript']);
+        Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'transcribeAudio']);
         Route::get('interviews/{interview}/transcripts',     [InterviewController::class, 'getTranscripts']);
         Route::post('interviews/{interview}/analyze-live',   [InterviewController::class, 'analyzeLive']);
         Route::post('interviews/{interview}/notes',          [InterviewController::class, 'saveNotes']);

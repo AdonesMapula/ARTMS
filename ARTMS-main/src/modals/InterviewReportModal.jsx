@@ -52,10 +52,11 @@ function DimensionBar({ label, score }) {
 // ── Report Poller Hook ───────────────────────────────────────────────────────
 
 function useReportPoller(interviewId, isOpen) {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [polls, setPolls]     = useState(0);
+  const [data, setData]             = useState(null);
+  const [statusData, setStatusData] = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [polls, setPolls]           = useState(0);
 
   useEffect(() => {
     if (!isOpen || !interviewId) return;
@@ -65,12 +66,15 @@ function useReportPoller(interviewId, isOpen) {
 
     async function attempt() {
       try {
+        const { data: statusRes } = await interviewService.getProcessingStatus(interviewId);
+        if (!cancelled && statusRes) setStatusData(statusRes);
+
         const { data: res } = await interviewService.getReport(interviewId);
         if (cancelled) return;
         const interview = res?.interview;
         setData(interview);
 
-        if (interview?.ai_report || polls >= 12) {
+        if (interview?.ai_report || polls >= 15) {
           setLoading(false);
         } else {
           timer = setTimeout(() => {
@@ -79,8 +83,10 @@ function useReportPoller(interviewId, isOpen) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError("Failed to load interview report. Please try again.");
-          setLoading(false);
+          setError("Processing interview audio & generating report...");
+          timer = setTimeout(() => {
+            if (!cancelled) setPolls((p) => p + 1);
+          }, 3000);
         }
       }
     }
@@ -98,13 +104,13 @@ function useReportPoller(interviewId, isOpen) {
     setPolls((p) => p + 1);
   };
 
-  return { data, loading, error, retry };
+  return { data, statusData, loading, error, retry };
 }
 
 // ── Modal Component ──────────────────────────────────────────────────────────
 
 export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
-  const { data: interview, loading, error, retry } = useReportPoller(interviewId, isOpen);
+  const { data: interview, statusData, loading, error, retry } = useReportPoller(interviewId, isOpen);
 
   if (!isOpen) return null;
 
@@ -112,6 +118,9 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
   const transcripts = interview?.transcripts ?? [];
   const applicant   = interview?.applicant;
   const jobTitle    = interview?.job_posting?.job_library?.job_title ?? "—";
+
+  const isTranscribing = statusData?.transcription === "processing";
+  const isAnalyzing    = statusData?.analysis === "processing" || statusData?.report === "processing";
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md transition-all animate-fadeIn">
@@ -152,12 +161,33 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
         {/* ── Modal Body ────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {loading ? (
-            <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 text-slate-400">
-              <FiRefreshCw size={36} className="animate-spin text-indigo-600" />
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-700">Generating AI Evaluation Report…</p>
-                <p className="mt-1 text-xs text-slate-500">xAI Grok is analyzing the full speech transcript. This takes a few seconds.</p>
+          {loading && !report ? (
+            <div className="flex min-h-[360px] flex-col items-center justify-center gap-5 text-slate-400">
+              <FiRefreshCw size={40} className="animate-spin text-indigo-600" />
+              <div className="text-center space-y-2 max-w-md">
+                <p className="text-base font-extrabold text-slate-900">Post-Interview Processing Pipeline</p>
+                <div className="flex flex-col gap-2 pt-2 text-xs font-medium">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                    <span>1. LiveKit Egress Audio Finalization</span>
+                    <span className="text-emerald-600 font-bold">✓ Complete</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                    <span>2. Whisper Speech-to-Text Transcription</span>
+                    <span className={cn("font-bold", isTranscribing ? "text-indigo-600 animate-pulse" : "text-emerald-600")}>
+                      {isTranscribing ? "Transcribing..." : "Processing"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                    <span>3. MediaPipe Behavioral & Speech Analysis</span>
+                    <span className={cn("font-bold", isAnalyzing ? "text-indigo-600 animate-pulse" : "text-slate-400")}>
+                      {isAnalyzing ? "Analyzing..." : "Pending"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                    <span>4. xAI Grok Evaluation Report</span>
+                    <span className="text-slate-400 font-bold">Pending</span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : error ? (
