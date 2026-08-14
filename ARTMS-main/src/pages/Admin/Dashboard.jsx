@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Users, Clock, Clipboard, Activity, Calendar, Layers, CheckCircle2,
@@ -363,13 +363,19 @@ function PipelineChart({ pipeline }) {
    4. MONTHLY HIRING AREA CHART
    ─────────────────────────────────────────────────────────────────────────── */
 function MonthlyHiringChart({ hires }) {
-  const chartData = hires.map(h => {
-    const date = new Date(2026, h.month - 1);
-    return {
-      month: date.toLocaleString('default', { month: 'short' }),
-      Hires: h.count
-    };
-  });
+  const chartData = useMemo(() => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonth = new Date().getMonth(); // 0-indexed
+    const start = Math.max(0, currentMonth - 6);
+    return monthNames.slice(start, currentMonth + 1).map((mName, idx) => {
+      const monthNum = start + idx + 1; // 1-indexed
+      const found = (hires || []).find(h => Number(h.month) === monthNum);
+      return {
+        month: mName,
+        Hires: found ? Number(found.count) : 0
+      };
+    });
+  }, [hires]);
 
   return (
     <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">

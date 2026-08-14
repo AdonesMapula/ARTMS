@@ -2,54 +2,64 @@
 
 namespace App\Services\Cache;
 
-use App\Models\User;
 use App\Models\Department;
 use App\Models\JobPosting;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Manages caching for the application boot payloads.
+ *
+ * Uses CacheKeyService for consistent key naming and CacheService
+ * for graceful Redis failure handling.
+ *
+ * TTL: 5 minutes (reduced from 6h — includes unread notification count
+ * which changes regularly, and dashboard data that should be fresh)
+ */
 class BootCacheService
 {
-    /**
-     * Cache TTL in seconds (e.g., 6 hours).
-     */
-    protected const CACHE_TTL_SECONDS = 21600;
+    // 5 minutes — boot includes notification count which changes regularly
+    public const TTL = 300;
 
-    /**
-     * Retrieve the consolidated boot payload for an authenticated user.
-     * Uses Cache-Aside strategy with tag support if available.
-     *
-     * @param User $user
-     * @return array
-     */
-    public function getBootPayload(User $user): array
+    // 15 minutes for public payload (job postings change less frequently)
+    public const TTL_PUBLIC = 900;
+
+    protected CacheService $cache;
+
+    public function __construct(CacheService $cache)
     {
-        $cacheKey = "boot_payload:user:{$user->id}";
-        $tags = ["user_{$user->id}", "department_{$user->department_id}", "boot_data"];
-
-        $callback = function () use ($user) {
-            return $this->buildBootPayload($user);
-        };
-
-        return $this->rememberWithTags($cacheKey, $tags, self::CACHE_TTL_SECONDS, $callback);
+        $this->cache = $cache;
     }
 
     /**
-     * Retrieve system-wide initial configuration and public job library data.
-     *
-     * @return array
+     * Retrieve the consolidated boot payload for an authenticated user.
+     * Cache-aside with tag support where available.
+     */
+    public function getBootPayload(User $user): array
+    {
+        $key  = CacheKeyService::bootUser($user->id);
+        $tags = ["boot_data", "user_{$user->id}"];
+
+        return $this->cache->rememberTagged($key, $tags, self::TTL, function () use ($user) {
+            return $this->buildBootPayload($user);
+        });
+    }
+
+    /**
+     * Retrieve system-wide config and public job listing for unauthenticated pages.
      */
     public function getPublicBootPayload(): array
     {
-        $cacheKey = "boot_payload:public";
-        $tags = ["public_boot", "job_postings"];
+        $key  = CacheKeyService::bootPublic();
+        $tags = ['boot_data', 'public_boot', 'job_postings'];
 
-        $callback = function () {
+        return $this->cache->rememberTagged($key, $tags, self::TTL_PUBLIC, function () {
             return [
-                'active_jobs' => JobPosting::where('status', 'published')
+                'active_jobs'  => JobPosting::where('status', 'published')
                     ->where('is_published', true)
                     ->with([
                         'department:id,department_name,department_code',
-                        'jobLibrary:id,job_title,employment_type'
+                        'jobLibrary:id,job_title,employment_type',
                     ])
                     ->select(['id', 'job_library_id', 'department_id', 'location', 'created_at'])
                     ->orderBy('created_at', 'desc')
@@ -58,91 +68,53 @@ class BootCacheService
                     ->select(['id', 'department_name', 'department_code'])
                     ->get(),
             ];
-        };
-
-        return $this->rememberWithTags($cacheKey, $tags, self::CACHE_TTL_SECONDS, $callback);
+        });
     }
 
     /**
      * Invalidate boot payload cache for a specific user.
-     *
-     * @param int $userId
-     * @return void
      */
     public function invalidateUserCache(int $userId): void
     {
-        $this->flushTags(["user_{$userId}"]);
-        Cache::forget("boot_payload:user:{$userId}");
+        $key = CacheKeyService::bootUser($userId);
+        $this->cache->flushTags(["user_{$userId}"]);
+        $this->cache->forget($key);
     }
 
     /**
-     * Invalidate all boot payloads (e.g., after systemic updates).
-     *
-     * @return void
+     * Invalidate all boot payloads — call after department/permission/role changes.
      */
     public function invalidateAllBootCache(): void
     {
-        $this->flushTags(["boot_data", "public_boot"]);
-        Cache::forget("boot_payload:public");
+        $this->cache->flushTags(['boot_data', 'public_boot']);
+        $this->cache->forget(CacheKeyService::bootPublic());
     }
 
-    /**
-     * Helper to build the actual boot payload array from DB queries.
-     */
+    // ── Internal ─────────────────────────────────────────────────────────────
+
     protected function buildBootPayload(User $user): array
     {
-        // Load relationships efficiently in 1 step
         $user->loadMissing(['department:id,department_name,department_code']);
 
         return [
             'user' => [
-                'id' => $user->id,
-                'employee_id' => $user->employee_id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
+                'id'            => $user->id,
+                'employee_id'   => $user->employee_id,
+                'first_name'    => $user->first_name,
+                'last_name'     => $user->last_name,
+                'name'          => $user->name,
+                'email'         => $user->email,
+                'role'          => $user->role,
                 'department_id' => $user->department_id,
+                'is_active'     => $user->is_active,
             ],
             'department' => $user->department ? [
-                'id' => $user->department->id,
+                'id'   => $user->department->id,
                 'name' => $user->department->department_name,
                 'code' => $user->department->department_code,
             ] : null,
             'unread_notifications_count' => $user->unreadNotifications()->count(),
             'cached_at' => now()->toIso8601String(),
         ];
-    }
-
-    /**
-     * Safely executes Cache::remember using Cache Tags if supported by current store,
-     * otherwise falls back to standard key-based caching.
-     */
-    protected function rememberWithTags(string $key, array $tags, int $ttl, \Closure $callback): array
-    {
-        if ($this->supportsTags()) {
-            return Cache::tags($tags)->remember($key, $ttl, $callback);
-        }
-
-        return Cache::remember($key, $ttl, $callback);
-    }
-
-    /**
-     * Safely flushes tags if supported by current cache driver.
-     */
-    protected function flushTags(array $tags): void
-    {
-        if ($this->supportsTags()) {
-            Cache::tags($tags)->flush();
-        }
-    }
-
-    /**
-     * Check if the current default cache store supports tags (e.g. Redis, Memcached, Array).
-     */
-    protected function supportsTags(): bool
-    {
-        return Cache::supportsTags();
     }
 }

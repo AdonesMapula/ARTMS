@@ -219,5 +219,31 @@ Clear the Laravel config and application cache:
 cd artms-backend
 php artisan config:clear
 php artisan cache:clear
-php artisan artms:warm-cache
+php artisan artms:warm-cache --active-only
 ```
+
+---
+
+## ☁️ Aiven MySQL Setup (Production DB)
+
+For production deployment or remote testing, ARTMS can connect to **Aiven MySQL** over a TLS-secured connection:
+
+1. **Aiven Account**: Create a MySQL service in the [Aiven Console](https://console.aiven.io/).
+2. **CA Certificate**: Download the CA certificate (`ca.pem`) from the Overview page and store it securely (e.g., `storage/certs/ca.pem`).
+3. **Environment Setup**: In `.env`, set:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=<AIVEN_HOST>
+   DB_PORT=<AIVEN_PORT>
+   DB_DATABASE=defaultdb
+   DB_USERNAME=avnadmin
+   DB_PASSWORD=<AIVEN_PASSWORD>
+   MYSQL_ATTR_SSL_CA=storage/certs/ca.pem
+   MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=true
+   ```
+4. **Verification**: Clear configuration cache and run the diagnostic check:
+   ```bash
+   php artisan config:clear
+   php artisan artms:db-health
+   ```
+5. **Detailed Instructions**: Refer to the full [Aiven MySQL Migration Guide](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/docs/aiven-mysql-migration.md) in the `docs/` folder.

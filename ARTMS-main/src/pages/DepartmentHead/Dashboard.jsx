@@ -123,7 +123,7 @@ export default function DepartmentHeadDashboard() {
       <div className="grid gap-6 lg:grid-cols-12 items-stretch">
         {/* CHART SECTON */}
         <div className="lg:col-span-8 flex flex-col">
-          <DepartmentActivityChart />
+          <DepartmentActivityChart weeklyActivity={stats?.weekly_activity} />
         </div>
 
         {/* QUICK ACTIONS & ATTENDANCE */}
@@ -228,11 +228,11 @@ function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColo
   );
 }
 
-// ── SYNTHETIC CHART COMPONENT ────────────────────────────────────────────────
-function DepartmentActivityChart() {
+// ── WEEKLY ACTIVITY CHART COMPONENT ──────────────────────────────────────────
+function DepartmentActivityChart({ weeklyActivity }) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  // Synthetic data for visual appeal
-  const data = [
+  
+  const data = weeklyActivity || [
     { day: "Mon", present: 85, onLeave: 5 },
     { day: "Tue", present: 90, onLeave: 2 },
     { day: "Wed", present: 88, onLeave: 4 },
@@ -253,7 +253,7 @@ function DepartmentActivityChart() {
             <FiBarChart2 size={18} className="text-[#111A62]" />
             <h3 className="text-base font-extrabold text-slate-900">Weekly Department Activity</h3>
           </div>
-          <p className="text-xs font-medium text-slate-500 mt-1">Simulated attendance & leave trends for the week</p>
+          <p className="text-xs font-medium text-slate-500 mt-1">Live attendance & leave trends for the week</p>
         </div>
         <div className="flex items-center gap-4 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
           <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-[#111A62]"></span> Present</div>

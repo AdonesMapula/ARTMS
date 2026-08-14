@@ -166,7 +166,7 @@ export default function CooDashboard() {
         
         {/* MIDDLE LEFT: AREA / LINE CHART -> PRF VOLUME & HEADCOUNT TRENDS */}
         <div className="lg:col-span-7 flex flex-col">
-          <PrfTrendsChart monthlyTrends={monthlyTrends} totalRequests={totalRequests} />
+          <PrfTrendsChart stats={stats} totalRequests={totalRequests} />
         </div>
 
         {/* MIDDLE RIGHT: DONUT CHART -> URGENCY & STATUS BREAKDOWN */}
@@ -191,7 +191,7 @@ export default function CooDashboard() {
 
         {/* BOTTOM RIGHT: DATA TABLE -> PENDING APPROVALS QUEUE */}
         <div className="lg:col-span-7 flex flex-col">
-          <PendingApprovalsTable recentPending={recentPending} approvedRequests={approvedRequests} />
+          <PendingApprovalsTable recentPending={recentPending} recentHistory={stats?.recent_history} approvedRequests={approvedRequests} />
         </div>
       </div>
     </div>
@@ -242,24 +242,31 @@ function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColo
 /* ───────────────────────────────────────────────────────────────────────────
    2. MIDDLE LEFT: AREA / LINE CHART -> PRF VOLUME & HEADCOUNT TRENDS
    ─────────────────────────────────────────────────────────────────────────── */
-function PrfTrendsChart({ monthlyTrends, totalRequests }) {
+function PrfTrendsChart({ stats, totalRequests }) {
   const [timeRange, setTimeRange] = useState("7M"); // "7M", "30D", "24H"
 
   const dataSets = useMemo(() => {
-    const base = totalRequests > 0 ? totalRequests : 15;
-    if (monthlyTrends && monthlyTrends.length > 0 && timeRange === "7M") {
+    if (timeRange === "7M" && stats?.monthly_trends) {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       return monthNames.slice(0, 7).map((mName, idx) => {
-        const found = monthlyTrends.find(t => t.month === idx + 1);
-        const cnt = found ? Number(found.count) : Math.max(1, Math.round(base * (0.4 + (idx * 0.1))));
+        const found = stats.monthly_trends.find(t => t.month === idx + 1);
         return {
           label: mName,
-          requests: cnt,
-          headcount: Math.round(cnt * 2.5),
+          requests: found ? Number(found.count) : 0,
+          headcount: found ? Number(found.headcount || 0) : 0,
         };
       });
     }
 
+    if (timeRange === "30D" && stats?.trends_30d) {
+      return stats.trends_30d;
+    }
+
+    if (timeRange === "24H" && stats?.trends_24h) {
+      return stats.trends_24h;
+    }
+
+    const base = totalRequests > 0 ? totalRequests : 15;
     if (timeRange === "7M") {
       return [
         { label: "Jan", requests: Math.round(base * 0.4), headcount: Math.round(base * 1.1) },
@@ -285,7 +292,7 @@ function PrfTrendsChart({ monthlyTrends, totalRequests }) {
         { label: "18:00", requests: 5, headcount: 12 },
       ];
     }
-  }, [timeRange, monthlyTrends, totalRequests]);
+  }, [timeRange, stats, totalRequests]);
 
   const maxRequests = Math.max(...dataSets.map(d => d.requests), 5);
   const maxHeadcount = Math.max(...dataSets.map(d => d.headcount), 10);
@@ -453,28 +460,26 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
   const [activeTab, setActiveTab] = useState("urgency"); // "urgency" or "status"
 
   const urgencyData = useMemo(() => {
-    if (!requestsByUrgency || requestsByUrgency.length === 0) {
-      return [
-        { name: "Critical Priority", count: 2, percent: 13, color: URGENCY_COLORS[0] },
-        { name: "High Priority", count: 4, percent: 27, color: URGENCY_COLORS[1] },
-        { name: "Medium Priority", count: 6, percent: 40, color: URGENCY_COLORS[2] },
-        { name: "Low / Normal", count: 3, percent: 20, color: URGENCY_COLORS[3] },
-      ];
-    }
-    const total = requestsByUrgency.reduce((acc, r) => acc + (Number(r.value) || 0), 0) || totalRequests || 1;
-    return requestsByUrgency.map((r, idx) => {
-      const cnt = Number(r.value) || 0;
-      const uName = (r.name || "normal").toLowerCase();
-      let col = URGENCY_COLORS[3];
-      if (uName.includes("critical")) col = URGENCY_COLORS[0];
-      else if (uName.includes("high")) col = URGENCY_COLORS[1];
-      else if (uName.includes("medium")) col = URGENCY_COLORS[2];
+    const levels = [
+      { key: "critical", name: "Critical Priority", color: URGENCY_COLORS[0] },
+      { key: "high", name: "High Priority", color: URGENCY_COLORS[1] },
+      { key: "medium", name: "Medium Priority", color: URGENCY_COLORS[2] },
+      { key: "low", name: "Low / Normal", color: URGENCY_COLORS[3] }
+    ];
 
+    const total = (requestsByUrgency || []).reduce((acc, r) => acc + (Number(r.value) || 0), 0) || totalRequests || 1;
+
+    return levels.map(level => {
+      const found = (requestsByUrgency || []).find(r => {
+        const nameLower = (r.name || "").toLowerCase();
+        return nameLower === level.key || (level.key === "low" && nameLower === "normal");
+      });
+      const cnt = found ? (Number(found.value) || 0) : 0;
       return {
-        name: uName.charAt(0).toUpperCase() + uName.slice(1) + " Priority",
+        name: level.name,
         count: cnt,
-        percent: Math.max(1, Math.round((cnt / total) * 100)),
-        color: col,
+        percent: Math.round((cnt / total) * 100),
+        color: level.color,
       };
     });
   }, [requestsByUrgency, totalRequests]);
@@ -724,7 +729,7 @@ function DepartmentAllocationChart({ requestsByDept, totalRequests }) {
 /* ───────────────────────────────────────────────────────────────────────────
    5. BOTTOM RIGHT: DATA TABLE -> PENDING APPROVALS QUEUE
    ─────────────────────────────────────────────────────────────────────────── */
-function PendingApprovalsTable({ recentPending, approvedRequests }) {
+function PendingApprovalsTable({ recentPending, recentHistory, approvedRequests }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState("pending"); // "pending" or "history"
   const [filterQuery, setFilterQuery] = useState("");
@@ -743,12 +748,24 @@ function PendingApprovalsTable({ recentPending, approvedRequests }) {
     });
   }, [recentPending, filterQuery]);
 
-  const historyList = useMemo(() => [
-    { position: "Senior HR Specialist", dept: "Human Resources", headcount: 1, status: "Approved", date: "2026-08-01", urgency: "medium" },
-    { position: "Lead React Developer", dept: "Operations & IT", headcount: 2, status: "Approved", date: "2026-07-28", urgency: "high" },
-    { position: "Financial Accountant", dept: "Finance", headcount: 1, status: "Approved", date: "2026-07-20", urgency: "low" },
-    { position: "Systems Architect", dept: "Operations & IT", headcount: 1, status: "Approved", date: "2026-07-15", urgency: "critical" },
-  ], []);
+  const historyList = useMemo(() => {
+    if (recentHistory && recentHistory.length > 0) {
+      return recentHistory.map(r => ({
+        position: r.position_needed,
+        dept: r.department?.department_name || "General",
+        headcount: r.headcount,
+        status: r.status.charAt(0).toUpperCase() + r.status.slice(1),
+        date: r.approved_at ? new Date(r.approved_at).toLocaleDateString() : new Date(r.updated_at).toLocaleDateString(),
+        urgency: r.urgency,
+      }));
+    }
+    return [
+      { position: "Senior HR Specialist", dept: "Human Resources", headcount: 1, status: "Approved", date: "2026-08-01", urgency: "medium" },
+      { position: "Lead React Developer", dept: "Operations & IT", headcount: 2, status: "Approved", date: "2026-07-28", urgency: "high" },
+      { position: "Financial Accountant", dept: "Finance", headcount: 1, status: "Approved", date: "2026-07-20", urgency: "low" },
+      { position: "Systems Architect", dept: "Operations & IT", headcount: 1, status: "Approved", date: "2026-07-15", urgency: "critical" },
+    ];
+  }, [recentHistory]);
 
   const totalItems = tab === "pending" ? filteredPending.length : historyList.length;
   const pagedPending = filteredPending.slice((page - 1) * pageSize, page * pageSize);

@@ -149,12 +149,12 @@ export default function SuperAdminDashboard() {
         
         {/* MIDDLE LEFT: AREA / LINE CHART -> USER GROWTH & TRAFFIC TRENDS */}
         <div className="lg:col-span-7 flex flex-col">
-          <TrafficTrendsChart totalUsers={totalUsers} />
+          <TrafficTrendsChart totalUsers={totalUsers} trafficTrends={stats?.traffic_trends} />
         </div>
 
         {/* MIDDLE RIGHT: DONUT CHART -> STATUS BREAKDOWN / ROLE DISTRIBUTION */}
         <div className="lg:col-span-5 flex flex-col">
-          <RoleDistributionChart usersByRole={usersByRole} totalUsers={totalUsers} />
+          <RoleDistributionChart usersByRole={usersByRole} totalUsers={totalUsers} inactiveUsers={stats?.inactive_users} deletedUsers={stats?.deleted_users} />
         </div>
       </div>
 
@@ -163,7 +163,7 @@ export default function SuperAdminDashboard() {
         
         {/* BOTTOM LEFT: BAR CHART / HEATMAP -> SECURITY AUDIT & SYSTEM LOGS */}
         <div className="lg:col-span-5 flex flex-col">
-          <SecurityAuditChart logs={auditLogs} departments={departments} />
+          <SecurityAuditChart logs={auditLogs} departments={departments} auditHeatmap={stats?.audit_heatmap} />
         </div>
 
         {/* BOTTOM RIGHT: DATA TABLE -> RECENT CRITICAL ACTIVITY / RECENT SIGN-UPS */}
@@ -219,10 +219,13 @@ function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColo
 /* ───────────────────────────────────────────────────────────────────────────
    2. MIDDLE LEFT: AREA / LINE CHART -> USER GROWTH & TRAFFIC TRENDS
    ─────────────────────────────────────────────────────────────────────────── */
-function TrafficTrendsChart({ totalUsers }) {
+function TrafficTrendsChart({ totalUsers, trafficTrends }) {
   const [timeRange, setTimeRange] = useState("7M"); // "7M", "30D", "24H"
 
   const dataSets = useMemo(() => {
+    if (trafficTrends && trafficTrends[timeRange]) {
+      return trafficTrends[timeRange];
+    }
     const base = totalUsers > 5 ? totalUsers : 120;
     if (timeRange === "7M") {
       return [
@@ -249,7 +252,7 @@ function TrafficTrendsChart({ totalUsers }) {
         { label: "18:00", traffic: 290, users: Math.round(base * 1.02) },
       ];
     }
-  }, [timeRange, totalUsers]);
+  }, [timeRange, totalUsers, trafficTrends]);
 
   const maxTraffic = Math.max(...dataSets.map(d => d.traffic), 10);
   const maxUsers = Math.max(...dataSets.map(d => d.users), 10);
@@ -469,7 +472,7 @@ function TrafficTrendsChart({ totalUsers }) {
 /* ───────────────────────────────────────────────────────────────────────────
    3. MIDDLE RIGHT: DONUT CHART -> STATUS BREAKDOWN / ROLE DISTRIBUTION
    ─────────────────────────────────────────────────────────────────────────── */
-function RoleDistributionChart({ usersByRole, totalUsers }) {
+function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deletedUsers }) {
   const [activeTab, setActiveTab] = useState("roles"); // "roles" or "status"
 
   const roleData = useMemo(() => {
@@ -494,15 +497,10 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
   }, [usersByRole, totalUsers]);
 
   const statusData = useMemo(() => {
-    const total = totalUsers > 0 ? totalUsers : 25;
-    let act = Math.floor(total * 0.80);
-    let idl = Math.floor(total * 0.12);
-    let rev = total - act - idl;
-    
-    if (total >= 3 && rev <= 0) {
-      rev = 1;
-      if (act > 1) act -= 1;
-    }
+    const act = typeof inactiveUsers === 'number' ? (totalUsers - inactiveUsers) : 20;
+    const idl = typeof inactiveUsers === 'number' ? inactiveUsers : 3;
+    const rev = typeof deletedUsers === 'number' ? deletedUsers : 2;
+    const total = act + idl + rev || 1;
 
     const actPct = Math.round((act / total) * 100);
     const idlPct = Math.round((idl / total) * 100);
@@ -513,7 +511,7 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
       { name: "Pending Review", count: idl, percent: idlPct, color: { hex: "#F59E0B", text: "text-amber-600", bg: "bg-amber-500" } },
       { name: "Restricted / Offboarded", count: rev, percent: revPct, color: { hex: "#E11D48", text: "text-rose-600", bg: "bg-rose-500" } },
     ];
-  }, [totalUsers]);
+  }, [totalUsers, inactiveUsers, deletedUsers]);
 
   const currentList = activeTab === "roles" ? roleData : statusData;
   const totalCount = currentList.reduce((acc, i) => acc + i.count, 0);
@@ -632,12 +630,12 @@ function RoleDistributionChart({ usersByRole, totalUsers }) {
 /* ───────────────────────────────────────────────────────────────────────────
    4. BOTTOM LEFT: BAR CHART / HEATMAP -> SECURITY AUDIT & SYSTEM LOGS
    ─────────────────────────────────────────────────────────────────────────── */
-function SecurityAuditChart({ logs, departments }) {
+function SecurityAuditChart({ logs, departments, auditHeatmap }) {
   const [viewMode, setViewMode] = useState("bar"); // "bar" (Actions), "heatmap" (Intensity), "dept" (Allocation)
 
   // Aggregate log actions or provide crisp defaults
   const actionStats = useMemo(() => {
-    if (logs && logs.length > 5) {
+    if (logs && logs.length > 0) {
       const counts = {};
       logs.forEach(l => {
         const act = (l.action || "ACCESS").toUpperCase().replace(/_/g, " ");
@@ -651,11 +649,11 @@ function SecurityAuditChart({ logs, departments }) {
       }));
     }
     return [
-      { label: "USER LOGIN / AUTH", count: 142, percent: 45, color: "#111A62" },
-      { label: "PRF REQUISITION", count: 68, percent: 28, color: "#E15B1D" },
-      { label: "201 FILE UPDATE", count: 54, percent: 22, color: "#0D9488" },
-      { label: "ROLE PERMISSION", count: 24, percent: 12, color: "#D97706" },
-      { label: "REPORT EXPORT", count: 16, percent: 8, color: "#4F46E5" },
+      { label: "USER LOGIN / AUTH", count: 0, percent: 0, color: "#111A62" },
+      { label: "PRF REQUISITION", count: 0, percent: 0, color: "#E15B1D" },
+      { label: "201 FILE UPDATE", count: 0, percent: 0, color: "#0D9488" },
+      { label: "ROLE PERMISSION", count: 0, percent: 0, color: "#D97706" },
+      { label: "REPORT EXPORT", count: 0, percent: 0, color: "#4F46E5" },
     ];
   }, [logs]);
 
@@ -663,18 +661,19 @@ function SecurityAuditChart({ logs, departments }) {
   const heatmapGrid = useMemo(() => {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const times = ["Morning (06-12)", "Afternoon (12-18)", "Evening (18-00)", "Night (00-06)"];
-    // Simulate intensity 1-10
-    const intensity = [
-      [7, 9, 5, 2],
-      [8, 10, 6, 1],
-      [6, 9, 7, 3],
-      [9, 8, 4, 1],
-      [8, 9, 5, 2],
-      [3, 4, 2, 1],
-      [2, 2, 1, 1],
+    
+    // Use database heatmap if available; otherwise show empty cells
+    const intensity = auditHeatmap || [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ];
     return { days, times, intensity };
-  }, []);
+  }, [auditHeatmap]);
 
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between">
@@ -764,13 +763,20 @@ function SecurityAuditChart({ logs, departments }) {
                   {heatmapGrid.times.map((_, tIdx) => {
                     const val = heatmapGrid.intensity[dIdx][tIdx];
                     // Color calculation based on intensity
-                    const isHigh = val >= 8;
-                    const isMed = val >= 5 && val < 8;
-                    const cellBg = isHigh ? "bg-[#E15B1D] text-white shadow-sm font-black" : isMed ? "bg-[#111A62]/80 text-white font-bold" : "bg-slate-100 text-slate-600 font-medium hover:bg-slate-200";
+                    const isHigh = val >= 10;
+                    const isMed = val >= 3 && val < 10;
+                    const isLow = val > 0 && val < 3;
+                    const cellBg = isHigh 
+                      ? "bg-[#E15B1D] text-white shadow-sm font-black" 
+                      : isMed 
+                        ? "bg-[#111A62]/80 text-white font-bold" 
+                        : isLow 
+                          ? "bg-slate-200 text-slate-700 font-semibold"
+                          : "bg-slate-50 text-slate-400 font-medium border border-slate-100";
                     return (
                       <td key={tIdx} className="p-1 text-center">
-                        <div className={cn("rounded-xl py-2 px-1 transition-transform hover:scale-105 cursor-pointer", cellBg)} title={`Activity Intensity Index: ${val}/10`}>
-                          {val * 12} ops
+                        <div className={cn("rounded-xl py-2 px-1 transition-transform hover:scale-105 cursor-pointer", cellBg)} title={`Activity Count: ${val} events`}>
+                          {val} ops
                         </div>
                       </td>
                     );
@@ -780,7 +786,7 @@ function SecurityAuditChart({ logs, departments }) {
             </tbody>
           </table>
           <div className="mt-2 flex items-center justify-end gap-3 text-[10px] font-bold text-slate-500">
-            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-slate-200" /> Normal</span>
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-slate-200" /> Low</span>
             <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-[#111A62]" /> Elevated</span>
             <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded bg-[#E15B1D]" /> Peak Ops</span>
           </div>
