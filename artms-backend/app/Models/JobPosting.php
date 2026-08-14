@@ -97,6 +97,11 @@ class JobPosting extends Model
         return $this->belongsTo(ManpowerRequest::class);
     }
 
+    public function manpowerRequests()
+    {
+        return $this->hasMany(ManpowerRequest::class, 'job_posting_id');
+    }
+
     public function applicants()
     {
         return $this->hasMany(Applicant::class);

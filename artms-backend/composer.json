@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
         "openai-php/client": "^0.20.1",
+        "phpoffice/phpspreadsheet": "*",
         "phpoffice/phpword": "*",
         "smalot/pdfparser": "*",
         "thiagoalessio/tesseract_ocr": "^2.13"

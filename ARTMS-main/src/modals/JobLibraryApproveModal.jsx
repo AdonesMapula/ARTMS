@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, FileText, BookOpen, Briefcase, DollarSign, Refres
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 import { calculateSalaryBreakdown } from "../utils/salaryUtils";
 
 export default function JobLibraryApproveModal({
@@ -57,7 +58,8 @@ export default function JobLibraryApproveModal({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       onClose={onClose}
       className="max-w-4xl"
@@ -274,9 +276,24 @@ export default function JobLibraryApproveModal({
                   </ul>
                </div>
             </div>
+            </div>
           </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {/* Full-screen blocking loading overlay for approval action */}
+      <ActionLoadingModal
+        open={saving}
+        type="process"
+        title={
+          status === "approved"
+            ? "Approving Job Entry..."
+            : status === "revised"
+            ? "Requesting Revisions..."
+            : "Rejecting Job Entry..."
+        }
+        message="Updating approval status and publishing changes. Please wait..."
+      />
+    </>
   );
 }

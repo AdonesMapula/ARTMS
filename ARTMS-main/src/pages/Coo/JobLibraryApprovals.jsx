@@ -27,8 +27,9 @@ const fmtMoney = (v) =>
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending (New)" },
+  { value: "pending", label: "Pending (All)" },
   { value: "resubmitted", label: "Resubmitted (Revised)" },
+  { value: "new_pending", label: "Pending (New)" },
   { value: "revised", label: "Needs Revision (HR)" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },

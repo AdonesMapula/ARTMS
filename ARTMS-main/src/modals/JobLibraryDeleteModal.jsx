@@ -2,27 +2,30 @@ import { Trash2, AlertTriangle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
 /**
  * JobLibraryDeleteModal - Delete Confirmation Modal
  */
-export default function JobLibraryDeleteModal({ open, job, onClose, onConfirm }) {
+export default function JobLibraryDeleteModal({ open, job, onClose, onConfirm, deleting = false }) {
   if (!open || !job) return null;
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
-      onClose={onClose}
+      onClose={deleting ? undefined : onClose}
       className="max-w-lg"
       title="Delete Job Entry?"
       description="This action cannot be undone"
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={deleting} className="cursor-pointer">
             Cancel
           </Button>
-          <Button variant="primary" onClick={onConfirm} className="bg-red-600 hover:bg-red-700 border-red-600">
-            Yes, Delete Entry
+          <Button variant="primary" onClick={onConfirm} disabled={deleting} className="bg-red-600 hover:bg-red-700 border-red-600 cursor-pointer gap-1.5">
+            <Trash2 size={15} />
+            <span>{deleting ? "Deleting..." : "Yes, Delete Entry"}</span>
           </Button>
         </div>
       }
@@ -118,5 +121,14 @@ export default function JobLibraryDeleteModal({ open, job, onClose, onConfirm })
           </div>
       </div>
     </Modal>
+
+    {/* Full-screen blocking loading overlay for Deletion */}
+    <ActionLoadingModal
+      open={deleting}
+      type="delete"
+      title="Deleting Job Entry..."
+      message={`Permanently removing "${job.job_title}" from the library. Please wait...`}
+    />
+    </>
   );
 }

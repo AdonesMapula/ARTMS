@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Briefcase, Building2, MapPin, Calendar, User, Plu
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
 const fmt = (d) =>
   d
@@ -204,7 +205,8 @@ export default function JobPostingApproveModal({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       onClose={onClose}
       className="max-w-3xl"
@@ -386,5 +388,20 @@ export default function JobPostingApproveModal({
         )}
       </div>
     </Modal>
+
+    {/* Full-screen blocking loading overlay for approval action */}
+    <ActionLoadingModal
+      open={saving}
+      type="process"
+      title={
+        status === "approved"
+          ? "Approving Job Posting..."
+          : status === "revised"
+          ? "Requesting Revisions..."
+          : "Rejecting Job Posting..."
+      }
+      message="Updating posting approval status and syncing with Careers board. Please wait..."
+    />
+    </>
   );
 }

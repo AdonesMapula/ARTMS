@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, FileText, Building2, User, Calendar, Plus, Trash2
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
 const fmt = (d) =>
   d
@@ -101,7 +102,8 @@ export default function ManpowerApproveModal({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       onClose={onClose}
       className="max-w-3xl"
@@ -378,5 +380,20 @@ export default function ManpowerApproveModal({
         )}
       </div>
     </Modal>
+
+    {/* Full-screen blocking loading overlay for approval action */}
+    <ActionLoadingModal
+      open={saving}
+      type="process"
+      title={
+        status === "approved"
+          ? "Approving Manpower Request..."
+          : status === "revised"
+          ? "Requesting PRF Revisions..."
+          : "Rejecting Manpower Request..."
+      }
+      message="Updating request approval status and notifying department. Please wait..."
+    />
+    </>
   );
 }

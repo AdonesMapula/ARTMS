@@ -21,15 +21,19 @@ class JobLibraryController extends Controller
                 if ($request->approval_status === 'resubmitted') {
                     $q->where('approval_status', 'pending')
                       ->whereNotNull('approval_remarks');
-                } else if ($request->approval_status === 'pending') {
+                } else if ($request->approval_status === 'new_pending') {
                     $q->where('approval_status', 'pending')
                       ->whereNull('approval_remarks');
+                } else if ($request->approval_status === 'pending') {
+                    $q->where('approval_status', 'pending');
+                } else if ($request->approval_status === 'revised' || $request->approval_status === 'needs_revision') {
+                    $q->whereIn('approval_status', ['revised', 'needs_revision']);
                 } else {
                     $q->where('approval_status', $request->approval_status);
                 }
             })
             ->orderBy('created_at', 'desc')
-            ->paginate($request->per_page ?? 15);
+            ->paginate($request->per_page ?? 100);
 
         return response()->json($jobs);
     }
@@ -93,11 +97,14 @@ class JobLibraryController extends Controller
         $data = $request->validate([
             'job_title'        => ['sometimes', 'string', 'max:255'],
             'job_description'  => ['sometimes', 'string'],
+            'job_category'     => ['sometimes', 'nullable', 'string'],
+            'employment_type'  => ['sometimes', 'nullable', 'string'],
             'qualifications'   => ['sometimes', 'array'],
             'responsibilities' => ['sometimes', 'array'],
             'salary_type'      => ['sometimes', 'in:exact,range'],
             'salary_min'       => ['nullable', 'numeric'],
             'salary_max'       => ['nullable', 'numeric'],
+            'hr_remarks'       => ['nullable', 'string'],
         ]);
 
         $old = $jobLibrary->toArray();
@@ -109,7 +116,6 @@ class JobLibraryController extends Controller
                 $oldRemarks = $jobLibrary->approval_remarks ? trim(str_replace('[COO Requested]:', '', explode('| [HR Updated]:', $jobLibrary->approval_remarks)[0])) : "No remarks";
                 $data['approval_remarks'] = "[COO Requested]: " . $oldRemarks . " | [HR Updated]: " . $request->hr_remarks;
             }
-            // If hr_remarks is missing, we still want to keep the old COO remarks intact, so we don't clear it.
         }
 
         $jobLibrary->update($data);

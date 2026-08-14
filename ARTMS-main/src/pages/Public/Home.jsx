@@ -171,8 +171,14 @@ function Reveal({ children, delay = 0, className = "" }) {
 }
 
 function StatCounter({ value, suffix = "" }) {
-  const numericValue = parseInt(value.replace(/\D/g, ""), 10);
-  const [count, setIsActive] = useCountAnimation(numericValue, 1800, 0);
+  const isRatio = typeof value === "string" && value.includes("/");
+  const [ratioPart1, ratioPart2] = isRatio ? value.split("/") : [value, ""];
+
+  const num1 = parseInt(String(ratioPart1).replace(/\D/g, ""), 10) || 0;
+  const num2 = isRatio ? (parseInt(String(ratioPart2).replace(/\D/g, ""), 10) || 0) : 0;
+
+  const [count1, setIsActive1] = useCountAnimation(num1, 1800, 0);
+  const [count2, setIsActive2] = useCountAnimation(num2, 1800, 0);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -181,7 +187,8 @@ function StatCounter({ value, suffix = "" }) {
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsActive(true);
+          setIsActive1(true);
+          if (isRatio) setIsActive2(true);
           io.disconnect();
         }
       },
@@ -189,11 +196,11 @@ function StatCounter({ value, suffix = "" }) {
     );
     io.observe(node);
     return () => io.disconnect();
-  }, [setIsActive]);
+  }, [isRatio]);
 
   return (
     <p ref={ref} className="text-3xl font-extrabold sm:text-4xl" style={{ color: TOKENS.accent }}>
-      {count}{suffix}
+      {isRatio ? `${count1}/${count2}` : `${count1}${suffix}`}
     </p>
   );
 }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { FileText, Hash, DollarSign, Briefcase, List, FileCheck, Plus, Trash2, GraduationCap, X, FolderPlus, Edit, AlertTriangle, XCircle } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { FileText, Hash, DollarSign, Briefcase, List, FileCheck, Plus, Trash2, GraduationCap, X, FolderPlus, Edit, AlertTriangle, XCircle, Upload, Sparkles, Loader2, CheckCircle2, Download, FileSpreadsheet, ChevronDown, ChevronUp, Copy, Check, HelpCircle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 import api from "../services/api";
 import { calculateSalaryBreakdown } from "../utils/salaryUtils";
 import { useToast } from "../context/ToastContext";
@@ -61,11 +62,199 @@ export default function JobLibraryFormModal({
   const [blockTitle, setBlockTitle] = useState("");
   const [blockDetails, setBlockDetails] = useState([]);
 
+  // Auto Input state
+  const [inputMode, setInputMode] = useState("manual"); // "manual" | "auto"
+  const [isDragging, setIsDragging] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseStatus, setParseStatus] = useState(null); // null | "success" | "error"
+  const [parseMessage, setParseMessage] = useState("");
+  const [parseMissingFields, setParseMissingFields] = useState([]);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [showFormatGuide, setShowFormatGuide] = useState(false);
+  const [copiedFormat, setCopiedFormat] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const ACCEPTED_TYPES = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"];
+
+  const SAMPLE_DOC_TEXT = `JOB TITLE: Customer Service Representative
+JOB CATEGORY: Operations
+EMPLOYMENT TYPE: full_time
+SALARY RANGE: 25000 - 35000
+
+JOB DESCRIPTION:
+We are looking for a dedicated Customer Service Representative to handle inquiries, resolve technical and account issues, and deliver exceptional support across multiple channels.
+
+QUALIFICATIONS:
+Education & Experience:
+- High school diploma, GED, or Bachelor's degree
+- 1+ years experience in customer service, call center, or client support
+
+Key Skills:
+- Exceptional verbal and written communication
+- Experience with CRM platforms (Salesforce, Zendesk, etc.)
+- Strong problem-solving and conflict resolution ability
+
+RESPONSIBILITIES:
+Core Duties:
+- Answer incoming phone calls, emails, and live chat inquiries promptly
+- Troubleshoot customer complaints and escalate complex issues when needed
+- Maintain in-depth knowledge of company products and services
+
+Documentation & Reporting:
+- Log customer interactions and ticket statuses accurately in the database
+- Provide weekly feedback to team leads on common user complaints`;
+
+  const downloadCsvTemplate = () => {
+    const csvContent = `"Job Title","Job Category","Employment Type","Salary Min","Salary Max","Job Description","Qualifications","Responsibilities"
+"Customer Service Representative","Operations","full_time","25000","35000","We are looking for a dedicated Customer Service Representative to handle customer inquiries, resolve technical issues, and provide exceptional customer satisfaction.","[Education & Experience]
+- High school diploma, GED, or Bachelor's degree
+- 1+ years experience in customer support or call center
+[Key Skills]
+- Exceptional verbal and written communication
+- Experience with CRM software (Salesforce, Zendesk)
+- Problem-solving and emotional intelligence","[Core Duties]
+- Handle incoming inquiries via phone, email, and chat
+- Troubleshoot client issues and escalate when necessary
+- Maintain up-to-date knowledge of company products
+[Documentation]
+- Log all tickets and interaction notes in CRM system"`;
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Job_Library_Template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Template Downloaded", "Job_Library_Template.csv downloaded successfully.");
+  };
+
+  const downloadDocTemplate = () => {
+    const blob = new Blob([SAMPLE_DOC_TEXT], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Job_Library_Template.txt");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Template Downloaded", "Job_Library_Template.txt downloaded successfully.");
+  };
+
+  const handleCopySample = () => {
+    navigator.clipboard.writeText(SAMPLE_DOC_TEXT);
+    setCopiedFormat(true);
+    toast.success("Copied to Clipboard", "Sample template text copied to your clipboard.");
+    setTimeout(() => setCopiedFormat(false), 2000);
+  };
+
+  const handleDocumentUpload = useCallback(async (file) => {
+    if (!file) return;
+
+    const ext = "." + file.name.split(".").pop().toLowerCase();
+    if (!ACCEPTED_TYPES.includes(ext)) {
+      toast.error("Invalid File", `Please upload one of: ${ACCEPTED_TYPES.join(", ")}`);
+      return;
+    }
+
+    setUploadedFileName(file.name);
+    setIsParsing(true);
+    setParseStatus(null);
+    setParseMessage("");
+    setParseMissingFields([]);
+
+    try {
+      const formPayload = new FormData();
+      formPayload.append("document", file);
+
+      const res = await api.post("/job-library/parse-document", formPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const { success, data, message, missing_fields } = res.data || {};
+
+      if (success && data && (data.job_title || data.job_description)) {
+        // Auto-fill form fields
+        setForm((prev) => ({
+          ...prev,
+          job_title: data.job_title || prev.job_title,
+          job_description: data.job_description || prev.job_description,
+          job_category: data.job_category || prev.job_category,
+          employment_type: data.employment_type || prev.employment_type,
+          salary_min: data.salary_min ?? prev.salary_min,
+          salary_max: data.salary_max ?? prev.salary_max,
+          salary_type: (data.salary_min && data.salary_max && data.salary_min !== data.salary_max) ? "range" : "exact",
+          qualifications: Array.isArray(data.qualifications) && data.qualifications.length > 0 ? data.qualifications : prev.qualifications,
+          responsibilities: Array.isArray(data.responsibilities) && data.responsibilities.length > 0 ? data.responsibilities : prev.responsibilities,
+        }));
+
+        setParseStatus("success");
+        setParseMessage(message || "Document parsed successfully!");
+        setParseMissingFields([]);
+        toast.success("Auto-Fill Complete", "All fields have been populated from your document. Switching to Manual Input for review.");
+
+        // Auto-switch to manual tab after a brief delay
+        setTimeout(() => setInputMode("manual"), 1200);
+      } else {
+        setParseStatus("error");
+        const msg = message || "The uploaded file does not contain recognized job description details.";
+        setParseMessage(msg);
+        setParseMissingFields(missing_fields || []);
+        toast.warning("Incompatible Document", msg);
+      }
+    } catch (err) {
+      console.error("Document parse error:", err);
+      setParseStatus("error");
+      const errorMsg = err.response?.data?.message || "The uploaded file could not be parsed as a Job Description.";
+      const missing = err.response?.data?.missing_fields || [];
+      setParseMessage(errorMsg);
+      setParseMissingFields(missing);
+      toast.error("Incompatible File Uploaded", errorMsg);
+    } finally {
+      setIsParsing(false);
+    }
+  }, [setForm, toast]);
+
+  // Drag and drop handlers
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleDocumentUpload(file);
+  }, [handleDocumentUpload]);
+
+  const handleFileSelect = useCallback((e) => {
+    const file = e.target?.files?.[0];
+    if (file) handleDocumentUpload(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [handleDocumentUpload]);
+
   useEffect(() => {
     if (open) {
       fetchCategories();
       setShowCategoryModal(false);
       setNewCategory("");
+      setInputMode("manual");
+      setIsParsing(false);
+      setParseStatus(null);
+      setParseMessage("");
+      setUploadedFileName("");
       const init = initialData || data || {};
       setInternalForm({
         id: init.id,
@@ -215,6 +404,313 @@ export default function JobLibraryFormModal({
         }
       >
         <form onSubmit={(e) => { e.preventDefault(); onSave(form); }} className="space-y-6">
+          {/* Input Mode Tabs (only in create mode) */}
+          {mode === "create" && (
+            <div className="flex items-center gap-1 rounded-xl bg-slate-100/90 p-1 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setInputMode("manual")}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 cursor-pointer ${
+                  inputMode === "manual"
+                    ? "bg-[#111A62] text-white shadow-sm font-bold"
+                    : "text-slate-600 hover:text-[#111A62] hover:bg-slate-200/60 font-semibold"
+                }`}
+              >
+                <Edit size={15} />
+                Manual Input
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode("auto")}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 cursor-pointer ${
+                  inputMode === "auto"
+                    ? "bg-[#111A62] text-white shadow-sm font-bold"
+                    : "text-slate-600 hover:text-[#111A62] hover:bg-slate-200/60 font-semibold"
+                }`}
+              >
+                <Sparkles size={15} />
+                Auto Input
+              </button>
+            </div>
+          )}
+
+          {/* Auto Input Mode */}
+          {mode === "create" && inputMode === "auto" && (
+            <div className="space-y-5">
+              {/* Upload Dropzone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !isParsing && fileInputRef.current?.click()}
+                className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-300 cursor-pointer ${
+                  isParsing
+                    ? "border-[#111A62]/40 bg-[#111A62]/5 pointer-events-none"
+                    : isDragging
+                      ? "border-[#111A62] bg-[#111A62]/10 scale-[1.01]"
+                      : "border-slate-300 bg-slate-50/50 hover:border-[#111A62]/50 hover:bg-[#111A62]/5"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_TYPES.join(",")}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {isParsing ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                      <div className="h-14 w-14 rounded-2xl bg-[#111A62]/10 flex items-center justify-center">
+                        <Loader2 size={28} className="text-[#111A62] animate-spin" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#111A62]">Parsing Document...</p>
+                      <p className="mt-1 text-xs text-slate-500">{uploadedFileName}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">AI is extracting job information from your document</p>
+                    </div>
+                  </div>
+                ) : parseStatus === "success" ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-14 w-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                      <CheckCircle2 size={28} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-700">Auto-Fill Complete!</p>
+                      <p className="mt-1 text-xs text-slate-500">{parseMessage}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">Switching to Manual Input for review...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-14 w-14 rounded-2xl bg-[#111A62]/8 flex items-center justify-center">
+                      <Upload size={28} className="text-[#111A62]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">
+                        Drag & drop your document here
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        or <span className="text-[#111A62] font-semibold underline underline-offset-2">click to browse</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Supported Formats */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {[
+                  { ext: "PDF", color: "bg-red-50 text-red-600 border-red-100" },
+                  { ext: "DOCX", color: "bg-blue-50 text-blue-600 border-blue-100" },
+                  { ext: "DOC", color: "bg-blue-50 text-blue-600 border-blue-100" },
+                  { ext: "XLSX", color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+                  { ext: "XLS", color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+                  { ext: "CSV", color: "bg-amber-50 text-amber-600 border-amber-100" },
+                  { ext: "TXT", color: "bg-slate-50 text-slate-600 border-slate-200" },
+                ].map(({ ext, color }) => (
+                  <span
+                    key={ext}
+                    className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[11px] font-bold ${color}`}
+                  >
+                    {ext}
+                  </span>
+                ))}
+              </div>
+
+              {/* Error / Incompatible File Warning */}
+              {parseStatus === "error" && (
+                <div className="rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50/90 via-white to-red-50/50 p-4.5 shadow-xs">
+                  <div className="flex items-start gap-3.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 font-bold">
+                      <AlertTriangle size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                          <span>Incompatible or Unrecognized Document</span>
+                        </h4>
+                        {uploadedFileName && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-100/80 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-800 border border-amber-200 truncate max-w-[220px]">
+                            {uploadedFileName}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-1 text-xs text-amber-800 leading-relaxed font-medium">
+                        {parseMessage}
+                      </p>
+
+                      {parseMissingFields.length > 0 && (
+                        <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-bold text-amber-900">Missing Elements:</span>
+                          {parseMissingFields.map((field) => (
+                            <span key={field} className="inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 border border-red-200">
+                              ✕ {field.replace(/_/g, " ").toUpperCase()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action Guidance */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-amber-200/60">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParseStatus(null);
+                            setParseMessage("");
+                            setParseMissingFields([]);
+                            fileInputRef.current?.click();
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#111A62] bg-[#111A62] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#111A62]/90 cursor-pointer shadow-2xs"
+                        >
+                          <Upload size={13} />
+                          <span>Upload Another File</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowFormatGuide(true)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                        >
+                          <HelpCircle size={13} />
+                          <span>View Expected Format</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setInputMode("manual")}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer ml-auto"
+                        >
+                          <Edit size={13} />
+                          <span>Fill in Manually</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Download Ready-to-Use Templates Banner */}
+              <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-blue-50/50 p-4.5 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-indigo-100/70">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111A62] text-white">
+                        <Download size={14} />
+                      </div>
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#111A62]">
+                        Download Standard Templates
+                      </h4>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Download a pre-formatted template with all required fields, fill it in, and upload it here.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={downloadCsvTemplate}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100/80 px-3 py-1.5 text-xs font-bold text-emerald-800 transition-all duration-150 shadow-2xs hover:shadow-xs cursor-pointer active:scale-98"
+                      title="Download CSV / Excel Template"
+                    >
+                      <FileSpreadsheet size={14} className="text-emerald-600" />
+                      <span>Excel / CSV Template</span>
+                      <Download size={12} className="text-emerald-600 opacity-75" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={downloadDocTemplate}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-indigo-50/80 hover:bg-indigo-100/80 px-3 py-1.5 text-xs font-bold text-[#111A62] transition-all duration-150 shadow-2xs hover:shadow-xs cursor-pointer active:scale-98"
+                      title="Download Word / Text Document Template"
+                    >
+                      <FileText size={14} className="text-indigo-600" />
+                      <span>Word / Text Template</span>
+                      <Download size={12} className="text-indigo-600 opacity-75" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Format Guide Toggle */}
+                <div className="pt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormatGuide(!showFormatGuide)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111A62] hover:text-indigo-800 transition-colors cursor-pointer"
+                  >
+                    <HelpCircle size={13} />
+                    <span>{showFormatGuide ? "Hide" : "View"} Expected Format & Field Guide</span>
+                    {showFormatGuide ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  </button>
+
+                  {/* Expandable Format Guide */}
+                  {showFormatGuide && (
+                    <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs transition-all duration-200">
+                      <div>
+                        <h5 className="font-bold text-slate-800 text-xs flex items-center justify-between">
+                          <span>📋 Expected Document / Spreadsheet Fields:</span>
+                          <button
+                            type="button"
+                            onClick={handleCopySample}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#111A62] hover:underline cursor-pointer"
+                          >
+                            {copiedFormat ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                            <span>{copiedFormat ? "Copied!" : "Copy Sample Text"}</span>
+                          </button>
+                        </h5>
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                          <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                            <span className="font-bold text-slate-700 block">1. Job Title & Category</span>
+                            <span className="text-slate-500">e.g. Customer Service Representative | Operations</span>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                            <span className="font-bold text-slate-700 block">2. Employment Type & Salary</span>
+                            <span className="text-slate-500">full_time, part_time, etc. | ₱25,000 - ₱35,000</span>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                            <span className="font-bold text-slate-700 block">3. Job Description</span>
+                            <span className="text-slate-500">A clear 2-4 sentence overview of the role and goals</span>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                            <span className="font-bold text-slate-700 block">4. Qualifications & Responsibilities</span>
+                            <span className="text-slate-500">Grouped into category titles with bullet point items</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-2.5">
+                        <span className="font-bold text-slate-700 text-[11px] block mb-1.5">📝 Sample Text Layout Preview:</span>
+                        <pre className="rounded-lg bg-slate-900 text-slate-100 p-3 text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre">
+{SAMPLE_DOC_TEXT}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* How it works */}
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <p className="text-xs font-semibold text-blue-900">
+                  ✨ How Auto Input Works
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-blue-700">
+                  <li>• Download one of the templates above or use your own file</li>
+                  <li>• Upload it in PDF, Word (DOCX/DOC), Excel (XLSX/XLS), CSV, or TXT format</li>
+                  <li>• AI automatically extracts job title, description, salary, qualifications & responsibilities</li>
+                  <li>• Review and fine-tune all auto-populated fields in Manual Input mode before submitting</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Input Mode (original form content) */}
+          {(inputMode === "manual" || mode !== "create") && (
+          <>
           {/* COO Feedback Banner for Rejected Entries */}
           {isRejected && (
             <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-amber-50/60 p-4 shadow-sm">
@@ -614,6 +1110,8 @@ export default function JobLibraryFormModal({
               <li>• Qualifications and responsibilities auto-fill PRF forms</li>
             </ul>
           </div>
+          </>
+          )}
         </form>
       </Modal>
 
@@ -804,6 +1302,26 @@ export default function JobLibraryFormModal({
           </div>
         </div>
       </Modal>
+
+      {/* Full-screen blocking loading overlay for saving (Create/Edit) */}
+      <ActionLoadingModal
+        open={saving}
+        type={mode === "create" ? "create" : "edit"}
+        title={mode === "create" ? "Creating Job Entry..." : "Updating Job Entry..."}
+        message={
+          mode === "create"
+            ? "Submitting new job entry to COO for approval. Please wait..."
+            : "Updating job entry details and resubmitting to COO. Please wait..."
+        }
+      />
+
+      {/* Full-screen blocking loading overlay for AI document parsing */}
+      <ActionLoadingModal
+        open={isParsing}
+        type="upload"
+        title="Analyzing Document..."
+        message={`AI is parsing ${uploadedFileName || "your file"} and mapping fields. Please wait...`}
+      />
     </>
   );
 }

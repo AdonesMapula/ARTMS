@@ -14,6 +14,9 @@ const applicantService = {
   /** Get single applicant details */
   getById: (id) => api.get(`/applicants/${id}`),
 
+  /** Stream/Download applicant resume */
+  getResume: (id) => api.get(`/applicants/${id}/resume`, { responseType: 'blob' }),
+
   /** Update applicant status/details */
   update: (id, data) => api.patch(`/applicants/${id}`, data),
   updateStatus: (id, status) => api.patch(`/applicants/${id}`, { status }),
