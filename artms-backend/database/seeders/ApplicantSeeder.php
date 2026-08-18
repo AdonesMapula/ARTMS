@@ -12,9 +12,13 @@ class ApplicantSeeder extends Seeder
     public function run(): void
     {
         // Truncate cleanly
-        Schema::disableForeignKeyConstraints();
-        Applicant::truncate();
-        Schema::enableForeignKeyConstraints();
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE applicants CASCADE;');
+        } else {
+            Schema::disableForeignKeyConstraints();
+            Applicant::truncate();
+            Schema::enableForeignKeyConstraints();
+        }
 
         $postings = JobPosting::with('jobLibrary')->get();
 

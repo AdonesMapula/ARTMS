@@ -13,10 +13,14 @@ class JobPostingSeeder extends Seeder
     public function run(): void
     {
         // Clean out old job postings & library entries to prevent old stale jobs from showing
-        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-        JobPosting::truncate();
-        JobLibrary::truncate();
-        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE job_postings, job_library CASCADE;');
+        } else {
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+            JobPosting::truncate();
+            JobLibrary::truncate();
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+        }
 
         $hrAdmin = User::where('email', 'hradmin@artms.com')->first();
         $coo     = User::where('email', 'coo@artms.com')->first();
