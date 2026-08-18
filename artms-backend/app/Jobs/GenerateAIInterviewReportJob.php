@@ -117,7 +117,7 @@ class GenerateAIInterviewReportJob implements ShouldQueue
         // ── 2. Call Google Gemini with Dual-Key Fallback ───────────────────
         $keys = \App\Services\GeminiService::getApiKeys();
         $aiData = null;
-        $modelUsed = 'gemini-2.5-flash';
+        $modelUsed = 'gemini-3.6-flash';
 
         if (! empty($keys)) {
             $prompt = <<<PROMPT

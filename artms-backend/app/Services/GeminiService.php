@@ -11,6 +11,7 @@ class GeminiService
      * Primary and reserve Gemini models in order of preference.
      */
     protected static array $models = [
+        'gemini-3.6-flash',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
         'gemini-1.5-flash',
@@ -85,7 +86,10 @@ class GeminiService
                         ];
                     }
 
-                    $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    $response = Http::withHeaders([
+                        'Content-Type'   => 'application/json',
+                        'x-goog-api-key' => $apiKey,
+                    ])
                         ->withOptions(['verify' => false])
                         ->timeout(60)
                         ->post($url, $payload);
@@ -167,7 +171,10 @@ class GeminiService
                         ];
                     }
 
-                    $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    $response = Http::withHeaders([
+                        'Content-Type'   => 'application/json',
+                        'x-goog-api-key' => $apiKey,
+                    ])
                         ->withOptions(['verify' => false])
                         ->timeout(60)
                         ->post($url, $payload);
