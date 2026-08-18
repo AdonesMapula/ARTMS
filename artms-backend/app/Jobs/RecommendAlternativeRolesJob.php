@@ -142,27 +142,23 @@ EOT;
             $systemInstruction = 'You are a precise HR evaluator. Respond ONLY with valid, raw JSON array. No markdown, no code fences, no extra text.';
             $recommendations = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 1024);
 
-                if (is_array($recommendations) && count($recommendations) > 0) {
-                    // Extract job IDs
-                    $recommendedJobIds = collect($recommendations)->pluck('job_posting_id')->toArray();
-                    $matchedJobs = JobPosting::with('jobLibrary')->whereIn('id', $recommendedJobIds)->get();
-                    
-                    if ($matchedJobs->isNotEmpty()) {
-                        // We attach the AI's reason to the matched job model dynamically for the blade template
-                        foreach ($matchedJobs as $matchedJob) {
-                            $matchData = collect($recommendations)->firstWhere('job_posting_id', $matchedJob->id);
-                            $matchedJob->ai_reason = $matchData['reason'] ?? 'Your profile aligns well with this role.';
-                        }
-                        
-                        NotificationService::sendAlternativeRoleRecommendationEmail($applicant, $matchedJobs, $this->remarks);
-                        return;
+            if (is_array($recommendations) && count($recommendations) > 0) {
+                // Extract job IDs
+                $recommendedJobIds = collect($recommendations)->pluck('job_posting_id')->toArray();
+                $matchedJobs = JobPosting::with('jobLibrary')->whereIn('id', $recommendedJobIds)->get();
+                
+                if ($matchedJobs->isNotEmpty()) {
+                    // We attach the AI's reason to the matched job model dynamically for the blade template
+                    foreach ($matchedJobs as $matchedJob) {
+                        $matchData = collect($recommendations)->firstWhere('job_posting_id', $matchedJob->id);
+                        $matchedJob->ai_reason = $matchData['reason'] ?? 'Your profile aligns well with this role.';
                     }
+                    
+                    NotificationService::sendAlternativeRoleRecommendationEmail($applicant, $matchedJobs, $this->remarks);
+                    return;
                 }
-            } else {
-                Log::error('RecommendAlternativeRolesJob API Error: ' . $response->body());
             }
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('RecommendAlternativeRolesJob Exception: ' . $e->getMessage());
         }
 
