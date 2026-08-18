@@ -30,6 +30,27 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::prefix('public')->group(function () {
+    Route::get('health', function () {
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $dbName = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+            $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+            $jobsCount = \App\Models\JobPosting::count();
+            $usersCount = \App\Models\User::count();
+            return response()->json([
+                'status' => 'connected',
+                'database' => $dbName,
+                'driver' => $driver,
+                'job_postings_count' => $jobsCount,
+                'users_count' => $usersCount,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    });
     Route::get('boot', [AppBootController::class, 'publicBoot']);
     Route::get('job-postings', [JobPostingController::class, 'publicIndex']);
     Route::get('job-postings/{jobPosting}', [JobPostingController::class, 'show']);
