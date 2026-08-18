@@ -169,39 +169,39 @@ EOT;
         try {
             $isGroq = str_starts_with($apiKey, 'gsk_');
             $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
-            $model = $isGroq ? 'llama-3.3-70b-versatile' : 'grok-4.5';
+            $modelsToTry = $isGroq
+                ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'mixtral-8x7b-32768']
+                : ['grok-4.5', 'grok-3-mini', 'grok-2-latest', 'grok-beta'];
 
-            $response = Http::withToken($apiKey)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->timeout(15)
-                ->post($baseUri, [
-                    'model' => $model,
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
+            foreach ($modelsToTry as $model) {
+                $response = Http::withToken($apiKey)
+                    ->withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(15)
+                    ->post($baseUri, [
+                        'model' => $model,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => $prompt
+                            ]
                         ],
-                        [
-                            'role' => 'user',
-                            'content' => $prompt
-                        ]
-                    ],
-                    'temperature' => 0.1,
-                    'max_tokens' => 2048,
-                ]);
+                        'temperature' => 0.1,
+                        'max_tokens' => 2048,
+                    ]);
 
-            if ($response->successful()) {
-                $aiText = $response->json('choices.0.message.content') ?? '{}';
-                
-                // Clean codeblocks
-                $aiText = preg_replace('/```json\s*/i', '', $aiText);
-                $aiText = preg_replace('/```\s*/', '', $aiText);
-                $aiText = trim($aiText);
+                if ($response->successful()) {
+                    $aiText = $response->json('choices.0.message.content') ?? '{}';
+                    $aiText = preg_replace('/^```json\s*/i', '', trim($aiText));
+                    $aiText = preg_replace('/```\s*$/', '', $aiText);
 
-                $extracted = json_decode($aiText, true);
-                if (is_array($extracted)) {
-                    // Ensure all schema keys exist in the response
-                    return array_merge($this->emptyParsedData(), $extracted);
+                    $extracted = json_decode(trim($aiText), true);
+                    if (is_array($extracted)) {
+                        return array_merge($this->emptyParsedData(), $extracted);
+                    }
                 }
             }
         } catch (\Throwable $e) {

@@ -53,6 +53,15 @@ class Employee extends Model
         'clearance_processed' => 'boolean',
     ];
 
+    public function getAvatarAttribute($value): ?string
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http://')) {
+            return 'https://' . substr($value, 7);
+        }
+        return $value;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

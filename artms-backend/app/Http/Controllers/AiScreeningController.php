@@ -174,49 +174,66 @@ Respond with ONLY valid JSON — no markdown, no extra text:
 }
 EOT;
 
-        // ── 4. Call Groq (OpenAI-compatible) ────────────────────────────────
-        $apiKey = config('services.groq.key');
+        // ── 4. Call Groq / xAI (OpenAI-compatible) with fallback ─────────
+        $apiKey = config('services.groq.key') ?? config('services.xai.key') ?? env('GROQ_API_KEY') ?? env('XAI_API_KEY');
 
         if (empty($apiKey)) {
-            return response()->json(['message' => 'Groq API key is not configured. Add GROQ_API_KEY to your .env file.'], 503);
+            return response()->json(['message' => 'AI API key is not configured. Add GROQ_API_KEY or XAI_API_KEY to your .env file.'], 503);
         }
 
-        try {
-            $response = Http::withToken($apiKey)
-                ->withOptions(['verify' => false])
-                ->timeout(90)
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile',
-                    'messages'    => [
-                        [
-                            'role'    => 'system',
-                            'content' => 'You are a precise HR screening AI. Always respond with valid JSON only. No markdown, no code fences, no extra text — just the raw JSON object.',
+        $isGroq = str_starts_with($apiKey, 'gsk_');
+        $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
+
+        // Models to try in order of capability
+        $modelsToTry = $isGroq
+            ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'mixtral-8x7b-32768']
+            : ['grok-4.5', 'grok-3-mini', 'grok-2-latest', 'grok-beta'];
+
+        $aiData = null;
+        $lastError = null;
+
+        foreach ($modelsToTry as $model) {
+            try {
+                $response = Http::withToken($apiKey)
+                    ->withOptions(['verify' => false])
+                    ->timeout(60)
+                    ->post($baseUri, [
+                        'model'       => $model,
+                        'messages'    => [
+                            [
+                                'role'    => 'system',
+                                'content' => 'You are a precise HR screening AI. Always respond with valid JSON only. No markdown, no code fences, no extra text — just the raw JSON object.',
+                            ],
+                            ['role' => 'user', 'content' => $prompt],
                         ],
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                    'temperature' => 0.2,
-                    'max_tokens'  => 1024,
-                ]);
+                        'temperature' => 0.2,
+                        'max_tokens'  => 1024,
+                    ]);
 
-            if (! $response->successful()) {
-                $errMsg = $response->json('error.message', 'Unknown error');
-                return response()->json(['message' => 'Groq AI service error: ' . $errMsg], 503);
+                if ($response->successful()) {
+                    $rawContent = $response->json('choices.0.message.content');
+
+                    // Strip any accidental markdown fences
+                    $rawContent = preg_replace('/^```json\s*/i', '', trim($rawContent ?? ''));
+                    $rawContent = preg_replace('/```\s*$/', '', $rawContent);
+
+                    $parsed = json_decode($rawContent, true);
+                    if ($parsed && isset($parsed['ai_score'])) {
+                        $aiData = $parsed;
+                        break; // Success!
+                    }
+                } else {
+                    $lastError = $response->json('error.message', 'HTTP ' . $response->status() . ' error');
+                    \Log::warning("AI Screening model {$model} failed: {$lastError}. Trying next fallback...");
+                }
+            } catch (\Exception $e) {
+                $lastError = $e->getMessage();
+                \Log::warning("AI Screening request exception for {$model}: {$lastError}. Trying next fallback...");
             }
+        }
 
-            $rawContent = $response->json('choices.0.message.content');
-
-            // Strip any accidental markdown fences
-            $rawContent = preg_replace('/^```json\s*/i', '', trim($rawContent ?? ''));
-            $rawContent = preg_replace('/```\s*$/', '', $rawContent);
-
-            $aiData = json_decode($rawContent, true);
-
-            if (! $aiData || ! isset($aiData['ai_score'])) {
-                return response()->json(['message' => 'Failed to parse Groq AI response. Raw: ' . substr($rawContent, 0, 200)], 500);
-            }
-
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'AI screening failed: ' . $e->getMessage()], 500);
+        if (! $aiData) {
+            return response()->json(['message' => 'AI screening failed: ' . ($lastError ?? 'No models could process the request.')], 503);
         }
 
         // ── 5. Apply fit thresholds ──────────────────────────────────────────

@@ -47,6 +47,10 @@ return [
         'key' => env('GROQ_API_KEY'),
     ],
 
+    'xai' => [
+        'key' => env('XAI_API_KEY'),
+    ],
+
     'livekit' => [
         'url'         => env('LIVEKIT_URL', env('LIVEKIT_HOST', 'wss://artms-8tdvtcz7.livekit.cloud')),
         'key'         => env('LIVEKIT_API_KEY'),

@@ -48,6 +48,15 @@ class User extends Authenticatable
         'password'          => 'hashed',
     ];
 
+    public function getAvatarAttribute($value): ?string
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http://')) {
+            return 'https://' . substr($value, 7);
+        }
+        return $value;
+    }
+
     // ── Relationships ──────────────────────────────
 
     public function department()
