@@ -19,5 +19,8 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # Discover packages at container runtime
 php artisan package:discover --ansi || true
 
+# Run database migrations automatically if connected
+php artisan migrate --force || true
+
 # Start Apache in foreground
 exec apache2-foreground
