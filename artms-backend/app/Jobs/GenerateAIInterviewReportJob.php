@@ -114,10 +114,14 @@ class GenerateAIInterviewReportJob implements ShouldQueue
             }
         }
 
-        // ── 2. Call Google Gemini with Dual-Key Fallback ───────────────────
+        // ── 2. Call Google Gemini with Guardrails & Key Fallback ───────────
         $keys = \App\Services\GeminiService::getApiKeys();
         $aiData = null;
         $modelUsed = 'gemini-3.6-flash';
+
+        // Apply Input Guardrails on transcript
+        $cleanDialogue = \App\Services\AiGuardrailService::sanitizeInput($dialogue, 12000);
+        $safeDialogue  = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanDialogue, 'Interview Report: #' . $interview->id);
 
         if (! empty($keys)) {
             $prompt = <<<PROMPT
@@ -133,7 +137,7 @@ Interview Stage: {$interview->interview_stage}
 {$behaviorSummary}
 
 == INTERVIEW TRANSCRIPT ==
-{$dialogue}
+{$safeDialogue}
 
 == EVALUATION INSTRUCTIONS ==
 1. Analyze {$applicantName}'s answers in the transcript.
@@ -161,7 +165,10 @@ PROMPT;
 
             try {
                 $systemInstruction = 'You are a precise HR evaluation AI. Output raw valid JSON only matching the requested schema template without markdown formatting.';
-                $aiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.3, 2048);
+                $rawAiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.3, 2048, 'Interview Report AI');
+                if (is_array($rawAiData) && isset($rawAiData['overall_score'])) {
+                    $aiData = \App\Services\AiGuardrailService::enforceInterviewReportSchema($rawAiData);
+                }
             } catch (\Throwable $e) {
                 Log::warning("GenerateAIInterviewReportJob: Gemini API request failed ({$e->getMessage()}). Using dynamic heuristic evaluator.");
             }
@@ -199,15 +206,17 @@ PROMPT;
                 ? "Highly recommend advancing {$applicantName} for the {$positionTitle} role based on candidate communication clarity and technical suitability."
                 : "Consider {$applicantName} for {$positionTitle} with additional technical screening during subsequent interview rounds.";
 
-            $aiData = [
+            $rawFallback = [
                 'overall_score'         => $overallScore,
                 'communication_score'   => $commScore,
                 'confidence_score'      => $confScore,
                 'strengths'             => $strengthsList,
                 'weaknesses'            => $weaknessesList,
                 'hiring_recommendation' => $recommendation,
-                'score_rationale'       => "Evaluation score of {$overallScore}/100 calculated from {$applicantName}'s dialogue tone, response depth, and alignment with {$positionTitle} requirements.",
+                'score_rationale'       => "Score calculated based on demonstrated communication clarity, responsive interaction pacing, and technical alignment for the {$positionTitle} role during the interview.",
             ];
+
+            $aiData = \App\Services\AiGuardrailService::enforceInterviewReportSchema($rawFallback);
         }
 
         // ── 4. Persist the report in DB ────────────────────────────────────

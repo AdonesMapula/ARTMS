@@ -622,22 +622,29 @@ class InterviewController extends Controller
         }
 
         $dialogueText = $transcripts->map(fn($t) => strtoupper($t->speaker_role) . ': ' . $t->text)->implode("\n");
+        
+        // Apply Input Guardrails: Sanitize dialogue and defuse prompt injections
+        $cleanDialogue = \App\Services\AiGuardrailService::sanitizeInput($dialogueText, 8000);
+        $safeDialogue = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanDialogue, 'Live Interview Analysis: Interview #' . $interview->id);
+
         $apiKey = config('services.xai.key');
 
         if (empty($apiKey)) {
             // Smart local keyword extraction fallback
-            $allText = strtolower($dialogueText);
+            $allText = strtolower($safeDialogue);
             $possibleKeywords = ['COMMUNICATION SKILLS', 'LEADERSHIP', 'PROBLEM SOLVING', 'SCALABILITY', 'ACTIVE LISTENING', 'CUSTOMER HANDLING', 'TEAMWORK', 'CRITICAL THINKING'];
             $foundKeywords = array_values(array_filter($possibleKeywords, fn($k) => str_contains($allText, strtolower($k))));
 
-            return response()->json([
+            $heuristicData = [
                 'confidence_score' => 84,
                 'enthusiasm_score' => 78,
                 'calmness_score'   => 82,
                 'keywords'         => !empty($foundKeywords) ? $foundKeywords : ['COMMUNICATION SKILLS', 'LEADERSHIP', 'PROBLEM SOLVING'],
                 'overall_match'    => 85,
                 'source'           => 'heuristic',
-            ]);
+            ];
+
+            return response()->json(\App\Services\AiGuardrailService::enforceLiveAnalysisSchema($heuristicData));
         }
 
         try {
@@ -656,7 +663,7 @@ Analyze the following live interview speech snippet and extract:
 5. Overall job match percentage (0-100)
 
 Transcript:
-{$dialogueText}
+{$safeDialogue}
 
 Respond ONLY with valid JSON in this format:
 {
@@ -684,21 +691,24 @@ PROMPT;
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['confidence_score'])) {
-                $parsed['source'] = 'grok-4.5';
-                return response()->json($parsed);
+                $guarded = \App\Services\AiGuardrailService::enforceLiveAnalysisSchema($parsed);
+                $guarded['source'] = 'grok-4.5';
+                return response()->json($guarded);
             }
         } catch (\Throwable $e) {
             // Graceful fallback
         }
 
-        return response()->json([
+        $fallbackData = [
             'confidence_score' => 82,
             'enthusiasm_score' => 76,
             'calmness_score'   => 84,
             'keywords'         => ['COMMUNICATION SKILLS', 'PROBLEM SOLVING', 'ACTIVE LISTENING', 'LEADERSHIP'],
             'overall_match'    => 84,
             'source'           => 'fallback',
-        ]);
+        ];
+
+        return response()->json(\App\Services\AiGuardrailService::enforceLiveAnalysisSchema($fallbackData));
     }
 
     /**

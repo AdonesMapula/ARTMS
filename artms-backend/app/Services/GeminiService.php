@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -19,6 +20,11 @@ class GeminiService
     ];
 
     /**
+     * Maximum requests per minute per API key at the service level (Free-tier safe boundary).
+     */
+    protected static int $maxRequestsPerMinutePerKey = 14;
+
+    /**
      * Retrieve available API keys (Primary first, then Reserve).
      */
     public static function getApiKeys(): array
@@ -32,12 +38,39 @@ class GeminiService
     }
 
     /**
-     * Execute a prompt expecting a structured JSON object response with dual-key & multi-model fallback.
+     * Check if a specific API key has hit its service-level rate limit window.
+     */
+    protected static function isKeyRateLimited(string $apiKey): bool
+    {
+        $cacheKey = 'gemini_rpm_' . substr(md5($apiKey), 0, 12);
+        $currentCount = (int) Cache::get($cacheKey, 0);
+
+        return $currentCount >= self::$maxRequestsPerMinutePerKey;
+    }
+
+    /**
+     * Increment the request count for a given API key within a 60-second window.
+     */
+    protected static function recordKeyUsage(string $apiKey): void
+    {
+        $cacheKey = 'gemini_rpm_' . substr(md5($apiKey), 0, 12);
+        
+        if (! Cache::has($cacheKey)) {
+            Cache::put($cacheKey, 1, 60);
+        } else {
+            Cache::increment($cacheKey);
+        }
+    }
+
+    /**
+     * Execute a prompt expecting a structured JSON object response with dual-key & multi-model fallback,
+     * integrated with AI Guardrails and service-level rate limit control.
      *
      * @param string $prompt
      * @param string|null $systemInstruction
      * @param float $temperature
      * @param int $maxTokens
+     * @param string|null $guardrailContext
      * @return array|null
      * @throws \Exception
      */
@@ -45,7 +78,8 @@ class GeminiService
         string $prompt,
         ?string $systemInstruction = null,
         float $temperature = 0.2,
-        int $maxTokens = 2048
+        int $maxTokens = 2048,
+        ?string $guardrailContext = 'Gemini JSON Generation'
     ): ?array {
         $keys = self::getApiKeys();
 
@@ -53,13 +87,25 @@ class GeminiService
             throw new \Exception('Gemini API key is not configured. Please set GEMINI_API_KEY or RESERVE_GEMINI_API_KEY in your environment.');
         }
 
+        // ── Input Guardrail: Sanitize and Neutralize Prompt Injections ────
+        $sanitizedPrompt = AiGuardrailService::sanitizeInput($prompt, 16000);
+        $safePrompt = AiGuardrailService::detectAndNeutralizePromptInjection($sanitizedPrompt, $guardrailContext);
+
         $lastError = null;
 
         foreach ($keys as $keyIndex => $apiKey) {
             $keyLabel = $keyIndex === 0 ? 'Primary Key' : 'Reserve Key';
 
+            // Check service-level key throttle
+            if (self::isKeyRateLimited($apiKey)) {
+                Log::warning("GeminiService: {$keyLabel} reached service-level rate limit buffer (14 RPM). Checking next key...");
+                continue;
+            }
+
             foreach (self::$models as $model) {
                 try {
+                    self::recordKeyUsage($apiKey);
+
                     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
                     $payload = [
@@ -67,7 +113,7 @@ class GeminiService
                             [
                                 'role'  => 'user',
                                 'parts' => [
-                                    ['text' => $prompt],
+                                    ['text' => $safePrompt],
                                 ],
                             ],
                         ],
@@ -91,14 +137,14 @@ class GeminiService
                         'x-goog-api-key' => $apiKey,
                     ])
                         ->withOptions(['verify' => false])
-                        ->timeout(60)
+                        ->timeout(45)
                         ->post($url, $payload);
 
                     if ($response->successful()) {
                         $rawText = $response->json('candidates.0.content.parts.0.text');
 
                         if (! empty($rawText)) {
-                            // Strip any accidental markdown formatting
+                            // Strip markdown code fences if model returned them despite JSON mode
                             $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', trim($rawText));
                             $cleanJson = preg_replace('/```\s*$/', '', $cleanJson);
 
@@ -108,9 +154,17 @@ class GeminiService
                             }
                         }
                     } else {
-                        $errorBody = $response->json('error.message') ?? "HTTP {$response->status()} error";
+                        $status = $response->status();
+                        $errorBody = $response->json('error.message') ?? "HTTP {$status} error";
                         $lastError = "[{$keyLabel} - {$model}] {$errorBody}";
-                        Log::warning("Gemini API call failed using {$keyLabel} with model {$model}: {$errorBody}. Trying next fallback...");
+                        
+                        // If rate limited (HTTP 429), perform a short backoff before trying fallback
+                        if ($status === 429) {
+                            Log::warning("Gemini API 429 Too Many Requests on {$keyLabel} ({$model}). Backing off briefly...");
+                            usleep(400000); // 400ms jitter
+                        } else {
+                            Log::warning("Gemini API call failed using {$keyLabel} with model {$model}: {$errorBody}. Trying next fallback...");
+                        }
                     }
                 } catch (\Throwable $e) {
                     $lastError = "[{$keyLabel} - {$model}] " . $e->getMessage();
@@ -125,13 +179,15 @@ class GeminiService
     }
 
     /**
-     * Execute a prompt expecting a plain text response with dual-key & multi-model fallback.
+     * Execute a prompt expecting a plain text response with dual-key & multi-model fallback,
+     * rate limiter protection, and input guardrails.
      */
     public static function generateText(
         string $prompt,
         ?string $systemInstruction = null,
         float $temperature = 0.2,
-        int $maxTokens = 2048
+        int $maxTokens = 2048,
+        ?string $guardrailContext = 'Gemini Text Generation'
     ): ?string {
         $keys = self::getApiKeys();
 
@@ -139,13 +195,23 @@ class GeminiService
             throw new \Exception('Gemini API key is not configured. Please set GEMINI_API_KEY or RESERVE_GEMINI_API_KEY in your environment.');
         }
 
+        $sanitizedPrompt = AiGuardrailService::sanitizeInput($prompt, 16000);
+        $safePrompt = AiGuardrailService::detectAndNeutralizePromptInjection($sanitizedPrompt, $guardrailContext);
+
         $lastError = null;
 
         foreach ($keys as $keyIndex => $apiKey) {
             $keyLabel = $keyIndex === 0 ? 'Primary Key' : 'Reserve Key';
 
+            if (self::isKeyRateLimited($apiKey)) {
+                Log::warning("GeminiService: {$keyLabel} reached service-level rate limit buffer. Checking next key...");
+                continue;
+            }
+
             foreach (self::$models as $model) {
                 try {
+                    self::recordKeyUsage($apiKey);
+
                     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
                     $payload = [
@@ -153,7 +219,7 @@ class GeminiService
                             [
                                 'role'  => 'user',
                                 'parts' => [
-                                    ['text' => $prompt],
+                                    ['text' => $safePrompt],
                                 ],
                             ],
                         ],
@@ -176,7 +242,7 @@ class GeminiService
                         'x-goog-api-key' => $apiKey,
                     ])
                         ->withOptions(['verify' => false])
-                        ->timeout(60)
+                        ->timeout(45)
                         ->post($url, $payload);
 
                     if ($response->successful()) {
@@ -185,8 +251,13 @@ class GeminiService
                             return trim($rawText);
                         }
                     } else {
-                        $errorBody = $response->json('error.message') ?? "HTTP {$response->status()} error";
+                        $status = $response->status();
+                        $errorBody = $response->json('error.message') ?? "HTTP {$status} error";
                         $lastError = "[{$keyLabel} - {$model}] {$errorBody}";
+                        
+                        if ($status === 429) {
+                            usleep(400000);
+                        }
                         Log::warning("Gemini text call failed on {$keyLabel} ({$model}): {$errorBody}");
                     }
                 } catch (\Throwable $e) {
@@ -199,3 +270,4 @@ class GeminiService
         throw new \Exception("Gemini text generation failed across all keys and models. Last error: {$lastError}");
     }
 }
+

@@ -136,8 +136,9 @@ class ResumeParserController extends Controller
             return $this->parseResumeTextFallback($rawText);
         }
 
-        // Limit raw text length for prompt limits
-        $inputText = strlen($rawText) > 10000 ? substr($rawText, 0, 10000) . "\n[Truncated]" : $rawText;
+        // Apply Input Guardrails: Sanitize text and neutralize prompt injections
+        $cleanText = \App\Services\AiGuardrailService::sanitizeInput($rawText, 10000);
+        $inputText = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanText, 'Resume Parser');
 
         $prompt = <<<EOT
 You are an expert ATS resume extraction parser. 
@@ -168,10 +169,22 @@ EOT;
 
         try {
             $systemInstruction = 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON matching the requested schema. No markdown, no code fences, no extra text.';
-            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048);
+            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048, 'Resume Parser AI');
 
             if (is_array($extracted)) {
-                return array_merge($this->emptyParsedData(), $extracted);
+                // Sanitize extracted string fields
+                $sanitizedExtracted = [];
+                foreach ($extracted as $key => $val) {
+                    if (is_string($val)) {
+                        $sanitizedExtracted[$key] = strip_tags(trim($val));
+                    } elseif (is_array($val) && $key === 'skills') {
+                        $sanitizedExtracted[$key] = array_values(array_filter(array_map('trim', array_map('strip_tags', $val))));
+                    } else {
+                        $sanitizedExtracted[$key] = $val;
+                    }
+                }
+
+                return array_merge($this->emptyParsedData(), $sanitizedExtracted);
             }
         } catch (\Throwable $e) {
             Log::error('Gemini Resume Parsing Failed: ' . $e->getMessage());

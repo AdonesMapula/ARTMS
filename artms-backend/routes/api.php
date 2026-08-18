@@ -56,10 +56,10 @@ Route::prefix('public')->group(function () {
     Route::get('job-postings/{jobPosting}', [JobPostingController::class, 'show']);
     Route::post('applicants', [ApplicantController::class, 'store']); // online application form
     Route::post('applicants/track', [ApplicantController::class, 'track']); // track by application_id
-    Route::post('parse-resume', [ResumeParserController::class, 'parse']); // AI resume parser
+    Route::post('parse-resume', [ResumeParserController::class, 'parse'])->middleware('throttle:ai-public-parser'); // AI resume parser
     Route::match(['get', 'post'], 'interviews/{interview}/livekit-token', [InterviewController::class, 'publicGenerateToken']); // applicant video room token
     Route::post('interviews/{interview}/transcript', [InterviewController::class, 'storePublicTranscript']); // applicant live transcript
-    Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'publicTranscribeAudio']); // applicant audio transcript
+    Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'publicTranscribeAudio'])->middleware('throttle:ai-transcription'); // applicant audio transcript
     Route::get('interviews/{interview}/processing-status', [InterviewController::class, 'getProcessingStatus']);
     Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
     Route::post('interviews/{interview}/end-session', [InterviewController::class, 'endSession']); // applicant end session
@@ -169,7 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('job-library', JobLibraryController::class);
-        Route::post('job-library/parse-document', [JobDocumentParserController::class, 'parse']);
+        Route::post('job-library/parse-document', [JobDocumentParserController::class, 'parse'])->middleware('throttle:ai-document-parser');
         Route::get('job-categories', [JobCategoryController::class, 'index']);
         Route::post('job-categories', [JobCategoryController::class, 'store']);
     });
@@ -210,7 +210,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:hr_admin,super_admin')->group(function () {
         Route::get('ai/applicants',             [AiScreeningController::class, 'pendingQueue']);
         Route::get('ai/evaluations',            [AiScreeningController::class, 'index']);
-        Route::post('ai/screen/{applicant}',    [AiScreeningController::class, 'screen']);
+        Route::post('ai/screen/{applicant}',    [AiScreeningController::class, 'screen'])->middleware('throttle:ai-screening');
         Route::patch('ai/review/{applicant}',   [AiScreeningController::class, 'hrReview']);
         Route::get('ai/rankings',               [AiScreeningController::class, 'rankings']);
     });
@@ -225,9 +225,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
         Route::get('interviews/{interview}/report',          [InterviewController::class, 'report']);
         Route::post('interviews/{interview}/transcript',     [InterviewController::class, 'storeTranscript']);
-        Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'transcribeAudio']);
+        Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'transcribeAudio'])->middleware('throttle:ai-transcription');
         Route::get('interviews/{interview}/transcripts',     [InterviewController::class, 'getTranscripts']);
-        Route::post('interviews/{interview}/analyze-live',   [InterviewController::class, 'analyzeLive']);
+        Route::post('interviews/{interview}/analyze-live',   [InterviewController::class, 'analyzeLive'])->middleware('throttle:ai-live-analysis');
         Route::post('interviews/{interview}/notes',          [InterviewController::class, 'saveNotes']);
     });
 

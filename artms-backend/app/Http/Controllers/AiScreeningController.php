@@ -91,25 +91,29 @@ class AiScreeningController extends Controller
             return response()->json(['message' => 'No resume found for this applicant.'], 422);
         }
 
-        // ── 1. Parse resume text ─────────────────────────────────────────────
+        // ── 1. Parse & Guardrail resume text ───────────────────────────────────
         $parser     = new ResumeParserService();
-        $resumeText = $parser->extractText($applicant->resume_path);
+        $rawResumeText = $parser->extractText($applicant->resume_path);
 
         // Also capture structured fields from the CV for display in the screening UI
         $parsedFields = [];
-        if (! empty(trim($resumeText))) {
-            // Reuse the same extraction logic via a quick local parse
-            $parsedFields = $this->extractStructuredFields($resumeText);
+        if (! empty(trim($rawResumeText))) {
+            $parsedFields = $this->extractStructuredFields($rawResumeText);
         }
 
-        if (empty(trim($resumeText))) {
-            $resumeText = "Applicant Name: {$applicant->first_name} {$applicant->last_name}\nEmail: {$applicant->email}";
+        if (empty(trim($rawResumeText))) {
+            $rawResumeText = "Applicant Profile for Screening";
         }
 
-        // Truncate to avoid token limits (~12 000 chars ≈ 3 000 tokens)
-        if (strlen($resumeText) > 12000) {
-            $resumeText = substr($resumeText, 0, 12000) . "\n[Resume truncated for processing]";
-        }
+        // Apply Input Guardrails: Sanitize, Bound Length, Neutralize Injections, and Anonymize PII
+        $cleanResumeText = \App\Services\AiGuardrailService::sanitizeInput($rawResumeText, 12000);
+        $safeResumeText  = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanResumeText, 'AI Screening: Candidate #' . $applicant->id, auth()->id());
+        $resumeText      = \App\Services\AiGuardrailService::anonymizePii($safeResumeText, [
+            $applicant->first_name,
+            $applicant->last_name,
+            $applicant->middle_name,
+            trim("{$applicant->first_name} {$applicant->last_name}"),
+        ]);
 
         // ── 2. Build PRF requirements from job posting chain ─────────────────
         $jobPosting = $applicant->jobPosting->load('jobLibrary', 'manpowerRequest');
@@ -121,12 +125,13 @@ class AiScreeningController extends Controller
         $experienceReq        = $this->formatRequirementAsString($prf?->work_experience         ?? 'Not specified');
         $skillsReq            = $this->formatRequirementAsString($prf?->skills                  ?? 'Not specified');
         $otherReq             = $this->formatRequirementAsString($prf?->other_preferred         ?? 'Not specified');
-        $highFitMin           = $prf?->high_fit_min_score      ?? 75;
-        $mediumFitMin         = $prf?->medium_fit_min_score    ?? 50;
+        $highFitMin           = (float) ($prf?->high_fit_min_score      ?? 75);
+        $mediumFitMin         = (float) ($prf?->medium_fit_min_score    ?? 50);
 
-        // ── 3. Build OpenAI prompt ───────────────────────────────────────────
+        // ── 3. Build AI prompt ───────────────────────────────────────────────
         $prompt = <<<EOT
-You are an expert HR screening AI for ARTMS. Evaluate the resume below against the job requirements.
+You are an expert HR screening AI for ARTMS. Evaluate the resume below objectively against the job requirements.
+Do NOT use discriminatory criteria (age, gender, marital status, race, or religion). Evaluate strictly based on skills, education, and relevant experience.
 
 == POSITION ==
 Title: {$positionTitle}
@@ -174,47 +179,44 @@ Respond with ONLY valid JSON — no markdown, no extra text:
 }
 EOT;
 
-        // ── 4. Call Google Gemini (with Primary & Reserve Key Failover) ────
+        // ── 4. Call Google Gemini with Guardrails & Key Rotation ────
         try {
-            $systemInstruction = 'You are a precise HR screening AI. Always respond with valid JSON only. Output a valid JSON object matching the requested schema exactly.';
-            $aiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 2048);
+            $systemInstruction = 'You are a precise HR screening AI. Always respond with valid JSON only matching the schema exactly. Evaluate purely on merit and qualifications.';
+            $rawAiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 2048, 'AI Screening: #' . $applicant->id);
 
-            if (! $aiData || ! isset($aiData['ai_score'])) {
+            if (! $rawAiData || ! is_array($rawAiData)) {
                 return response()->json(['message' => 'Failed to parse Gemini AI response structure.'], 500);
             }
+
+            // ── Output Guardrail: Validate Schema, Clamp Numeric Scores, Filter Bias ────
+            $aiData = \App\Services\AiGuardrailService::enforceEvaluationSchema($rawAiData, $highFitMin, $mediumFitMin);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'AI screening failed: ' . $e->getMessage()], 503);
         }
 
-        // ── 5. Apply fit thresholds ──────────────────────────────────────────
-        $totalScore = (float) ($aiData['ai_score'] ?? 0);
-        $fitLabel   = match (true) {
-            $totalScore >= $highFitMin   => 'high',
-            $totalScore >= $mediumFitMin => 'medium',
-            default                      => 'low',
-        };
+        // ── 5. Extract guarded fit & score metrics ───────────────────────────
+        $totalScore = $aiData['ai_score'];
+        $fitLabel   = $aiData['fit_label'];
 
         // ── 6. Persist evaluation ────────────────────────────────────────────
-        $scoreBreakdown = $aiData['score_breakdown'] ?? [];
-        // Attach per-category remarks into breakdown for frontend display
-        $scoreBreakdown['education_remarks']  = $aiData['education_remarks']  ?? null;
-        $scoreBreakdown['experience_remarks'] = $aiData['experience_remarks'] ?? null;
-        $scoreBreakdown['skills_remarks']     = $aiData['skills_remarks']     ?? null;
-        // Attach the raw parsed CV fields so the UI can show what was extracted
-        $scoreBreakdown['parsed_cv'] = $parsedFields;
+        $scoreBreakdown = $aiData['score_breakdown'];
+        $scoreBreakdown['education_remarks']  = $aiData['education_remarks'];
+        $scoreBreakdown['experience_remarks'] = $aiData['experience_remarks'];
+        $scoreBreakdown['skills_remarks']     = $aiData['skills_remarks'];
+        $scoreBreakdown['parsed_cv']          = $parsedFields;
 
         $evaluation = AiEvaluation::updateOrCreate(
             ['applicant_id' => $applicant->id],
             [
                 'ai_score'            => $totalScore,
-                'confidence_level'    => $aiData['confidence_level']    ?? null,
+                'confidence_level'    => $aiData['confidence_level'],
                 'fit_label'           => $fitLabel,
-                'qualification_match' => $aiData['qualification_match'] ?? null,
-                'skills_matched'      => $aiData['skills_matched']      ?? [],
-                'skills_missing'      => $aiData['skills_missing']      ?? [],
+                'qualification_match' => $aiData['qualification_match'],
+                'skills_matched'      => $aiData['skills_matched'],
+                'skills_missing'      => $aiData['skills_missing'],
                 'score_breakdown'     => $scoreBreakdown,
-                'ai_summary'          => $aiData['ai_summary']          ?? null,
-                'ai_feedback'         => $aiData['ai_feedback']         ?? null,
+                'ai_summary'          => $aiData['ai_summary'],
+                'ai_feedback'         => $aiData['ai_feedback'],
             ]
         );
 

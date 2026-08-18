@@ -51,43 +51,26 @@ class RecommendAlternativeRolesJob implements ShouldQueue
             return;
         }
 
-        // 2. Prepare applicant's resume
-        $resumeText = '';
+        // 2. Prepare applicant's resume with Guardrails
+        $rawResumeText = '';
         if ($applicant->resume_path) {
             $parser = new ResumeParserService();
-            $resumeText = $parser->extractText($applicant->resume_path);
+            $rawResumeText = $parser->extractText($applicant->resume_path);
         }
 
-        if (empty(trim($resumeText))) {
-            // Fallback
-            $resumeText = "Applicant Name: {$applicant->first_name} {$applicant->last_name}\nEmail: {$applicant->email}";
+        if (empty(trim($rawResumeText))) {
+            $rawResumeText = "Applicant Profile";
         }
 
-        // Redact Applicant's Name for Privacy Concerns
-        $first = $applicant->first_name;
-        $last = $applicant->last_name;
-        $middle = $applicant->middle_name;
-        if (!empty($first)) {
-            $resumeText = str_ireplace($first, '[REDACTED NAME]', $resumeText);
-        }
-        if (!empty($last)) {
-            $resumeText = str_ireplace($last, '[REDACTED NAME]', $resumeText);
-        }
-        if (!empty($middle)) {
-            $resumeText = str_ireplace($middle, '[REDACTED NAME]', $resumeText);
-        }
-        $fullName = trim("{$first} {$middle} {$last}");
-        if (!empty($fullName)) {
-            $resumeText = str_ireplace($fullName, '[REDACTED NAME]', $resumeText);
-        }
-        $shortName = trim("{$first} {$last}");
-        if (!empty($shortName)) {
-            $resumeText = str_ireplace($shortName, '[REDACTED NAME]', $resumeText);
-        }
-
-        if (strlen($resumeText) > 8000) {
-            $resumeText = substr($resumeText, 0, 8000) . "\n[Truncated]";
-        }
+        // Input Guardrails: Sanitize, Neutralize Prompt Injection, and Anonymize PII
+        $cleanResumeText = \App\Services\AiGuardrailService::sanitizeInput($rawResumeText, 8000);
+        $safeResumeText  = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanResumeText, 'Alternative Roles Job: #' . $applicant->id);
+        $resumeText      = \App\Services\AiGuardrailService::anonymizePii($safeResumeText, [
+            $applicant->first_name,
+            $applicant->last_name,
+            $applicant->middle_name,
+            trim("{$applicant->first_name} {$applicant->last_name}"),
+        ]);
 
         // 3. Prepare jobs summary
         $jobsSummary = [];
@@ -110,6 +93,7 @@ class RecommendAlternativeRolesJob implements ShouldQueue
         $prompt = <<<EOT
 You are an expert HR AI for ARTMS. 
 An applicant failed the screening for their chosen job. We want to see if they are a strong fit for ANY of our OTHER open roles.
+Evaluate objectively without bias.
 
 == APPLICANT RESUME ==
 {$resumeText}
@@ -140,18 +124,19 @@ EOT;
 
         try {
             $systemInstruction = 'You are a precise HR evaluator. Respond ONLY with valid, raw JSON array. No markdown, no code fences, no extra text.';
-            $recommendations = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 1024);
+            $recommendations = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 1024, 'Alternative Roles AI');
 
             if (is_array($recommendations) && count($recommendations) > 0) {
-                // Extract job IDs
-                $recommendedJobIds = collect($recommendations)->pluck('job_posting_id')->toArray();
+                // Extract and validate job IDs
+                $recommendedJobIds = collect($recommendations)->pluck('job_posting_id')->filter(fn($id) => is_numeric($id))->toArray();
                 $matchedJobs = JobPosting::with('jobLibrary')->whereIn('id', $recommendedJobIds)->get();
                 
                 if ($matchedJobs->isNotEmpty()) {
-                    // We attach the AI's reason to the matched job model dynamically for the blade template
+                    // Attach the AI's reason to the matched job model dynamically with guardrail filtering
                     foreach ($matchedJobs as $matchedJob) {
                         $matchData = collect($recommendations)->firstWhere('job_posting_id', $matchedJob->id);
-                        $matchedJob->ai_reason = $matchData['reason'] ?? 'Your profile aligns well with this role.';
+                        $reason = $matchData['reason'] ?? 'Your profile aligns well with this role.';
+                        $matchedJob->ai_reason = \App\Services\AiGuardrailService::filterHarmfulLanguage(strip_tags((string) $reason));
                     }
                     
                     NotificationService::sendAlternativeRoleRecommendationEmail($applicant, $matchedJobs, $this->remarks);

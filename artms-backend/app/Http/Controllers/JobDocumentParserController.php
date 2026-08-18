@@ -291,7 +291,9 @@ class JobDocumentParserController extends Controller
             return $this->emptyJobData();
         }
 
-        $inputText = strlen($rawText) > 15000 ? substr($rawText, 0, 15000) . "\n[Truncated]" : $rawText;
+        // Apply Input Guardrails: Sanitize text and neutralize prompt injections
+        $cleanText = \App\Services\AiGuardrailService::sanitizeInput($rawText, 15000);
+        $inputText = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanText, 'Job Document Parser');
 
         $prompt = <<<EOT
 You are an expert HR document parser for a Job Library system. 
@@ -343,7 +345,7 @@ EOT;
 
         try {
             $systemInstruction = 'You are a precise HR document parser. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.';
-            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048);
+            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048, 'Job Document Parser AI');
 
             if (is_array($extracted)) {
                 $extracted = $this->normalizeBlockIds($extracted);
