@@ -371,12 +371,19 @@ class ApplicantController extends Controller
         if (!$employee) {
             $employee = Employee::create([
                 'user_id'                  => $user->id,
+                'first_name'               => $applicant->first_name,
+                'last_name'                => $applicant->last_name,
+                'email'                    => $applicant->email,
+                'phone'                    => $applicant->phone,
                 'department_id'            => $deptId,
+                'job_title'                => $jobTitle,
                 'position'                 => $jobTitle,
+                'hire_date'                => $request->date_hired ?? now()->toDateString(),
                 'date_hired'               => $request->date_hired ?? now()->toDateString(),
+                'basic_salary'             => $request->salary ?? ($applicant->jobPosting?->jobLibrary?->salary_min ?? 0),
                 'salary'                   => $request->salary ?? ($applicant->jobPosting?->jobLibrary?->salary_min ?? 0),
                 'employment_type'          => $request->employment_type ?? 'regular',
-                'employment_status'        => 'active',
+                'employment_status'        => 'regular',
                 'address'                  => $applicant->address,
                 'contact_number'           => $applicant->phone,
                 'emergency_contact_name'   => null,
@@ -384,47 +391,60 @@ class ApplicantController extends Controller
             ]);
         }
 
-        // 4. Auto-generate Employee Number (EMP-YYYY-XXXXX) & save to User
-        $empId = $employee->generateEmployeeNumber();
+        // 4. Auto-generate Employee Number (EMP-YYYY-XXXXX) & save to Employee & User
+        $empId = $employee->employee_id ?: $employee->generateEmployeeNumber();
+        $employee->update(['employee_id' => $empId]);
         $user->update(['employee_id' => $empId]);
 
         // 5. Seed default 201 Document Checklist
-        $employee->seedDefaultDocuments();
+        try {
+            $employee->seedDefaultDocuments();
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to seed default 201 documents: " . $e->getMessage());
+        }
 
         // 6. Transfer candidate resume to 201 documents if present
-        if ($applicant->resume_path && Storage::disk('local')->exists($applicant->resume_path)) {
-            $folder = "employee_documents/{$empId}";
-            $targetPath = "{$folder}/Resume_{$empId}." . pathinfo($applicant->resume_path, PATHINFO_EXTENSION);
-            Storage::disk('public')->put($targetPath, Storage::disk('local')->get($applicant->resume_path));
+        try {
+            if ($applicant->resume_path && Storage::disk('local')->exists($applicant->resume_path)) {
+                $folder = "employee_documents/{$empId}";
+                $targetPath = "{$folder}/Resume_{$empId}." . pathinfo($applicant->resume_path, PATHINFO_EXTENSION);
+                Storage::disk('public')->put($targetPath, Storage::disk('local')->get($applicant->resume_path));
 
-            $employee->documents()->updateOrCreate(
-                ['document_type' => 'resume'],
-                [
-                    'file_path'     => $targetPath,
-                    'original_name' => "Resume_{$applicant->first_name}_{$applicant->last_name}",
-                    'status'        => 'submitted',
-                    'submitted_at'  => now(),
-                    'remarks'       => 'Auto-transferred from job application resume',
-                ]
-            );
+                $employee->documents()->updateOrCreate(
+                    ['document_type' => 'resume'],
+                    [
+                        'file_path'     => $targetPath,
+                        'original_name' => "Resume_{$applicant->first_name}_{$applicant->last_name}",
+                        'status'        => 'submitted',
+                        'submitted_at'  => now(),
+                        'remarks'       => 'Auto-transferred from job application resume',
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to transfer candidate resume to 201 files: " . $e->getMessage());
         }
 
         // 7. Send Notifications
-        NotificationService::notifyEmail(
-            $applicant->email,
-            "Congratulations! You have been hired — ARTMS 201 File Created",
-            "Hello {$applicant->first_name}, welcome aboard! You have been officially hired as {$jobTitle}. Your Employee Number is {$empId}.",
-            null,
-            'application'
-        );
+        try {
+            NotificationService::notifyEmail(
+                $applicant->email,
+                "Congratulations! You have been hired — ARTMS 201 File Created",
+                "Hello {$applicant->first_name}, welcome aboard! You have been officially hired as {$jobTitle}. Your Employee Number is {$empId}.",
+                null,
+                'application'
+            );
 
-        NotificationService::notifyRoles(
-            ['hr_admin', 'super_admin'],
-            "New Employee Hired — 201 File Created",
-            "{$applicant->first_name} {$applicant->last_name} was hired as {$jobTitle}. Employee Number: {$empId}.",
-            '/admin/employees',
-            'application'
-        );
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
+                "New Employee Hired — 201 File Created",
+                "{$applicant->first_name} {$applicant->last_name} was hired as {$jobTitle}. Employee Number: {$empId}.",
+                '/admin/employees',
+                'application'
+            );
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to dispatch hiring notifications: " . $e->getMessage());
+        }
 
         AuditLog::record('hire_applicant', 'employee', "Hired applicant {$applicant->first_name} {$applicant->last_name} ({$applicant->application_id}) as Employee {$empId}");
 
