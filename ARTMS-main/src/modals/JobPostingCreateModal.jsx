@@ -4,8 +4,9 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import DatePicker from "../components/ui/DatePicker";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
-export default function JobPostingCreateModal({ open, prf, onClose, onSave }) {
+export default function JobPostingCreateModal({ open, prf, existingPostings = [], onClose, onSave, saving = false }) {
   const [formData, setFormData] = useState({
     location: "",
     closing_date: "",
@@ -18,19 +19,67 @@ export default function JobPostingCreateModal({ open, prf, onClose, onSave }) {
   const [createBlockTitle, setCreateBlockTitle] = useState("");
   const [createBlockDetails, setCreateBlockDetails] = useState([{ id: Date.now(), value: "" }]);
 
+  // Find if an active/published job posting exists for this position & department
+  const jobLibId = prf?.job_library_id || prf?.job_library?.id;
+  const deptId = prf?.department_id || prf?.department?.id;
+  const existingPostingMatch = existingPostings?.find(
+    (p) =>
+      p.job_library_id === jobLibId &&
+      p.department_id === deptId &&
+      p.status !== "closed" &&
+      p.status !== "cancelled"
+  ) || existingPostings?.find((p) => p.job_library_id === jobLibId && p.status !== "closed");
+
   useEffect(() => {
     if (open && prf) {
+      // 1. Location: from existing posting, or from job library
+      const autoLocation = existingPostingMatch?.location || prf.job_library?.location || "";
+
+      // 2. Closing Date: from existing posting, or from PRF needed_by date
+      let autoClosingDate = "";
+      if (existingPostingMatch?.closing_date) {
+        autoClosingDate = existingPostingMatch.closing_date.split("T")[0];
+      } else if (prf.needed_by) {
+        autoClosingDate = prf.needed_by.split("T")[0];
+      }
+
+      // 3. Description: from existing posting, or from job library
+      const autoDescription = existingPostingMatch?.description || prf.job_library?.job_description || "";
+
+      // 4. Qualifications & Responsibilities: from existing posting, or PRF, or job library
+      const autoQualifications =
+        existingPostingMatch?.qualifications && existingPostingMatch.qualifications.length > 0
+          ? existingPostingMatch.qualifications
+          : (prf.qualifications && prf.qualifications.length > 0
+            ? prf.qualifications
+            : (prf.job_library?.qualifications || []));
+
+      const autoResponsibilities =
+        existingPostingMatch?.responsibilities && existingPostingMatch.responsibilities.length > 0
+          ? existingPostingMatch.responsibilities
+          : (prf.responsibilities && prf.responsibilities.length > 0
+            ? prf.responsibilities
+            : (prf.job_library?.responsibilities || []));
+
       setFormData({
-        location: prf.job_library?.location || "",
-        closing_date: "",
-        description: prf.job_library?.job_description || "",
-        qualifications: prf.qualifications || prf.job_library?.qualifications || [],
-        responsibilities: prf.responsibilities || prf.job_library?.responsibilities || [],
+        location: autoLocation,
+        closing_date: autoClosingDate,
+        description: autoDescription,
+        qualifications: autoQualifications,
+        responsibilities: autoResponsibilities,
       });
     }
-  }, [open, prf]);
+  }, [open, prf, existingPostingMatch]);
 
   if (!open || !prf) return null;
+
+  // Salary Range display formatting
+  const minSal = Number(prf.job_library?.salary_min ?? 0);
+  const maxSal = Number(prf.job_library?.salary_max ?? 0);
+  const isRange = prf.job_library?.salary_type === "range" && maxSal > 0 && maxSal !== minSal;
+  const salaryDisplay = isRange
+    ? `₱${minSal.toLocaleString()} – ₱${maxSal.toLocaleString()}`
+    : (minSal > 0 ? `₱${minSal.toLocaleString()} / mo` : "Not specified");
 
   // Block handlers
   const openCreateAddBlock = (field) => {
@@ -86,14 +135,31 @@ export default function JobPostingCreateModal({ open, prf, onClose, onSave }) {
         description="Review PRF details, set posting information, and edit qualifications or responsibilities before publishing."
         footer={
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose} className="cursor-pointer">Cancel</Button>
-            <Button type="button" variant="primary" onClick={handleSubmit} className="bg-[#111A62] text-white gap-1.5 cursor-pointer">
-              <Save size={14} /> Create Posting
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="cursor-pointer">Cancel</Button>
+            <Button type="button" variant="primary" onClick={handleSubmit} disabled={saving} className="bg-[#111A62] text-white gap-1.5 cursor-pointer">
+              <Save size={14} /> {saving ? "Publishing..." : existingPostingMatch ? "Add Vacancies to Posting" : "Create Posting"}
             </Button>
           </div>
         }
       >
         <div className="space-y-5 py-2">
+          {/* Active Posting Detected Banner */}
+          {existingPostingMatch && (
+            <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50/60 p-3.5 text-xs text-blue-900 shadow-2xs">
+              <div className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px]">✓</span>
+                <div>
+                  <p className="font-bold text-blue-950">
+                    Existing Active Job Posting Found (JP-{String(existingPostingMatch.id).padStart(3, "0")})
+                  </p>
+                  <p className="mt-0.5 text-blue-800 text-[11px] leading-relaxed">
+                    Work Location, Closing Date, and details were automatically populated from your existing posting. Submitting will merge this PRF's <strong>{prf.headcount} headcount</strong> into the active listing (New Total: <strong>{Number(existingPostingMatch.vacancies_count || 0) + Number(prf.headcount)} vacancies</strong>).
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* PRF / Job Library Info Summary */}
           <div className="grid gap-3 sm:grid-cols-4">
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
@@ -120,11 +186,7 @@ export default function JobPostingCreateModal({ open, prf, onClose, onSave }) {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Salary Range</p>
-                <p className="truncate text-xs font-bold text-slate-900">
-                  {prf.job_library?.salary_min || prf.job_library?.salary_max 
-                    ? `₱${Number(prf.job_library?.salary_min ?? 0).toLocaleString()} – ₱${Number(prf.job_library?.salary_max ?? 0).toLocaleString()}`
-                    : "Not specified"}
-                </p>
+                <p className="truncate text-xs font-bold text-slate-900">{salaryDisplay}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
@@ -354,6 +416,14 @@ export default function JobPostingCreateModal({ open, prf, onClose, onSave }) {
           </div>
         </div>
       </Modal>
+
+      {/* Full-screen blocking loading overlay for Creating/Updating Posting */}
+      <ActionLoadingModal
+        open={saving}
+        type="save"
+        title={existingPostingMatch ? "Adding Vacancies to Posting..." : "Publishing Job Posting..."}
+        message="Updating vacancy counts and publishing position to Careers board. Please wait..."
+      />
     </>
   );
 }

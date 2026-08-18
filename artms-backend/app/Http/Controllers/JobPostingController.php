@@ -74,42 +74,75 @@ class JobPostingController extends Controller
             ], 422);
         }
 
-        $data['requested_by'] = auth()->id();
-        $isModified = $request->input('is_modified_from_prf', false);
-        $data['is_modified_from_prf'] = $isModified;
+        $data['requested_by']    = auth()->id();
+        $data['approval_status'] = 'approved';
+        $data['status']          = 'published';
+        $data['is_published']    = true;
+        $data['approved_by']     = auth()->id();
+        $data['approved_at']     = now();
+        $data['posting_date']    = now();
+        $data['is_modified_from_prf'] = false;
 
-        if (!$isModified) {
-            // Unmodified data from approved PRF -> Auto-publish bypass
-            $data['approval_status'] = 'approved';
-            $data['status']          = 'published';
-            $data['is_published']    = true;
-            $data['approved_by']     = auth()->id(); // Auto-approved by the poster, or leave null to mean system-approved
-            $data['approved_at']     = now();
-            $data['posting_date']    = now();
-            $message = 'Job posting was instantly published (no modifications to requirements).';
-        } else {
-            // Modified -> Needs COO Approval
-            $data['approval_status'] = 'pending';
-            $data['status']          = 'pending_approval';
-            $data['is_published']    = false;
-            $message = 'Job posting submitted for COO approval (requirements were modified).';
-        }
-
-        // Check if an active posting for this job library template and department already exists
+        // Check if an active published posting for this job library position & department already exists
         $existing = JobPosting::where('job_library_id', $data['job_library_id'])
             ->where('department_id', $data['department_id'])
+            ->where('status', 'published')
             ->whereNotIn('status', ['closed', 'cancelled'])
             ->first();
 
         if ($existing) {
-            $existing->update($data);
-            return response()->json(['message' => 'Existing active job posting updated successfully.', 'posting' => $existing], 200);
+            $previousVacancies = (int) $existing->vacancies_count;
+            $additionalVacancies = (int) $data['vacancies_count'];
+            $newTotalVacancies = $previousVacancies + $additionalVacancies;
+
+            $updatePayload = [
+                'vacancies_count' => $newTotalVacancies,
+            ];
+
+            if (!empty($data['location'])) {
+                $updatePayload['location'] = $data['location'];
+            }
+            if (!empty($data['closing_date'])) {
+                $updatePayload['closing_date'] = $data['closing_date'];
+            }
+            if (!empty($data['description'])) {
+                $updatePayload['description'] = $data['description'];
+            }
+
+            $existing->update($updatePayload);
+
+            // Link this PRF to the existing Job Posting
+            if (!empty($data['manpower_request_id'])) {
+                \App\Models\ManpowerRequest::where('id', $data['manpower_request_id'])->update([
+                    'job_posting_id' => $existing->id
+                ]);
+            }
+
+            AuditLog::record('update', 'job_posting', "Added {$additionalVacancies} vacancies from PRF-{$data['manpower_request_id']} to Job Posting ID {$existing->id} (Total: {$newTotalVacancies})");
+
+            return response()->json([
+                'message' => "Added {$additionalVacancies} vacancies to existing active job posting. (Total Vacancies: {$newTotalVacancies})",
+                'posting' => $existing->fresh(['jobLibrary', 'department', 'requester']),
+                'merged'  => true,
+            ], 200);
         }
 
         $posting = JobPosting::create($data);
+
+        // Link this PRF to the newly created Job Posting
+        if (!empty($data['manpower_request_id'])) {
+            \App\Models\ManpowerRequest::where('id', $data['manpower_request_id'])->update([
+                'job_posting_id' => $posting->id
+            ]);
+        }
+
         AuditLog::record('create', 'job_posting', "Created job posting ID {$posting->id}");
 
-        return response()->json(['message' => $message, 'posting' => $posting], 201);
+        return response()->json([
+            'message' => 'Job posting was successfully created and published.',
+            'posting' => $posting->fresh(['jobLibrary', 'department', 'requester']),
+            'merged'  => false,
+        ], 201);
     }
 
     public function show(JobPosting $jobPosting): JsonResponse
@@ -122,40 +155,18 @@ class JobPostingController extends Controller
     public function update(Request $request, JobPosting $jobPosting): JsonResponse
     {
         $data = $request->validate([
-            'vacancies_count' => ['sometimes', 'integer', 'min:1'],
-            'closing_date'    => ['nullable', 'date'],
+            'vacancies_count'      => ['sometimes', 'integer', 'min:1'],
+            'closing_date'         => ['nullable', 'date'],
+            'location'             => ['nullable', 'string'],
+            'description'          => ['nullable', 'string'],
             'qualifications'       => ['nullable', 'array'],
             'responsibilities'     => ['nullable', 'array'],
             'is_modified_from_prf' => ['boolean'],
         ]);
 
-        $isModified = $request->input('is_modified_from_prf', false);
-        $wasNeedsRevision = in_array($jobPosting->approval_status, ['revised', 'needs_revision']);
-
-        if ($isModified || $wasNeedsRevision) {
-            $data['approval_status']  = 'pending';
-            $data['status']           = 'pending_approval';
-            $data['is_published']     = false;
-            $data['approval_remarks'] = null;
-        }
-
         $jobPosting->update($data);
 
-        if ($wasNeedsRevision) {
-            NotificationService::notifyRoles(
-                ['coo', 'super_admin'],
-                'Revised Job Posting Resubmitted',
-                "Job posting for '{$jobPosting->job_title}' was revised by HR and resubmitted for COO approval.",
-                '/coo/job-posting-approvals',
-                'request'
-            );
-        }
-
-        $message = ($wasNeedsRevision || $isModified)
-            ? 'Job posting updated and submitted for COO approval.' 
-            : 'Job posting updated.';
-
-        return response()->json(['message' => $message, 'posting' => $jobPosting->fresh()]);
+        return response()->json(['message' => 'Job posting updated successfully.', 'posting' => $jobPosting->fresh()]);
     }
 
     public function destroy(JobPosting $jobPosting): JsonResponse

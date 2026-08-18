@@ -10,6 +10,7 @@ import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
+import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import {
   JobLibraryFormModal,
   JobLibraryApproveModal,
@@ -94,6 +95,7 @@ export default function JobLibrary() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Alert Modal state
   const [alertModal, setAlertModalState] = useState({
@@ -127,7 +129,7 @@ export default function JobLibrary() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/job-library");
+      const res = await api.get("/job-library", { params: { per_page: 100 } });
       setJobs(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch job library:", err);
@@ -222,6 +224,7 @@ export default function JobLibrary() {
 
   // Delete
   const handleDelete = async () => {
+    setDeleting(true);
     try {
       await api.delete(`/job-library/${deleteModal.job.id}`);
       showAlert("success", "Deleted", "Job entry removed from the library.");
@@ -235,6 +238,8 @@ export default function JobLibrary() {
         err.response?.data?.message || "Failed to delete job entry."
       );
       setDeleteModal({ open: false, job: null });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -712,6 +717,7 @@ export default function JobLibrary() {
         job={deleteModal.job}
         onClose={() => setDeleteModal({ open: false, job: null })}
         onConfirm={handleDelete}
+        deleting={deleting}
       />
 
       {/* Alert Modal */}
@@ -721,6 +727,22 @@ export default function JobLibrary() {
         title={alertModal.title}
         message={alertModal.message}
         onClose={() => setAlertModalState({ ...alertModal, open: false })}
+      />
+
+      {/* Full-screen blocking loading overlay for Delete */}
+      <ActionLoadingModal
+        open={deleting}
+        type="delete"
+        title="Deleting Job Entry..."
+        message="Please wait while this position is removed from the library..."
+      />
+
+      {/* Full-screen blocking loading overlay for COO Approval */}
+      <ActionLoadingModal
+        open={saving && approveModal.open}
+        type="process"
+        title={approveModal.status === "approved" ? "Approving Job Entry..." : "Rejecting Job Entry..."}
+        message="Updating approval status and publishing to library. Please wait..."
       />
     </div>
   );

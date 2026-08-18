@@ -25,3 +25,6 @@ export { default as QuickAddDepartmentModal } from './QuickAddDepartmentModal';
 
 // Department Modals
 export { default as DepartmentModal } from './DepartmentModal';
+
+// Resume Preview Modal
+export { default as ResumePreviewModal } from './ResumePreviewModal';

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
+import ResumePreviewModal from "../../modals/ResumePreviewModal";
 import applicantService from "../../services/applicantService";
 import { useToast } from "../../context/ToastContext";
 
@@ -39,6 +40,9 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [resumeBlobUrl, setResumeBlobUrl] = useState(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
 
   useEffect(() => {
     if (!applicantId) return;
@@ -103,16 +107,34 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
     }
   };
 
-  const handleDownloadResume = () => {
+  const handleOpenResume = async () => {
     if (!data?.resume_path) {
       toast.error("No Resume File", "Applicant has not uploaded a resume file.");
       return;
     }
-    const fullUrl = data.resume_path.startsWith("http")
-      ? data.resume_path
-      : `${import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage"}/${data.resume_path}`;
-    window.open(fullUrl, "_blank");
+
+    setResumeModalOpen(true);
+    setResumeLoading(true);
+    try {
+      const response = await applicantService.getResume(data.id);
+      const blob = new Blob([response.data], { type: response.headers?.['content-type'] || 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      setResumeBlobUrl(objectUrl);
+    } catch (err) {
+      console.error("Failed to load resume document:", err);
+      toast.error("Resume Error", "Could not load the resume file from storage.");
+    } finally {
+      setResumeLoading(false);
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (resumeBlobUrl) {
+        URL.revokeObjectURL(resumeBlobUrl);
+      }
+    };
+  }, [resumeBlobUrl]);
 
   if (!data && !loading) {
     return (
@@ -410,13 +432,23 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <p className="text-[11px] text-slate-400">{app.resume_path ? app.resume_path.split("/").pop() : "No file attached"}</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={handleDownloadResume} className="gap-1.5 text-xs">
-                <Download size={14} /> Open Resume
+              <Button size="sm" variant="outline" onClick={handleOpenResume} className="gap-1.5 text-xs font-semibold cursor-pointer border-[#111A62]/20 text-[#111A62] hover:bg-[#111A62]/10">
+                <Eye size={14} /> Open Resume
               </Button>
             </div>
           </>
         )}
       </div>
+
+      {/* In-App Resume PDF / Document Preview Modal */}
+      <ResumePreviewModal
+        open={resumeModalOpen}
+        onClose={() => setResumeModalOpen(false)}
+        url={resumeBlobUrl}
+        loading={resumeLoading}
+        applicantName={`${app.first_name || ""} ${app.last_name || ""}`.trim() || "Applicant"}
+        fileName={app.resume_original_name || app.resume_path?.split("/").pop() || "Resume.pdf"}
+      />
     </div>
   );
 }

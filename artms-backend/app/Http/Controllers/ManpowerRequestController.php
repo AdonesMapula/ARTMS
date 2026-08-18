@@ -18,9 +18,13 @@ class ManpowerRequestController extends Controller
                 if ($request->status === 'resubmitted') {
                     $q->where('status', 'pending')
                       ->whereNotNull('approval_remarks');
-                } else if ($request->status === 'pending') {
+                } else if ($request->status === 'new_pending') {
                     $q->where('status', 'pending')
                       ->whereNull('approval_remarks');
+                } else if ($request->status === 'pending') {
+                    $q->where('status', 'pending');
+                } else if ($request->status === 'revised' || $request->status === 'needs_revision') {
+                    $q->whereIn('status', ['revised', 'needs_revision']);
                 } else {
                     $q->where('status', $request->status);
                 }
@@ -232,6 +236,7 @@ class ManpowerRequestController extends Controller
     {
         $requests = ManpowerRequest::with(['department', 'requester', 'jobLibrary', 'approver'])
             ->where('status', 'approved')
+            ->whereNull('job_posting_id')
             ->whereDoesntHave('jobPostings')
             ->orderBy('approved_at', 'desc')
             ->paginate($request->per_page ?? 15);

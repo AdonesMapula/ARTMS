@@ -8,6 +8,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import DatePicker from "../components/ui/DatePicker";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 import api from "../services/api";
 
 const URGENCY_OPTIONS = [
@@ -678,6 +679,14 @@ export default function ManpowerEditModal({ open, request, onClose, onSave, savi
           </div>
         </div>
       </Modal>
+
+      {/* Full-screen blocking loading overlay for saving/resubmitting PRF */}
+      <ActionLoadingModal
+        open={saving}
+        type="edit"
+        title="Resubmitting Manpower Request..."
+        message="Updating request details and resubmitting to COO for approval. Please wait..."
+      />
     </>
   );
 }

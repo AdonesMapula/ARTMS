@@ -133,6 +133,36 @@ class ApplicantController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/applicants/{applicant}/resume — Stream/Download applicant resume
+     */
+    public function resume(Applicant $applicant)
+    {
+        if (! $applicant->resume_path) {
+            return response()->json(['message' => 'No resume file associated with this applicant.'], 404);
+        }
+
+        $path = $applicant->resume_path;
+        $disk = 'local';
+
+        if (! Storage::disk('local')->exists($path)) {
+            if (Storage::disk('public')->exists($path)) {
+                $disk = 'public';
+            } else {
+                return response()->json(['message' => 'Resume file could not be found on storage.'], 404);
+            }
+        }
+
+        $fullPath = Storage::disk($disk)->path($path);
+        $mime = @mime_content_type($fullPath) ?: 'application/pdf';
+        $fileName = $applicant->resume_original_name ?: ("Resume_" . $applicant->first_name . "_" . $applicant->last_name . "." . pathinfo($fullPath, PATHINFO_EXTENSION));
+
+        return response()->file($fullPath, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
     public function update(Request $request, Applicant $applicant): JsonResponse
     {
         $oldStatus       = $applicant->status;

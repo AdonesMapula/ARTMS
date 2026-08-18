@@ -3,6 +3,7 @@
 use App\Http\Controllers\AiScreeningController;
 use App\Http\Controllers\AppBootController;
 use App\Http\Controllers\ApplicantController;
+use App\Http\Controllers\JobDocumentParserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
@@ -147,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('job-library', JobLibraryController::class);
+        Route::post('job-library/parse-document', [JobDocumentParserController::class, 'parse']);
         Route::get('job-categories', [JobCategoryController::class, 'index']);
         Route::post('job-categories', [JobCategoryController::class, 'store']);
     });
@@ -172,6 +174,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::get('applicants', [ApplicantController::class, 'index']);
         Route::get('applicants/{applicant}', [ApplicantController::class, 'show']);
+        Route::get('applicants/{applicant}/resume', [ApplicantController::class, 'resume']);
         Route::put('applicants/{applicant}', [ApplicantController::class, 'update']);
         Route::patch('applicants/{applicant}', [ApplicantController::class, 'update']);
         Route::patch('applicants/{applicant}/ready-for-interview', [ApplicantController::class, 'readyForInterview']);

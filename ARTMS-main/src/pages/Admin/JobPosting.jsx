@@ -16,9 +16,9 @@ import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
 import Skeleton from "../../components/ui/Skeleton";
-import JobPostingEditPanel from "../../components/job/JobPostingEditPanel";
 import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import api from "../../services/api";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 import { useToast } from "../../context/ToastContext";
@@ -35,8 +35,6 @@ const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warni
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "published", label: "Published" },
-  { value: "pending_approval", label: "Pending" },
-  { value: "revised", label: "Needs Revision" },
   { value: "closed", label: "Closed" },
 ];
 
@@ -60,15 +58,19 @@ export default function JobPosting() {
   const pageSize = 5;
 
   // Selected Posting ID for Split View Detail & Edit Panel
+  const [openDetailId, setOpenDetailId] = useState(null);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletePRFModalOpen, setDeletePRFModalOpen] = useState(false);
   const [selectedPRF, setSelectedPRF] = useState(null);
   const [selectedPosting, setSelectedPosting] = useState(null);
   const [prfToDelete, setPrfToDelete] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, postingId: null });
   const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
@@ -137,12 +139,9 @@ export default function JobPosting() {
       return;
     }
 
-    const isModified =
-      !deepEqual(submittedFormData.qualifications, selectedPRF.qualifications || []) ||
-      !deepEqual(submittedFormData.responsibilities, selectedPRF.responsibilities || []);
-
+    setCreating(true);
     try {
-      await api.post("/job-postings", {
+      const res = await api.post("/job-postings", {
         job_library_id: selectedPRF.job_library_id,
         department_id: selectedPRF.department_id,
         manpower_request_id: selectedPRF.id,
@@ -152,16 +151,13 @@ export default function JobPosting() {
         description: submittedFormData.description || null,
         qualifications: submittedFormData.qualifications,
         responsibilities: submittedFormData.responsibilities,
-        is_modified_from_prf: isModified,
       });
 
       setAlertModal({
         open: true,
         variant: "success",
         title: "Success",
-        message: isModified
-          ? "Job posting submitted for COO approval (requirements were modified)."
-          : "Job posting was instantly published (no modifications made).",
+        message: res.data?.message || "Job posting was successfully updated and published.",
       });
       setCreateModalOpen(false);
       fetchData();
@@ -173,21 +169,24 @@ export default function JobPosting() {
         title: "Error",
         message: error.response?.data?.message || "Failed to create job posting.",
       });
+    } finally {
+      setCreating(false);
     }
   };
 
   const handleDeletePosting = async () => {
-    if (!selectedPosting) return;
+    if (!deleteConfirm.postingId) return;
+
+    setDeleting(true);
     try {
-      await api.delete(`/job-postings/${selectedPosting.id}`);
+      await api.delete(`/job-postings/${deleteConfirm.postingId}`);
       setAlertModal({
         open: true,
         variant: "success",
         title: "Success",
-        message: "Job posting deleted successfully.",
+        message: "Job posting was deleted successfully.",
       });
-      setDeleteModalOpen(false);
-      if (selectedPostingId === selectedPosting.id) setSelectedPostingId(null);
+      setDeleteConfirm({ open: false, postingId: null });
       fetchData();
     } catch (error) {
       console.error("Error deleting posting:", error);
@@ -197,6 +196,8 @@ export default function JobPosting() {
         title: "Error",
         message: error.response?.data?.message || "Failed to delete job posting.",
       });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -243,9 +244,8 @@ export default function JobPosting() {
 
   const stats = {
     published: postings.filter((p) => p.status === "published").length,
-    pending: postings.filter((p) => p.status === "pending_approval" || p.approval_status === "pending").length,
-    revised: postings.filter((p) => p.approval_status === "revised").length,
     closed: postings.filter((p) => p.status === "closed").length,
+    totalVacancies: postings.reduce((sum, p) => sum + (p.vacancies_count || 1), 0),
     totalApps: postings.reduce((sum, p) => sum + (p.applicants_count || 0), 0),
   };
 
@@ -273,7 +273,7 @@ export default function JobPosting() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card
             onClick={() => setStatusFilter("published")}
             className={`cursor-pointer transition-all hover:border-emerald-400 ${statusFilter === "published" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
@@ -285,36 +285,6 @@ export default function JobPosting() {
               <div>
                 <p className="text-sm font-semibold text-slate-500">Published</p>
                 <p className="text-2xl font-extrabold text-slate-900">{stats.published}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            onClick={() => setStatusFilter("pending_approval")}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "pending_approval" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <Clock size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Pending</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.pending}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            onClick={() => setStatusFilter("revised")}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "revised" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <RefreshCw size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
-                <p className="text-2xl font-extrabold text-amber-600">{stats.revised}</p>
               </div>
             </CardContent>
           </Card>
@@ -336,11 +306,26 @@ export default function JobPosting() {
 
           <Card
             onClick={() => setStatusFilter("all")}
+            className="cursor-pointer transition-all hover:border-amber-400"
+          >
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+                <Briefcase size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">Total Vacancies</p>
+                <p className="text-2xl font-extrabold text-slate-900">{stats.totalVacancies}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            onClick={() => setStatusFilter("all")}
             className={`cursor-pointer transition-all hover:border-blue-400 ${statusFilter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
           >
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <Briefcase size={24} className="text-blue-600" />
+                <Clock size={24} className="text-blue-600" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-500">Total Apps</p>
@@ -611,7 +596,6 @@ export default function JobPosting() {
                           <TH>Department</TH>
                           <TH>Vacancies</TH>
                           <TH>Applicants</TH>
-                          <TH>COO Approval</TH>
                           <TH>Status</TH>
                           <TH className="text-right">Actions</TH>
                         </tr>
@@ -639,11 +623,6 @@ export default function JobPosting() {
                             <TD>
                               <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
                               <span className="text-xs text-slate-400"> apps</span>
-                            </TD>
-                            <TD>
-                              <Badge tone={APPROVAL_TONE[p.approval_status] ?? "default"}>
-                                {p.approval_status}
-                              </Badge>
                             </TD>
                             <TD>
                               <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
@@ -742,8 +721,26 @@ export default function JobPosting() {
       <JobPostingCreateModal
         open={createModalOpen}
         prf={selectedPRF}
+        existingPostings={postings}
         onClose={() => setCreateModalOpen(false)}
         onSave={handleCreatePosting}
+        saving={creating}
+      />
+
+      {/* Full-screen blocking loading overlay for Creating/Updating Posting */}
+      <ActionLoadingModal
+        open={creating}
+        type="save"
+        title="Publishing Job Posting..."
+        message="Updating vacancy counts and publishing position to Careers board. Please wait..."
+      />
+
+      {/* Full-screen blocking loading overlay for Deleting Posting */}
+      <ActionLoadingModal
+        open={deleting}
+        type="delete"
+        title="Deleting Job Posting..."
+        message="Removing job posting and updating listings. Please wait..."
       />
     </div>
   );

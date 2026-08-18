@@ -14,6 +14,7 @@ class ManpowerRequest extends Model
         'department_id',
         'requested_by',
         'job_library_id',
+        'job_posting_id',
         'position_needed',
         'headcount',
         'justification',
@@ -69,6 +70,11 @@ class ManpowerRequest extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function jobPosting()
+    {
+        return $this->belongsTo(JobPosting::class, 'job_posting_id');
     }
 
     public function jobPostings()
