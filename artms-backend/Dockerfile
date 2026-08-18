@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
@@ -13,8 +15,9 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions required by Laravel and ARTMS
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+# Configure and install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -28,8 +31,8 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Install PHP dependencies for production
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies without running artisan scripts during build time
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Configure Apache DocumentRoot to point to Laravel's public directory
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
