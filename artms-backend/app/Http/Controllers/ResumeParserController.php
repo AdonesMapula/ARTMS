@@ -170,7 +170,7 @@ EOT;
             $isGroq = str_starts_with($apiKey, 'gsk_');
             $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
             $modelsToTry = $isGroq
-                ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama-3.1-70b-versatile', 'mixtral-8x7b-32768']
+                ? ['llama-3.3-70b-versatile', 'llama-3.3-70b-specdec', 'llama-3.1-8b-instant', 'gemma2-9b-it']
                 : ['grok-4.5', 'grok-3-mini', 'grok-2-latest', 'grok-beta'];
 
             foreach ($modelsToTry as $model) {

@@ -345,47 +345,42 @@ EOT;
             $baseUri = $isGroq
                 ? 'https://api.groq.com/openai/v1/chat/completions'
                 : 'https://api.x.ai/v1/chat/completions';
-            $model = $isGroq ? 'llama-3.3-70b-versatile' : 'grok-3-mini';
+            $modelsToTry = $isGroq
+                ? ['llama-3.3-70b-versatile', 'llama-3.3-70b-specdec', 'llama-3.1-8b-instant', 'gemma2-9b-it']
+                : ['grok-3-mini', 'grok-4.5', 'grok-2-latest', 'grok-beta'];
 
-            $response = Http::withToken($apiKey)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->timeout(30)
-                ->post($baseUri, [
-                    'model' => $model,
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => 'You are a precise HR document parser. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
+            foreach ($modelsToTry as $model) {
+                $response = Http::withToken($apiKey)
+                    ->withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(30)
+                    ->post($baseUri, [
+                        'model' => $model,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => 'You are a precise HR document parser. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => $prompt
+                            ]
                         ],
-                        [
-                            'role' => 'user',
-                            'content' => $prompt
-                        ]
-                    ],
-                    'temperature' => 0.1,
-                    'max_tokens' => 4096,
-                ]);
+                        'temperature' => 0.1,
+                        'max_tokens' => 2048,
+                    ]);
 
-            if ($response->successful()) {
-                $aiText = $response->json('choices.0.message.content') ?? '{}';
+                if ($response->successful()) {
+                    $aiText = $response->json('choices.0.message.content') ?? '{}';
+                    $aiText = preg_replace('/^```json\s*/i', '', trim($aiText));
+                    $aiText = preg_replace('/```\s*$/', '', $aiText);
 
-                // Clean code fences
-                $aiText = preg_replace('/```json\s*/i', '', $aiText);
-                $aiText = preg_replace('/```\s*/', '', $aiText);
-                $aiText = trim($aiText);
-
-                $extracted = json_decode($aiText, true);
-                if (is_array($extracted)) {
-                    // Ensure proper block IDs for frontend
-                    $extracted = $this->normalizeBlockIds($extracted);
-                    return array_merge($this->emptyJobData(), $extracted);
+                    $extracted = json_decode(trim($aiText), true);
+                    if (is_array($extracted)) {
+                        $extracted = $this->normalizeBlockIds($extracted);
+                        return array_merge($this->emptyJobData(), $extracted);
+                    }
                 }
             }
-
-            Log::warning('AI parsing returned non-JSON or failed', [
-                'status' => $response->status(),
-            ]);
-
         } catch (\Throwable $e) {
             Log::error('xAI/Groq Job Document Parsing Failed: ' . $e->getMessage());
         }
