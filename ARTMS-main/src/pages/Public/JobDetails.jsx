@@ -9,7 +9,8 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import AlertModal from "../../components/ui/AlertModal";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
+const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
 
 export default function JobDetails() {
   const { id } = useParams();

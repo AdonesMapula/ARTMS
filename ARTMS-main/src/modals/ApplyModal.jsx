@@ -9,7 +9,8 @@ import applicantService from "../services/applicantService";
 import BirthDatePicker from "../components/ui/BirthDatePicker";
 import Select from "../components/ui/Select";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
+const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
 
 const EMPTY_FORM = {
   firstName: "", lastName: "", middleName: "",

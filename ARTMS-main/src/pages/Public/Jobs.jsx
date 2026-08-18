@@ -15,7 +15,8 @@ import GeometricBackground from "../../components/ui/GeometricBackground";
 import axios from "axios";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
+const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
