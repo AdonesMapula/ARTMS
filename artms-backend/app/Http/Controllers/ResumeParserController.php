@@ -126,18 +126,18 @@ class ResumeParserController extends Controller
     }
 
     /**
-     * Call the xAI/Groq API to get structured JSON data from resume text.
+     * Call the Google Gemini API to get structured JSON data from resume text.
      */
     private function parseResumeWithAI(string $rawText): array
     {
-        $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
-        if (!$apiKey) {
-            Log::warning('xAI/Groq API Key missing. Falling back to local regex parser.');
+        $keys = \App\Services\GeminiService::getApiKeys();
+        if (empty($keys)) {
+            Log::warning('Gemini API Key missing. Falling back to local regex parser.');
             return $this->parseResumeTextFallback($rawText);
         }
 
         // Limit raw text length for prompt limits
-        $inputText = strlen($rawText) > 8000 ? substr($rawText, 0, 8000) . "\n[Truncated]" : $rawText;
+        $inputText = strlen($rawText) > 10000 ? substr($rawText, 0, 10000) . "\n[Truncated]" : $rawText;
 
         $prompt = <<<EOT
 You are an expert ATS resume extraction parser. 
@@ -167,45 +167,14 @@ Your response must be valid JSON only. Do not wrap in markdown or backticks.
 EOT;
 
         try {
-            $isGroq = str_starts_with($apiKey, 'gsk_');
-            $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
-            $modelsToTry = $isGroq
-                ? ['llama-3.3-70b-versatile', 'llama-3.3-70b-specdec', 'llama-3.1-8b-instant', 'gemma2-9b-it']
-                : ['grok-4.5', 'grok-3-mini', 'grok-2-latest', 'grok-beta'];
+            $systemInstruction = 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON matching the requested schema. No markdown, no code fences, no extra text.';
+            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048);
 
-            foreach ($modelsToTry as $model) {
-                $response = Http::withToken($apiKey)
-                    ->withHeaders(['Content-Type' => 'application/json'])
-                    ->timeout(15)
-                    ->post($baseUri, [
-                        'model' => $model,
-                        'messages' => [
-                            [
-                                'role' => 'system',
-                                'content' => 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
-                            ],
-                            [
-                                'role' => 'user',
-                                'content' => $prompt
-                            ]
-                        ],
-                        'temperature' => 0.1,
-                        'max_tokens' => 2048,
-                    ]);
-
-                if ($response->successful()) {
-                    $aiText = $response->json('choices.0.message.content') ?? '{}';
-                    $aiText = preg_replace('/^```json\s*/i', '', trim($aiText));
-                    $aiText = preg_replace('/```\s*$/', '', $aiText);
-
-                    $extracted = json_decode(trim($aiText), true);
-                    if (is_array($extracted)) {
-                        return array_merge($this->emptyParsedData(), $extracted);
-                    }
-                }
+            if (is_array($extracted)) {
+                return array_merge($this->emptyParsedData(), $extracted);
             }
         } catch (\Throwable $e) {
-            Log::error('xAI/Groq Resume Parsing Failed: ' . $e->getMessage());
+            Log::error('Gemini Resume Parsing Failed: ' . $e->getMessage());
         }
 
         return $this->parseResumeTextFallback($rawText);

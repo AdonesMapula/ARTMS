@@ -131,45 +131,16 @@ Example Output:
 ]
 EOT;
 
-        $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
-        if (!$apiKey) {
-            Log::warning('No xAI/Groq API key found. Falling back to standard rejection.');
+        $keys = \App\Services\GeminiService::getApiKeys();
+        if (empty($keys)) {
+            Log::warning('No Gemini API key found. Falling back to standard rejection.');
             NotificationService::sendScreeningRejectionEmail($applicant, $this->remarks);
             return;
         }
 
         try {
-            $isGroq = str_starts_with($apiKey, 'gsk_');
-            $baseUri = $isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions';
-            $model = $isGroq ? 'llama-3.3-70b-versatile' : 'grok-4.5';
-
-            $response = Http::withToken($apiKey)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($baseUri, [
-                    'model' => $model,
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => 'You are a precise HR evaluator. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
-                        ],
-                        [
-                            'role' => 'user',
-                            'content' => $prompt
-                        ]
-                    ],
-                    'temperature' => 0.2,
-                    'max_tokens' => 1024,
-                ]);
-
-            if ($response->successful()) {
-                $aiText = $response->json('choices.0.message.content') ?? '[]';
-                
-                // Clean markdown if AI ignored instruction
-                $aiText = preg_replace('/```json\s*/i', '', $aiText);
-                $aiText = preg_replace('/```\s*/', '', $aiText);
-                $aiText = trim($aiText);
-
-                $recommendations = json_decode($aiText, true);
+            $systemInstruction = 'You are a precise HR evaluator. Respond ONLY with valid, raw JSON array. No markdown, no code fences, no extra text.';
+            $recommendations = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 1024);
 
                 if (is_array($recommendations) && count($recommendations) > 0) {
                     // Extract job IDs

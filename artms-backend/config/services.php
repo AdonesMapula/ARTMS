@@ -43,6 +43,11 @@ return [
         'key' => env('GOOGLE_AI_API_KEY'),
     ],
 
+    'gemini' => [
+        'key'         => env('GEMINI_API_KEY'),
+        'reserve_key' => env('RESERVE_GEMINI_API_KEY'),
+    ],
+
     'groq' => [
         'key' => env('GROQ_API_KEY'),
     ],

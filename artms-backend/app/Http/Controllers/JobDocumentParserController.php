@@ -281,17 +281,17 @@ class JobDocumentParserController extends Controller
     }
 
     /**
-     * Call xAI/Groq API to extract structured Job Library data from document text.
+     * Call Google Gemini API to extract structured Job Library data from document text.
      */
     private function parseWithAI(string $rawText): array
     {
-        $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
-        if (!$apiKey) {
-            Log::warning('xAI/Groq API Key missing for Job Document parsing.');
+        $keys = \App\Services\GeminiService::getApiKeys();
+        if (empty($keys)) {
+            Log::warning('Gemini API Key missing for Job Document parsing.');
             return $this->emptyJobData();
         }
 
-        $inputText = strlen($rawText) > 12000 ? substr($rawText, 0, 12000) . "\n[Truncated]" : $rawText;
+        $inputText = strlen($rawText) > 15000 ? substr($rawText, 0, 15000) . "\n[Truncated]" : $rawText;
 
         $prompt = <<<EOT
 You are an expert HR document parser for a Job Library system. 
@@ -299,39 +299,40 @@ Analyze the document text below to determine if it is a valid Job Description / 
 Extract all job-related information and return a valid JSON object matching the schema.
 
 CRITICAL RULES:
-1. "is_valid_job_document": Set to true ONLY if this document describes an open job position or job description with a title and role duties/requirements. Set to false if it is a personal resume/CV, invoice, receipt, school paper, blank, or completely unrelated document.
-2. "validation_feedback": If is_valid_job_document is false or if key fields like Job Title/Qualifications are missing, provide a clear 1-2 sentence explanation of what is wrong or missing.
-3. "missing_fields": List any required fields that could not be found (e.g. ["job_title", "qualifications", "responsibilities"]).
-4. For qualifications and responsibilities, group related items into categorized blocks with a title and bullet detail items.
-5. For employment_type, use one of: full_time, part_time, contractual, project_based, probationary, ojt.
-6. For salary values, extract numeric values only (no currency symbols). If a range is found, set both salary_min and salary_max.
-7. Your response must be valid JSON only. No markdown, no code fences, no explanation.
+1. "is_valid_job_document": Set to true ONLY if the document contains a clear job title and job-related specifications.
+2. "job_title": Extract the official job title.
+3. "department": Extract the department name. If missing, leave empty string "".
+4. "employment_type": One of: "full_time", "part_time", "contract", "internship". Default "full_time".
+5. "experience_level": One of: "entry", "mid", "senior", "lead", "executive". Default "entry".
+6. "job_category": Broad industry category (e.g. "Technology", "Human Resources", "Finance", "Operations", "Marketing", "Customer Service").
+7. "salary_min" and "salary_max": Numeric salary values if mentioned, otherwise 0.
+8. "salary_type": One of: "monthly", "hourly", "daily", "annual". Default "monthly".
+9. "job_description": 2-3 paragraph summary of the role.
+10. "qualifications" and "responsibilities": Group into logical section blocks (e.g. "Core Competencies", "Technical Skills", "Education & Experience", "Daily Tasks"). Each block has "title" and an array of "details" strings.
 
-== SCHEMA ==
+== JSON SCHEMA ==
 {
   "is_valid_job_document": true,
-  "validation_feedback": "string",
-  "missing_fields": ["string"],
-  "job_title": "string (the job position title, or empty string if not found)",
-  "job_description": "string (a 2-4 sentence overview of the role, or empty string)",
-  "job_category": "string (e.g. Operations, IT, Finance, Engineering, Marketing, HR, etc.)",
-  "employment_type": "string (full_time | part_time | contractual | project_based | probationary | ojt)",
-  "salary_min": "number or null (monthly salary minimum in PHP)",
-  "salary_max": "number or null (monthly salary maximum in PHP)",
+  "validation_message": "",
+  "job_title": "",
+  "department": "",
+  "employment_type": "full_time",
+  "experience_level": "entry",
+  "job_category": "General",
+  "salary_min": 0,
+  "salary_max": 0,
+  "salary_type": "monthly",
+  "job_description": "",
   "qualifications": [
     {
-      "title": "string (category name, e.g. 'Education & Experience', 'Technical Skills')",
-      "details": [
-        { "value": "string (specific qualification item)" }
-      ]
+      "title": "Educational Background",
+      "details": ["Bachelor's degree in Computer Science or related field"]
     }
   ],
   "responsibilities": [
     {
-      "title": "string (category name, e.g. 'Core Duties', 'Administrative Tasks')",
-      "details": [
-        { "value": "string (specific responsibility item)" }
-      ]
+      "title": "Key Responsibilities",
+      "details": ["Develop and maintain software applications"]
     }
   ]
 }
@@ -341,48 +342,15 @@ CRITICAL RULES:
 EOT;
 
         try {
-            $isGroq = str_starts_with($apiKey, 'gsk_');
-            $baseUri = $isGroq
-                ? 'https://api.groq.com/openai/v1/chat/completions'
-                : 'https://api.x.ai/v1/chat/completions';
-            $modelsToTry = $isGroq
-                ? ['llama-3.3-70b-versatile', 'llama-3.3-70b-specdec', 'llama-3.1-8b-instant', 'gemma2-9b-it']
-                : ['grok-3-mini', 'grok-4.5', 'grok-2-latest', 'grok-beta'];
+            $systemInstruction = 'You are a precise HR document parser. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.';
+            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048);
 
-            foreach ($modelsToTry as $model) {
-                $response = Http::withToken($apiKey)
-                    ->withHeaders(['Content-Type' => 'application/json'])
-                    ->timeout(30)
-                    ->post($baseUri, [
-                        'model' => $model,
-                        'messages' => [
-                            [
-                                'role' => 'system',
-                                'content' => 'You are a precise HR document parser. Respond ONLY with valid, raw JSON. No markdown, no code fences, no extra text.'
-                            ],
-                            [
-                                'role' => 'user',
-                                'content' => $prompt
-                            ]
-                        ],
-                        'temperature' => 0.1,
-                        'max_tokens' => 2048,
-                    ]);
-
-                if ($response->successful()) {
-                    $aiText = $response->json('choices.0.message.content') ?? '{}';
-                    $aiText = preg_replace('/^```json\s*/i', '', trim($aiText));
-                    $aiText = preg_replace('/```\s*$/', '', $aiText);
-
-                    $extracted = json_decode(trim($aiText), true);
-                    if (is_array($extracted)) {
-                        $extracted = $this->normalizeBlockIds($extracted);
-                        return array_merge($this->emptyJobData(), $extracted);
-                    }
-                }
+            if (is_array($extracted)) {
+                $extracted = $this->normalizeBlockIds($extracted);
+                return array_merge($this->emptyJobData(), $extracted);
             }
         } catch (\Throwable $e) {
-            Log::error('xAI/Groq Job Document Parsing Failed: ' . $e->getMessage());
+            Log::error('Gemini Job Document Parsing Failed: ' . $e->getMessage());
         }
 
         return $this->emptyJobData();

@@ -114,17 +114,12 @@ class GenerateAIInterviewReportJob implements ShouldQueue
             }
         }
 
-        // ── 2. Determine LLM Provider & Config ──────────────────────────────
-        $apiKey = config('services.xai.key') ?? env('XAI_API_KEY') ?? env('GROQ_API_KEY');
+        // ── 2. Call Google Gemini with Dual-Key Fallback ───────────────────
+        $keys = \App\Services\GeminiService::getApiKeys();
         $aiData = null;
-        $modelUsed = 'grok-4.5';
+        $modelUsed = 'gemini-2.5-flash';
 
-        if (! empty($apiKey)) {
-            $isGroq = str_starts_with($apiKey, 'gsk_');
-            $baseUri = $isGroq ? 'https://api.groq.com/openai/v1' : 'https://api.x.ai/v1';
-            $model = $isGroq ? 'llama-3.3-70b-versatile' : 'grok-4.5';
-            $modelUsed = $isGroq ? 'groq-llama-3.3-70b' : 'grok-4.5';
-
+        if (! empty($keys)) {
             $prompt = <<<PROMPT
 You are a senior executive HR evaluator. Perform an objective evaluation of the candidate based on transcript, speech statistics, and behavioral observations.
 IMPORTANT SAFETY & OBJECTIVITY RULE: Use cautious, objective language for behavioral observations. Do NOT claim the applicant is "dishonest", "lying", or "anxious". Instead, state observed indicators such as "Response showed hesitation based on speech pauses" or "Attentiveness maintained during technical questions".
@@ -165,29 +160,10 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code fences). Sche
 PROMPT;
 
             try {
-                /** @var \OpenAI\Client $client */
-                $client = \OpenAI::factory()
-                    ->withApiKey($apiKey)
-                    ->withBaseUri($baseUri)
-                    ->withHttpClient(new \GuzzleHttp\Client(['verify' => false, 'timeout' => 25]))
-                    ->make();
-
-                $response = $client->chat()->create([
-                    'model'       => $model,
-                    'temperature' => 0.4,
-                    'max_tokens'  => 1024,
-                    'messages'    => [
-                        ['role' => 'system', 'content' => 'You are a precise HR evaluation AI. Output raw valid JSON only without markdown formatting.'],
-                        ['role' => 'user',   'content' => $prompt],
-                    ],
-                ]);
-
-                $rawContent = $response->choices[0]->message->content ?? '';
-                $rawContent = preg_replace('/^```json\s*/i', '', trim($rawContent));
-                $rawContent = preg_replace('/```\s*$/', '', $rawContent);
-                $aiData = json_decode($rawContent, true);
+                $systemInstruction = 'You are a precise HR evaluation AI. Output raw valid JSON only matching the requested schema template without markdown formatting.';
+                $aiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.3, 2048);
             } catch (\Throwable $e) {
-                Log::warning("GenerateAIInterviewReportJob: LLM API request failed ({$e->getMessage()}). Using dynamic heuristic evaluator.");
+                Log::warning("GenerateAIInterviewReportJob: Gemini API request failed ({$e->getMessage()}). Using dynamic heuristic evaluator.");
             }
         }
 
