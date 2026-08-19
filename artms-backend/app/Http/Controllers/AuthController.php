@@ -21,9 +21,12 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $email = is_string($request->email) ? trim($request->email) : $request->email;
+        $password = is_string($request->password) ? trim($request->password) : $request->password;
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        $user = User::where('email', $email)->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
@@ -146,6 +149,12 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
+        $request->merge([
+            'current_password'      => is_string($request->current_password) ? trim($request->current_password) : $request->current_password,
+            'password'              => is_string($request->password) ? trim($request->password) : $request->password,
+            'password_confirmation' => is_string($request->password_confirmation) ? trim($request->password_confirmation) : $request->password_confirmation,
+        ]);
+
         $request->validate([
             'current_password' => ['required'],
             'password'         => ['required', 'string', 'min:8', 'confirmed'],
@@ -167,6 +176,13 @@ class AuthController extends Controller
      */
     public function setupAccount(Request $request): JsonResponse
     {
+        $request->merge([
+            'email'                 => is_string($request->email) ? trim($request->email) : $request->email,
+            'token'                 => is_string($request->token) ? trim($request->token) : $request->token,
+            'password'              => is_string($request->password) ? trim($request->password) : $request->password,
+            'password_confirmation' => is_string($request->password_confirmation) ? trim($request->password_confirmation) : $request->password_confirmation,
+        ]);
+
         $request->validate([
             'email'    => ['required', 'email'],
             'token'    => ['required', 'string'],

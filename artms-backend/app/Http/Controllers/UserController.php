@@ -46,7 +46,7 @@ class UserController extends Controller
         $fullName = trim($request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name);
         
         // Auto-generate a temporary password if not explicitly supplied
-        $plainPassword = $request->filled('password') ? $request->password : Str::random(10);
+        $plainPassword = $request->filled('password') ? trim($request->password) : Str::random(10);
 
         $user = User::create([
             'first_name'    => $request->first_name,
@@ -115,7 +115,7 @@ class UserController extends Controller
         }
 
         if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
+            $data['password'] = Hash::make(trim($data['password']));
         }
 
         $user->update($data);

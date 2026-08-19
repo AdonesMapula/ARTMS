@@ -33,13 +33,16 @@ export default function SetupAccount() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    const password = (passwordRef.current?.value || "").trim();
+    const password_confirmation = (confirmRef.current?.value || "").trim();
     
-    if (passwordRef.current.value !== confirmRef.current.value) {
+    if (password !== password_confirmation) {
       setError("Passwords do not match.");
       return;
     }
 
-    if (passwordRef.current.value.length < 8) {
+    if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
       return;
     }
@@ -48,10 +51,10 @@ export default function SetupAccount() {
 
     try {
       await axios.post(`${API_URL}/auth/setup-account`, {
-        email,
-        token,
-        password: passwordRef.current.value,
-        password_confirmation: confirmRef.current.value
+        email: (email || "").trim(),
+        token: (token || "").trim(),
+        password,
+        password_confirmation,
       });
       setSuccess(true);
     } catch (err) {
@@ -170,6 +173,9 @@ export default function SetupAccount() {
                       type={showPassword ? "text" : "password"}
                       required
                       ref={passwordRef}
+                      onKeyDown={(e) => { if (e.key === " ") e.preventDefault(); }}
+                      onChange={(e) => { if (e.target.value.includes(" ")) e.target.value = e.target.value.replace(/\s+/g, ""); }}
+                      onBlur={(e) => { e.target.value = e.target.value.trim(); }}
                       className="w-full bg-transparent py-3 pl-10 pr-12 text-sm font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
                       placeholder="At least 8 characters"
                     />
@@ -195,6 +201,9 @@ export default function SetupAccount() {
                       type={showConfirm ? "text" : "password"}
                       required
                       ref={confirmRef}
+                      onKeyDown={(e) => { if (e.key === " ") e.preventDefault(); }}
+                      onChange={(e) => { if (e.target.value.includes(" ")) e.target.value = e.target.value.replace(/\s+/g, ""); }}
+                      onBlur={(e) => { e.target.value = e.target.value.trim(); }}
                       className="w-full bg-transparent py-3 pl-10 pr-12 text-sm font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400"
                       placeholder="Confirm your new password"
                     />

@@ -37,14 +37,14 @@ export default function OtpVerification() {
   const handleReset = async (e) => {
     e.preventDefault();
     setError("");
-    const pw  = passwordRef.current.value;
-    const cpw = confirmRef.current.value;
+    const pw  = (passwordRef.current?.value || "").trim();
+    const cpw = (confirmRef.current?.value || "").trim();
     if (pw !== cpw) { setError("Passwords do not match."); return; }
     if (pw.length < 8) { setError("Password must be at least 8 characters."); return; }
 
     setLoading(true);
     try {
-      await authService.resetPassword(email, otp, pw, cpw);
+      await authService.resetPassword(email.trim(), otp.trim(), pw, cpw);
       setSuccess("Password reset successfully! Redirecting to login…");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
@@ -150,6 +150,9 @@ export default function OtpVerification() {
                   <input
                     ref={passwordRef} type={showPw ? "text" : "password"} required minLength={8}
                     placeholder="Min. 8 characters"
+                    onKeyDown={(e) => { if (e.key === " ") e.preventDefault(); }}
+                    onChange={(e) => { if (e.target.value.includes(" ")) e.target.value = e.target.value.replace(/\s+/g, ""); }}
+                    onBlur={(e) => { e.target.value = e.target.value.trim(); }}
                     className="w-full rounded-xl bg-transparent py-3 pl-4 pr-11 text-sm focus:outline-none"
                   />
                   <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3.5 text-slate-400">
@@ -163,6 +166,9 @@ export default function OtpVerification() {
                 <input
                   ref={confirmRef} type="password" required minLength={8}
                   placeholder="Repeat your new password"
+                  onKeyDown={(e) => { if (e.key === " ") e.preventDefault(); }}
+                  onChange={(e) => { if (e.target.value.includes(" ")) e.target.value = e.target.value.replace(/\s+/g, ""); }}
+                  onBlur={(e) => { e.target.value = e.target.value.trim(); }}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm focus:outline-none focus:border-[#060F5A] focus:ring-2 focus:ring-[#060F5A]/20"
                 />
               </div>

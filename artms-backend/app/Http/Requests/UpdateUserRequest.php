@@ -13,6 +13,32 @@ class UpdateUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        if ($this->has('first_name') && is_string($this->first_name)) {
+            $merge['first_name'] = trim($this->first_name);
+        }
+        if ($this->has('middle_name') && is_string($this->middle_name)) {
+            $merge['middle_name'] = trim($this->middle_name);
+        }
+        if ($this->has('last_name') && is_string($this->last_name)) {
+            $merge['last_name'] = trim($this->last_name);
+        }
+        if ($this->has('email') && is_string($this->email)) {
+            $merge['email'] = trim($this->email);
+        }
+        if ($this->has('password') && is_string($this->password)) {
+            $merge['password'] = trim($this->password);
+        }
+        if ($this->has('password_confirmation') && is_string($this->password_confirmation)) {
+            $merge['password_confirmation'] = trim($this->password_confirmation);
+        }
+        if (!empty($merge)) {
+            $this->merge($merge);
+        }
+    }
+
     public function rules(): array
     {
         $userId = $this->route('user');

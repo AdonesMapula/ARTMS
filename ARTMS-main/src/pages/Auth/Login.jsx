@@ -29,8 +29,17 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
+    const email = (emailRef.current?.value || "").trim();
+    const password = (passwordRef.current?.value || "").trim();
+
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const user = await login(emailRef.current.value, passwordRef.current.value);
+      const user = await login(email, password);
       // Role-based redirect after successful login
       navigate(authService.getRolePath(user.role), { replace: true });
     } catch (err) {
@@ -145,6 +154,9 @@ export default function Login() {
                   ref={emailRef}
                   placeholder="username@company.com"
                   autoComplete="username"
+                  onBlur={(e) => {
+                    e.target.value = e.target.value.trim();
+                  }}
                   className="w-full rounded-xl bg-transparent py-3 pl-11 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
               </div>
@@ -171,6 +183,19 @@ export default function Login() {
                   ref={passwordRef}
                   placeholder="••••••••"
                   autoComplete="current-password"
+                  onKeyDown={(e) => {
+                    if (e.key === " ") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    if (e.target.value.includes(" ")) {
+                      e.target.value = e.target.value.replace(/\s+/g, "");
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.target.value = e.target.value.trim();
+                  }}
                   className="w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
                 <button

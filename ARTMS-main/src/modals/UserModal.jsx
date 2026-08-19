@@ -100,10 +100,12 @@ export default function UserModal({
     if (!form.email.trim())      validationErrors.email       = ["Email address is required."];
     
     if (editUser) {
-      if (form.password && form.password.length < 8) {
+      const cleanPw = (form.password || "").trim();
+      const cleanCpw = (form.password_confirmation || "").trim();
+      if (cleanPw && cleanPw.length < 8) {
         validationErrors.password = ["Password must be at least 8 characters."];
       }
-      if (form.password && form.password !== form.password_confirmation) {
+      if (cleanPw && cleanPw !== cleanCpw) {
         validationErrors.password_confirmation = ["Passwords do not match."];
       }
     }
@@ -116,7 +118,16 @@ export default function UserModal({
     setSaving(true);
     setErrors({});
     try {
-      const res = await onSave(form);
+      const sanitizedForm = {
+        ...form,
+        first_name: form.first_name.trim(),
+        middle_name: form.middle_name?.trim() || "",
+        last_name: form.last_name.trim(),
+        email: form.email.trim(),
+        password: form.password?.trim() || "",
+        password_confirmation: form.password_confirmation?.trim() || "",
+      };
+      const res = await onSave(sanitizedForm);
       const data = res?.data || res;
       
       if (!editUser && data?.temporary_password) {

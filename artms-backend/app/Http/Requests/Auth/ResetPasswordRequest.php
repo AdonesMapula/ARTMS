@@ -11,6 +11,16 @@ class ResetPasswordRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email'                 => is_string($this->email) ? trim($this->email) : $this->email,
+            'otp'                   => is_string($this->otp) ? trim($this->otp) : $this->otp,
+            'password'              => is_string($this->password) ? trim($this->password) : $this->password,
+            'password_confirmation' => is_string($this->password_confirmation) ? trim($this->password_confirmation) : $this->password_confirmation,
+        ]);
+    }
+
     public function rules(): array
     {
         return [

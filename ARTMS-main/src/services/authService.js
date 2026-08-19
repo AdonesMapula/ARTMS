@@ -5,7 +5,9 @@ const authService = {
    * Login — returns { token, user }
    */
   login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+    const cleanEmail = typeof email === 'string' ? email.trim() : email;
+    const cleanPassword = typeof password === 'string' ? password.trim() : password;
+    const response = await api.post('/auth/login', { email: cleanEmail, password: cleanPassword });
     const { token, user } = response.data;
 
     // Persist token and user info
@@ -39,7 +41,8 @@ const authService = {
    * Send OTP to email for password reset
    */
   forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
+    const cleanEmail = typeof email === 'string' ? email.trim() : email;
+    const response = await api.post('/auth/forgot-password', { email: cleanEmail });
     return response.data;
   },
 
@@ -47,7 +50,9 @@ const authService = {
    * Verify OTP code
    */
   verifyOtp: async (email, otp) => {
-    const response = await api.post('/auth/verify-otp', { email, otp });
+    const cleanEmail = typeof email === 'string' ? email.trim() : email;
+    const cleanOtp = typeof otp === 'string' ? otp.trim() : otp;
+    const response = await api.post('/auth/verify-otp', { email: cleanEmail, otp: cleanOtp });
     return response.data;
   },
 
@@ -56,10 +61,10 @@ const authService = {
    */
   resetPassword: async (email, otp, password, password_confirmation) => {
     const response = await api.post('/auth/reset-password', {
-      email,
-      otp,
-      password,
-      password_confirmation,
+      email: typeof email === 'string' ? email.trim() : email,
+      otp: typeof otp === 'string' ? otp.trim() : otp,
+      password: typeof password === 'string' ? password.trim() : password,
+      password_confirmation: typeof password_confirmation === 'string' ? password_confirmation.trim() : password_confirmation,
     });
     return response.data;
   },
@@ -69,9 +74,9 @@ const authService = {
    */
   changePassword: async (current_password, password, password_confirmation) => {
     const response = await api.post('/auth/change-password', {
-      current_password,
-      password,
-      password_confirmation,
+      current_password: typeof current_password === 'string' ? current_password.trim() : current_password,
+      password: typeof password === 'string' ? password.trim() : password,
+      password_confirmation: typeof password_confirmation === 'string' ? password_confirmation.trim() : password_confirmation,
     });
     return response.data;
   },

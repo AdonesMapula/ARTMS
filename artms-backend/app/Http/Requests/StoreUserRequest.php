@@ -13,6 +13,17 @@ class StoreUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'first_name'  => is_string($this->first_name) ? trim($this->first_name) : $this->first_name,
+            'middle_name' => is_string($this->middle_name) ? trim($this->middle_name) : $this->middle_name,
+            'last_name'   => is_string($this->last_name) ? trim($this->last_name) : $this->last_name,
+            'email'       => is_string($this->email) ? trim($this->email) : $this->email,
+            'password'    => is_string($this->password) ? trim($this->password) : $this->password,
+        ]);
+    }
+
     public function rules(): array
     {
         return [

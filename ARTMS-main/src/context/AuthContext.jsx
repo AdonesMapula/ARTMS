@@ -39,7 +39,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const { user: loggedInUser } = await authService.login(email, password);
+    const cleanEmail = typeof email === 'string' ? email.trim() : email;
+    const cleanPassword = typeof password === 'string' ? password.trim() : password;
+    const { user: loggedInUser } = await authService.login(cleanEmail, cleanPassword);
     setUser(loggedInUser);
     return loggedInUser;
   }, []);

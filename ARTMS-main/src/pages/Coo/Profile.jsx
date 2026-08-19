@@ -196,9 +196,15 @@ export default function Profile() {
     setPasswordSaving(true);
     
     const formData = new FormData(e.target);
-    const current_password = formData.get("current_password");
-    const password = formData.get("new_password");
-    const password_confirmation = formData.get("confirm_password");
+    const current_password = (formData.get("current_password") || "").trim();
+    const password = (formData.get("new_password") || "").trim();
+    const password_confirmation = (formData.get("confirm_password") || "").trim();
+
+    if (!password || password.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      setPasswordSaving(false);
+      return;
+    }
 
     if (password !== password_confirmation) {
       setPasswordError("New passwords do not match.");
