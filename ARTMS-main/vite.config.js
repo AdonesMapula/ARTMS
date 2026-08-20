@@ -13,7 +13,37 @@ export default defineConfig({
     exclude: ['maplibre-gl'],
   },
   build: {
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 1200,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react') || id.includes('react-icons')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('livekit') || id.includes('@livekit/')) {
+              return 'vendor-livekit';
+            }
+            if (id.includes('@mediapipe/')) {
+              return 'vendor-vision';
+            }
+            if (id.includes('maplibre-gl') || id.includes('react-map-gl')) {
+              return 'vendor-maps';
+            }
+            if (id.includes('@radix-ui/')) {
+              return 'vendor-radix';
+            }
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,

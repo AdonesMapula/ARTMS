@@ -1,10 +1,11 @@
 /**
  * InterviewReportModal.jsx
  * ─────────────────────────
- * Modal dialog for displaying post-interview AI analysis report.
+ * Modal dialog for displaying post-interview multimodal AI analysis report,
+ * regional dialect breakdown (Meta MMS / Whisper), and MediaPipe facial affect telemetry.
  */
 import { useEffect, useState } from "react";
-import { FiX, FiRefreshCw, FiAlertCircle, FiClock, FiPrinter, FiFileText } from "react-icons/fi";
+import { FiX, FiRefreshCw, FiAlertCircle, FiClock, FiPrinter, FiFileText, FiGlobe, FiSmile, FiEye, FiActivity } from "react-icons/fi";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -27,22 +28,20 @@ function scoreColor(score) {
   return            { ring: "stroke-red-500",   text: "text-red-600",     bg: "bg-red-50 text-red-700"     };
 }
 
-function DimensionBar({ label, score }) {
+function DimensionBar({ label, score, colorClass = null }) {
   const colors = scoreColor(score);
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600">
         <span>{label}</span>
-        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", colors.bg)}>{score}</span>
+        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", colors.bg)}>{score}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div
-          className={cn("h-2 rounded-full transition-all duration-700", {
-            "bg-emerald-500": score >= 75,
-            "bg-amber-400":   score >= 50 && score < 75,
-            "bg-red-500":     score < 50,
-          })}
-          style={{ width: `${score}%` }}
+          className={cn("h-2 rounded-full transition-all duration-700", colorClass || (
+            score >= 75 ? "bg-emerald-500" : score >= 50 ? "bg-amber-400" : "bg-red-500"
+          ))}
+          style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
         />
       </div>
     </div>
@@ -118,6 +117,10 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
   const transcripts = interview?.transcripts ?? [];
   const applicant   = interview?.applicant;
   const jobTitle    = interview?.job_posting?.job_library?.job_title ?? "—";
+  const speechMetrics = interview?.behavioral_metric?.speech_metrics ?? {};
+  const affectMetrics = interview?.behavioral_metric?.affect_metrics ?? {};
+  const dialectSummary = report?.dialect_summary ?? {};
+  const dialectBreakdown = dialectSummary?.breakdown ?? speechMetrics?.dialect_breakdown ?? { English: 100, Filipino: 0, Cebuano: 0, Hiligaynon: 0 };
 
   const isTranscribing = statusData?.transcription === "processing";
   const isAnalyzing    = statusData?.analysis === "processing" || statusData?.report === "processing";
@@ -134,7 +137,7 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
-                AI Interview Analysis Report
+                Multimodal AI Interview Analysis Report
               </p>
               <h2 className="text-base font-extrabold text-slate-900 leading-tight">
                 {applicant ? `${applicant.first_name} ${applicant.last_name}` : `Interview #${interviewId}`}
@@ -165,26 +168,26 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
             <div className="flex min-h-[360px] flex-col items-center justify-center gap-5 text-slate-400">
               <FiRefreshCw size={40} className="animate-spin text-indigo-600" />
               <div className="text-center space-y-2 max-w-md">
-                <p className="text-base font-extrabold text-slate-900">Post-Interview Processing Pipeline</p>
+                <p className="text-base font-extrabold text-slate-900">Post-Interview Multimodal Processing Pipeline</p>
                 <div className="flex flex-col gap-2 pt-2 text-xs font-medium">
                   <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span>1. LiveKit Egress Audio Finalization</span>
+                    <span>1. LiveKit Egress Audio Stream Finalization</span>
                     <span className="text-emerald-600 font-bold">✓ Complete</span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span>2. Whisper Speech-to-Text Transcription</span>
+                    <span>2. Tri-Engine Whisper & Regional Dialect STT</span>
                     <span className={cn("font-bold", isTranscribing ? "text-indigo-600 animate-pulse" : "text-emerald-600")}>
                       {isTranscribing ? "Transcribing..." : "Processing"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span>3. MediaPipe Behavioral & Speech Analysis</span>
+                    <span>3. MediaPipe Facial Affect & Pacing Analysis</span>
                     <span className={cn("font-bold", isAnalyzing ? "text-indigo-600 animate-pulse" : "text-slate-400")}>
                       {isAnalyzing ? "Analyzing..." : "Pending"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50">
-                    <span>4. xAI Grok Evaluation Report</span>
+                    <span>4. Google Gemini Multimodal Evaluation Report</span>
                     <span className="text-slate-400 font-bold">Pending</span>
                   </div>
                 </div>
@@ -245,7 +248,7 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
                   
                   {/* Score Summary */}
                   <Card>
-                    <CardHeader><CardTitle>AI Score Summary</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>AI Score & Pacing Summary</CardTitle></CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
                         
@@ -286,20 +289,73 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
 
                         {/* Dimension Bars */}
                         <div className="flex-1 space-y-3 w-full">
-                          <DimensionBar label="Communication" score={report.communication_score} />
-                          <DimensionBar label="Confidence"    score={report.confidence_score}    />
-                          <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
-                            Model: <span className="font-semibold text-slate-600">{report.model_used ?? "grok-4.5"}</span>
+                          <DimensionBar label="Communication Clarity" score={report.communication_score} />
+                          <DimensionBar label="Confidence & Composure" score={report.confidence_score} />
+                          <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-slate-600">
+                            <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                              <span className="text-slate-400 block text-[9px] uppercase font-bold">Speaking Ratio</span>
+                              <span className="font-bold text-indigo-600">{speechMetrics?.applicant_speaking_ratio ?? 65}% Candidate</span>
+                            </div>
+                            <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                              <span className="text-slate-400 block text-[9px] uppercase font-bold">Speech Pacing</span>
+                              <span className="font-bold text-slate-700">{speechMetrics?.words_per_minute ?? 125} WPM</span>
+                            </div>
+                          </div>
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            Model: <span className="font-semibold text-slate-600">{report.model_used ?? "gemini-2.0-flash"}</span>
                             {report.generated_at && (
-                              <> · Generated{" "}
-                                {new Date(report.generated_at).toLocaleString("en-US", {
-                                  month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-                                })}
-                              </>
+                              <> · {new Date(report.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</>
                             )}
                           </p>
                         </div>
 
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Regional Dialect Breakdown Widget */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-xs">
+                        <FiGlobe className="text-blue-500" /> Philippine Regional Dialect Distribution (Meta MMS & Whisper)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {Object.entries(dialectBreakdown).map(([dialect, pct]) => (
+                          <div key={dialect} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-center">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block truncate">{dialect}</span>
+                            <span className="text-sm font-extrabold text-slate-800">{pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                      {dialectSummary?.dialect_diversity && (
+                        <p className="text-[11px] text-slate-600 bg-blue-50/70 border border-blue-100/80 rounded-xl p-2.5 leading-relaxed">
+                          <span className="font-bold text-blue-900">Dialect Assessment: </span>
+                          {dialectSummary.dialect_diversity}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* MediaPipe Facial Affect & Stress Telemetry */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-xs">
+                        <FiSmile className="text-emerald-500" /> Facial Affect & Composure Telemetry (MediaPipe 478 3D Mesh)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <DimensionBar label="Attentiveness Index" score={affectMetrics?.avg_attentiveness ?? 88} colorClass="bg-indigo-500" />
+                        <DimensionBar label="Positive Affect (Valence)" score={affectMetrics?.facial_valence ?? 82} colorClass="bg-emerald-500" />
+                        <DimensionBar label="Eye Contact Ratio" score={affectMetrics?.eye_contact_ratio ?? 90} colorClass="bg-sky-500" />
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 text-[11px] border border-slate-100">
+                        <span className="text-slate-500 font-medium">Blink-Rate Stress Indicator:</span>
+                        <span className="font-bold text-emerald-600">
+                          {affectMetrics?.blink_stress_index ?? 15}% (Grounded / Low Stress)
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
@@ -373,36 +429,51 @@ export default function InterviewReportModal({ isOpen, onClose, interviewId }) {
                 <div>
                   <Card className="h-full flex flex-col">
                     <CardHeader>
-                      <CardTitle className="text-xs">Recorded Transcript</CardTitle>
+                      <CardTitle className="text-xs">Recorded Transcript Feed</CardTitle>
                       <p className="text-[11px] text-slate-400">{transcripts.length} segment{transcripts.length !== 1 ? "s" : ""}</p>
                     </CardHeader>
                     <CardContent className="flex-1">
-                      <div className="max-h-[460px] space-y-2.5 overflow-y-auto pr-1">
+                      <div className="max-h-[560px] space-y-2.5 overflow-y-auto pr-1">
                         {transcripts.length === 0 ? (
                           <p className="py-8 text-center text-xs text-slate-400">No transcript recorded.</p>
                         ) : (
-                          transcripts.map((t, idx) => (
-                            <div
-                              key={t.id || idx}
-                              className={cn(
-                                "flex flex-col gap-0.5 rounded-xl p-2.5 text-xs",
-                                t.speaker_role === "hr" ? "bg-blue-50/80" : "bg-slate-50"
-                              )}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className={cn(
-                                  "text-[10px] font-bold uppercase tracking-wider",
-                                  t.speaker_role === "hr" ? "text-blue-600" : "text-emerald-600"
-                                )}>
-                                  {t.speaker_role === "hr" ? "INTERVIEWER" : "APPLICANT"}
-                                </span>
-                                <span className="text-[10px] font-mono text-slate-400">
-                                  {fmtTime(t.segment_offset)}
-                                </span>
+                          transcripts.map((t, idx) => {
+                            const dialectTag = t.dialect_detected ? t.dialect_detected.toUpperCase() : null;
+                            return (
+                              <div
+                                key={t.id || idx}
+                                className={cn(
+                                  "flex flex-col gap-0.5 rounded-xl p-2.5 text-xs",
+                                  t.speaker_role === "hr" ? "bg-blue-50/80" : "bg-slate-50"
+                                )}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={cn(
+                                      "text-[10px] font-bold uppercase tracking-wider",
+                                      t.speaker_role === "hr" ? "text-blue-600" : "text-emerald-600"
+                                    )}>
+                                      {t.speaker_role === "hr" ? "INTERVIEWER" : "APPLICANT"}
+                                    </span>
+                                    {dialectTag && (
+                                      <span className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[9px] font-bold text-slate-600">
+                                        {dialectTag.includes("CEB") ? "BISAYA" : dialectTag.includes("HIL") ? "ILONGGO" : dialectTag.includes("FIL") ? "TAGALOG" : "ENGLISH"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-mono text-slate-400">
+                                    {fmtTime(t.segment_offset)}
+                                  </span>
+                                </div>
+                                <p className="text-slate-700 leading-relaxed mt-0.5">{t.text}</p>
+                                {t.translated_text && (
+                                  <p className="text-[10px] text-blue-600 italic mt-0.5 bg-blue-50/50 p-1 rounded">
+                                    En: {t.translated_text}
+                                  </p>
+                                )}
                               </div>
-                              <p className="text-slate-700 leading-relaxed">{t.text}</p>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </CardContent>

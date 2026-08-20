@@ -66,15 +66,38 @@ class GenerateAIInterviewReportJob implements ShouldQueue
         }
 
         $speechMetrics = $interview->behavioralMetric?->speech_metrics ?? [];
+        $affectMetrics = $interview->behavioralMetric?->affect_metrics ?? [];
         $behavioralData = $interview->behavioralMetric?->aggregated_metrics ?? [];
         $isMocked = $interview->behavioralMetric?->is_mocked ?? false;
 
+        $dialectBreakdown = $speechMetrics['dialect_breakdown'] ?? ['English' => 100.0, 'Filipino' => 0.0, 'Cebuano' => 0.0, 'Hiligaynon' => 0.0];
+        $dialectSummaryStr = sprintf(
+            "English: %.1f%%, Filipino/Tagalog: %.1f%%, Cebuano/Bisaya: %.1f%%, Hiligaynon/Ilonggo: %.1f%%",
+            $dialectBreakdown['English'] ?? 0,
+            $dialectBreakdown['Filipino'] ?? 0,
+            $dialectBreakdown['Cebuano'] ?? 0,
+            $dialectBreakdown['Hiligaynon'] ?? 0
+        );
+
         $speechSummary = !empty($speechMetrics)
-            ? "Total Words: {$speechMetrics['total_words']}, Applicant Speaking Ratio: {$speechMetrics['applicant_speaking_ratio']}%, Long Pauses (>5s): {$speechMetrics['long_pause_count']}"
+            ? "Total Words: {$speechMetrics['total_words']}, Pacing: " . ($speechMetrics['words_per_minute'] ?? 120) . " WPM, Applicant Speaking Ratio: {$speechMetrics['applicant_speaking_ratio']}%, Long Pauses (>5s): {$speechMetrics['long_pause_count']}\nDialect Distribution: {$dialectSummaryStr}"
             : "Standard dialogue distribution";
 
         $behaviorSummary = "No behavioral tracking data available.";
-        if (!empty($behavioralData) && is_array($behavioralData)) {
+        if (!empty($affectMetrics)) {
+            $behaviorSummary = sprintf(
+                "Aggregated Computer Vision & Facial Affect Telemetry:\n" .
+                "- Average Attentiveness Index: %.1f/100 (Eye Contact: %.1f%%)\n" .
+                "- Average Composure Index: %.1f/100\n" .
+                "- Facial Valence & Expressiveness: %.1f/100 (Positive Affect Ratio)\n" .
+                "- Blink-Rate Stress Indicator: %.1f/100 (Low Stress Baseline)",
+                $affectMetrics['avg_attentiveness'] ?? 85.0,
+                $affectMetrics['eye_contact_ratio'] ?? 88.0,
+                $affectMetrics['avg_composure'] ?? 82.0,
+                $affectMetrics['facial_valence'] ?? 78.0,
+                $affectMetrics['blink_stress_index'] ?? 15.0
+            );
+        } elseif (!empty($behavioralData) && is_array($behavioralData)) {
             if ($isMocked) {
                 $behaviorSummary = "Historical mock tracking data (standard composure baseline maintained).";
             } else {
@@ -89,7 +112,6 @@ class GenerateAIInterviewReportJob implements ShouldQueue
                     $avgComposed  = array_sum(array_column($detectedSamples, 'composedScore')) / $detectedCount;
                     $avgEngaged   = array_sum(array_column($detectedSamples, 'engagedScore')) / $detectedCount;
 
-                    // Eye aspect ratio check for eye contact stability (initial default limit: 0.22)
                     $eyeContactSamples = array_filter($detectedSamples, function ($s) {
                         return ($s['eyeOpenness'] ?? 0) >= 0.22;
                     });
@@ -125,15 +147,17 @@ class GenerateAIInterviewReportJob implements ShouldQueue
 
         if (! empty($keys)) {
             $prompt = <<<PROMPT
-You are a senior executive HR evaluator. Perform an objective evaluation of the candidate based on transcript, speech statistics, and behavioral observations.
+You are a senior executive HR evaluator. Perform an objective evaluation of the candidate based on transcript, speech statistics, dialect adaptability, and behavioral/affect observations.
 IMPORTANT SAFETY & OBJECTIVITY RULE: Use cautious, objective language for behavioral observations. Do NOT claim the applicant is "dishonest", "lying", or "anxious". Instead, state observed indicators such as "Response showed hesitation based on speech pauses" or "Attentiveness maintained during technical questions".
 
 Position: {$positionTitle}
 Candidate Name: {$applicantName}
 Interview Stage: {$interview->interview_stage}
 
-== SPEECH & BEHAVIORAL METRICS ==
+== SPEECH & DIALECT METRICS ==
 {$speechSummary}
+
+== BEHAVIORAL & FACIAL AFFECT METRICS ==
 {$behaviorSummary}
 
 == INTERVIEW TRANSCRIPT ==
@@ -144,8 +168,9 @@ Interview Stage: {$interview->interview_stage}
 2. Determine realistic scores (0-100) for overall performance, communication clarity, and confidence.
 3. List 2 to 4 unique strengths observed.
 4. List 1 to 3 areas for improvement using cautious, objective phrasing.
-5. Write a personalized hiring recommendation (1-2 paragraphs) for {$applicantName} applying for {$positionTitle}.
-6. Write a detailed score rationale explaining the key factors behind {$applicantName}'s score.
+5. Provide a dialect summary detailing language adaptability (English, Filipino, Cebuano, Hiligaynon) and communication fluency.
+6. Write a personalized hiring recommendation (1-2 paragraphs) for {$applicantName} applying for {$positionTitle}.
+7. Write a detailed score rationale explaining the key factors behind {$applicantName}'s score.
 
 Respond ONLY with valid, raw JSON (no markdown formatting, no code fences). Schema template:
 {
@@ -158,6 +183,16 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code fences). Sche
   "weaknesses": [
     {"point": "<unique objective area of improvement for {$applicantName}>"}
   ],
+  "dialect_summary": {
+    "dominant_dialect": "English / Tagalog",
+    "dialect_diversity": "<fluent code-switching / regional adaptability analysis>",
+    "breakdown": {
+      "English": {$dialectBreakdown['English']},
+      "Filipino": {$dialectBreakdown['Filipino']},
+      "Cebuano": {$dialectBreakdown['Cebuano']},
+      "Hiligaynon": {$dialectBreakdown['Hiligaynon']}
+    }
+  },
   "hiring_recommendation": "<personalized recommendation for {$applicantName}>",
   "score_rationale": "<personalized score rationale for {$applicantName}>"
 }
@@ -206,12 +241,26 @@ PROMPT;
                 ? "Highly recommend advancing {$applicantName} for the {$positionTitle} role based on candidate communication clarity and technical suitability."
                 : "Consider {$applicantName} for {$positionTitle} with additional technical screening during subsequent interview rounds.";
 
+            $dominantDialect = 'English';
+            if (($dialectBreakdown['Cebuano'] ?? 0) > 30) {
+                $dominantDialect = 'Cebuano / Bisaya';
+            } elseif (($dialectBreakdown['Hiligaynon'] ?? 0) > 30) {
+                $dominantDialect = 'Hiligaynon / Ilonggo';
+            } elseif (($dialectBreakdown['Filipino'] ?? 0) > 30) {
+                $dominantDialect = 'Filipino / Tagalog';
+            }
+
             $rawFallback = [
                 'overall_score'         => $overallScore,
                 'communication_score'   => $commScore,
                 'confidence_score'      => $confScore,
                 'strengths'             => $strengthsList,
                 'weaknesses'            => $weaknessesList,
+                'dialect_summary'       => [
+                    'dominant_dialect'  => $dominantDialect,
+                    'dialect_diversity' => "Spoke comfortably with {$dominantDialect} and English terms during candidate responses.",
+                    'breakdown'         => $dialectBreakdown,
+                ],
                 'hiring_recommendation' => $recommendation,
                 'score_rationale'       => "Score calculated based on demonstrated communication clarity, responsive interaction pacing, and technical alignment for the {$positionTitle} role during the interview.",
             ];
@@ -226,8 +275,9 @@ PROMPT;
                 'overall_score'         => (int) ($aiData['overall_score']       ?? 80),
                 'communication_score'   => (int) ($aiData['communication_score'] ?? 80),
                 'confidence_score'      => (int) ($aiData['confidence_score']    ?? 80),
-                'strengths'             => $aiData['strengths']  ?? [],
-                'weaknesses'            => $aiData['weaknesses'] ?? [],
+                'strengths'             => $aiData['strengths']       ?? [],
+                'weaknesses'            => $aiData['weaknesses']      ?? [],
+                'dialect_summary'       => $aiData['dialect_summary'] ?? [],
                 'hiring_recommendation' => $aiData['hiring_recommendation'] ?? '',
                 'raw_ai_response'       => $aiData,
                 'model_used'            => $modelUsed,

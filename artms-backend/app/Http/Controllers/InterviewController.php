@@ -339,16 +339,23 @@ class InterviewController extends Controller
     public function saveBehavioralMetrics(Request $request, Interview $interview): JsonResponse
     {
         $metrics = $request->input('metrics', []);
+        $affectMetrics = $request->input('affect_metrics', null);
+
+        $payload = [
+            'aggregated_metrics' => $metrics,
+            'is_mocked'          => false,
+        ];
+
+        if ($affectMetrics !== null) {
+            $payload['affect_metrics'] = $affectMetrics;
+        }
 
         \App\Models\InterviewBehavioralMetric::updateOrCreate(
             ['interview_id' => $interview->id],
-            [
-                'aggregated_metrics' => $metrics,
-                'is_mocked'          => false,
-            ]
+            $payload
         );
 
-        return response()->json(['message' => 'Behavioral metrics stored successfully']);
+        return response()->json(['message' => 'Behavioral and affect metrics stored successfully']);
     }
 
     /**
@@ -448,6 +455,8 @@ class InterviewController extends Controller
             'speaker_role'     => ['required', 'in:hr,applicant,system'],
             'speaker_identity' => ['nullable', 'string'],
             'segment_offset'   => ['nullable', 'integer'],
+            'dialect_detected' => ['nullable', 'string', 'max:50'],
+            'translated_text'  => ['nullable', 'string'],
         ]);
 
         $transcript = InterviewTranscript::create([
@@ -455,6 +464,8 @@ class InterviewController extends Controller
             'speaker_identity' => $validated['speaker_identity'] ?? ($validated['speaker_role'] === 'hr' ? 'hr_' . $request->user()?->id : 'applicant'),
             'speaker_role'     => $validated['speaker_role'],
             'text'             => trim($validated['text']),
+            'dialect_detected' => $validated['dialect_detected'] ?? null,
+            'translated_text'  => !empty($validated['translated_text']) ? trim($validated['translated_text']) : null,
             'segment_offset'   => $validated['segment_offset'] ?? 0,
             'spoken_at'        => now(),
         ]);
@@ -473,6 +484,8 @@ class InterviewController extends Controller
             'speaker_role'     => ['nullable', 'in:hr,applicant,system'],
             'speaker_identity' => ['nullable', 'string'],
             'segment_offset'   => ['nullable', 'integer'],
+            'dialect_detected' => ['nullable', 'string', 'max:50'],
+            'translated_text'  => ['nullable', 'string'],
         ]);
 
         $applicant = $interview->applicant;
@@ -483,6 +496,8 @@ class InterviewController extends Controller
             'speaker_identity' => $validated['speaker_identity'] ?? ($speakerRole === 'hr' ? 'hr_interviewer' : 'applicant_' . ($applicant?->id ?? '0')),
             'speaker_role'     => $speakerRole,
             'text'             => trim($validated['text']),
+            'dialect_detected' => $validated['dialect_detected'] ?? null,
+            'translated_text'  => !empty($validated['translated_text']) ? trim($validated['translated_text']) : null,
             'segment_offset'   => $validated['segment_offset'] ?? 0,
             'spoken_at'        => now(),
         ]);
@@ -511,6 +526,7 @@ class InterviewController extends Controller
             'audio_file'       => ['nullable', 'file'],
             'speaker_role'     => ['nullable', 'in:hr,applicant,system'],
             'speaker_identity' => ['nullable', 'string'],
+            'dialect_detected' => ['nullable', 'string', 'max:50'],
         ]);
 
         $audioFile = $request->file('audio') ?? $request->file('audio_file');
@@ -520,6 +536,7 @@ class InterviewController extends Controller
 
         $speakerRole = $request->input('speaker_role', $defaultRole);
         $identity = $request->input('speaker_identity') ?? ($speakerRole === 'hr' ? 'hr_' . ($request->user()?->id ?? '0') : 'applicant_' . ($interview->applicant_id ?? '0'));
+        $dialectDetected = $request->input('dialect_detected', null);
 
         $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
 
@@ -561,6 +578,7 @@ class InterviewController extends Controller
                     'speaker_identity' => $identity,
                     'speaker_role'     => $speakerRole,
                     'text'             => $text,
+                    'dialect_detected' => $dialectDetected,
                     'segment_offset'   => 0,
                     'spoken_at'        => now(),
                 ]);
@@ -582,7 +600,7 @@ class InterviewController extends Controller
     public function getTranscripts(Interview $interview): JsonResponse
     {
         $transcripts = $interview->transcripts()
-            ->select(['id', 'interview_id', 'speaker_identity', 'speaker_role', 'text', 'segment_offset', 'spoken_at', 'created_at'])
+            ->select(['id', 'interview_id', 'speaker_identity', 'speaker_role', 'text', 'dialect_detected', 'translated_text', 'segment_offset', 'spoken_at', 'created_at'])
             ->orderBy('spoken_at', 'asc')
             ->orderBy('id', 'asc')
             ->get();

@@ -27,17 +27,21 @@ const interviewService = {
 
   getProcessingStatus:       (id) => api.get(`/interviews/${id}/processing-status`),
   getPublicProcessingStatus: (id) => api.get(`/public/interviews/${id}/processing-status`),
-  saveBehavioralMetrics:     (id, metrics) => api.post(`/interviews/${id}/behavioral-metrics`, { metrics }),
-  savePublicBehavioralMetrics: (id, metrics) => api.post(`/public/interviews/${id}/behavioral-metrics`, { metrics }),
+  saveBehavioralMetrics:     (id, metrics, affectMetrics = null) => api.post(`/interviews/${id}/behavioral-metrics`, { metrics, affect_metrics: affectMetrics }),
+  savePublicBehavioralMetrics: (id, metrics, affectMetrics = null) => api.post(`/public/interviews/${id}/behavioral-metrics`, { metrics, affect_metrics: affectMetrics }),
 
   // ── Real-time speech transcript & live Grok AI endpoints ──────────────
-  storeTranscript:       (id, text, speakerRole = 'hr', offset = 0)        => api.post(`/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
-  storePublicTranscript: (id, text, speakerRole = 'applicant', offset = 0) => api.post(`/public/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset }),
-  transcribeAudio:       (id, formData)                             => api.post(`/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  publicTranscribeAudio: (id, formData)                             => api.post(`/public/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  getTranscripts:        (id)                                       => api.get(`/interviews/${id}/transcripts`),
-  saveNotes:             (id, notes)                                => api.post(`/interviews/${id}/notes`, { notes }),
-  analyzeLive:           (id)                                       => api.post(`/interviews/${id}/analyze-live`),
+  storeTranscript:       (id, text, speakerRole = 'hr', offset = 0, dialectDetected = null, translatedText = null) =>
+    api.post(`/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset, dialect_detected: dialectDetected, translated_text: translatedText }),
+  storePublicTranscript: (id, text, speakerRole = 'applicant', offset = 0, dialectDetected = null, translatedText = null) =>
+    api.post(`/public/interviews/${id}/transcript`, { text, speaker_role: speakerRole, segment_offset: offset, dialect_detected: dialectDetected, translated_text: translatedText }),
+  transcribeAudio:       (id, formData) =>
+    api.post(`/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  publicTranscribeAudio: (id, formData) =>
+    api.post(`/public/interviews/${id}/transcribe-audio`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getTranscripts:        (id) => api.get(`/interviews/${id}/transcripts`),
+  saveNotes:             (id, notes) => api.post(`/interviews/${id}/notes`, { notes }),
+  analyzeLive:           (id) => api.post(`/interviews/${id}/analyze-live`),
 };
 
 export default interviewService;

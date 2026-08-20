@@ -1,6 +1,8 @@
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SplashScreen from "../components/ui/SplashScreen";
+import PageLoader from "../components/ui/PageLoader";
 import PublicLayout from "../layouts/PublicLayout";
 import DepartmentHeadLayout from "../layouts/DepartmentHeadLayout";
 import AdminLayout from "../layouts/AdminLayout";
@@ -10,80 +12,80 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import PermissionProtectedRoute from "../components/PermissionProtectedRoute";
 import GuestRoute from "../components/GuestRoute";
 
-// Public
-import Home from "../pages/Public/Home";
-import About from "../pages/Public/About";
-import Jobs from "../pages/Public/Jobs";
-import JobDetails from "../pages/Public/JobDetails";
-import Apply from "../pages/Public/Apply";
-import Contact from "../pages/Public/Contact";
-import ApplicationGuide from "../pages/Public/ApplicationGuide";
-import NotFound from "../pages/Public/NotFound";
-import AccessDenied from "../pages/Public/AccessDenied";
+// ── Lazy-Loaded Public Pages ────────────────────────────────────────────────
+const Home = lazy(() => import("../pages/Public/Home"));
+const About = lazy(() => import("../pages/Public/About"));
+const Jobs = lazy(() => import("../pages/Public/Jobs"));
+const JobDetails = lazy(() => import("../pages/Public/JobDetails"));
+const Apply = lazy(() => import("../pages/Public/Apply"));
+const Contact = lazy(() => import("../pages/Public/Contact"));
+const ApplicationGuide = lazy(() => import("../pages/Public/ApplicationGuide"));
+const NotFound = lazy(() => import("../pages/Public/NotFound"));
+const AccessDenied = lazy(() => import("../pages/Public/AccessDenied"));
 
-// Auth
-import Login from "../pages/Auth/Login";
-import ForgotPassword from "../pages/Auth/ForgotPassword";
-import OtpVerification from "../pages/Auth/OtpVerification";
-import SetupAccount from "../pages/Auth/SetupAccount";
+// ── Lazy-Loaded Auth Pages ──────────────────────────────────────────────────
+const Login = lazy(() => import("../pages/Auth/Login"));
+const ForgotPassword = lazy(() => import("../pages/Auth/ForgotPassword"));
+const OtpVerification = lazy(() => import("../pages/Auth/OtpVerification"));
+const SetupAccount = lazy(() => import("../pages/Auth/SetupAccount"));
 
-// Department Head
-import DepartmentHeadDashboard from "../pages/DepartmentHead/Dashboard";
-import ManpowerRequest from "../pages/DepartmentHead/ManpowerRequest";
-import RequestHistory from "../pages/DepartmentHead/RequestHistory";
-import DepartmentHeadNotifications from "../pages/DepartmentHead/Notifications";
-import DepartmentHeadProfile from "../pages/DepartmentHead/Profile";
+// ── Lazy-Loaded Department Head Pages ───────────────────────────────────────
+const DepartmentHeadDashboard = lazy(() => import("../pages/DepartmentHead/Dashboard"));
+const ManpowerRequest = lazy(() => import("../pages/DepartmentHead/ManpowerRequest"));
+const RequestHistory = lazy(() => import("../pages/DepartmentHead/RequestHistory"));
+const DepartmentHeadNotifications = lazy(() => import("../pages/DepartmentHead/Notifications"));
+const DepartmentHeadProfile = lazy(() => import("../pages/DepartmentHead/Profile"));
 
-// HR Admin
-import AdminDashboard from "../pages/Admin/Dashboard";
-import AdminManpowerRequests from "../pages/Admin/ManpowerRequests";
-import JobLibrary from "../pages/Admin/JobLibrary";
-import JobPosting from "../pages/Admin/JobPosting";
-import Applicants from "../pages/Admin/Applicants";
-import AiScreening from "../pages/Admin/AiScreening";
-import Interviews from "../pages/Admin/Interviews";
-import InterviewCalendar from "../pages/Admin/InterviewCalendar";
-import Pipeline from "../pages/Admin/Pipeline";
-import Employees from "../pages/Admin/Employees";
-import Reports from "../pages/Admin/Reports";
-import Attendance from "../pages/Admin/Attendance";
-import AdminNotifications from "../pages/Admin/Notifications";
-import AdminProfile from "../pages/Admin/Profile";
-import Settings from "../pages/Admin/Settings";
+// ── Lazy-Loaded HR Admin Pages ──────────────────────────────────────────────
+const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
+const AdminManpowerRequests = lazy(() => import("../pages/Admin/ManpowerRequests"));
+const JobLibrary = lazy(() => import("../pages/Admin/JobLibrary"));
+const JobPosting = lazy(() => import("../pages/Admin/JobPosting"));
+const Applicants = lazy(() => import("../pages/Admin/Applicants"));
+const AiScreening = lazy(() => import("../pages/Admin/AiScreening"));
+const Interviews = lazy(() => import("../pages/Admin/Interviews"));
+const InterviewCalendar = lazy(() => import("../pages/Admin/InterviewCalendar"));
+const Pipeline = lazy(() => import("../pages/Admin/Pipeline"));
+const Employees = lazy(() => import("../pages/Admin/Employees"));
+const Reports = lazy(() => import("../pages/Admin/Reports"));
+const Attendance = lazy(() => import("../pages/Admin/Attendance"));
+const AdminNotifications = lazy(() => import("../pages/Admin/Notifications"));
+const AdminProfile = lazy(() => import("../pages/Admin/Profile"));
+const Settings = lazy(() => import("../pages/Admin/Settings"));
 
-// Video Interview
-import ActiveInterviewRoom from "../pages/Interview/ActiveInterviewRoom";
-import InterviewReport from "../pages/Interview/InterviewReport";
+// ── Lazy-Loaded Video Interview Pages ───────────────────────────────────────
+const ActiveInterviewRoom = lazy(() => import("../pages/Interview/ActiveInterviewRoom"));
+const InterviewReport = lazy(() => import("../pages/Interview/InterviewReport"));
 
-// COO
-import CooDashboard from "../pages/Coo/Dashboard";
-import ManpowerApprovals from "../pages/Coo/ManpowerApprovals";
-import JobLibraryApprovals from "../pages/Coo/JobLibraryApprovals";
-import CooNotifications from "../pages/Coo/Notifications";
-import CooProfile from "../pages/Coo/Profile";
+// ── Lazy-Loaded COO Pages ───────────────────────────────────────────────────
+const CooDashboard = lazy(() => import("../pages/Coo/Dashboard"));
+const ManpowerApprovals = lazy(() => import("../pages/Coo/ManpowerApprovals"));
+const JobLibraryApprovals = lazy(() => import("../pages/Coo/JobLibraryApprovals"));
+const CooNotifications = lazy(() => import("../pages/Coo/Notifications"));
+const CooProfile = lazy(() => import("../pages/Coo/Profile"));
 
-// Super Admin
-import SuperAdminDashboard from "../pages/SuperAdmin/Dashboard";
-import Users from "../pages/SuperAdmin/Users";
-import ArchivedUsers from "../pages/SuperAdmin/ArchivedUsers";
-import Departments from "../pages/SuperAdmin/Departments";
-import Roles from "../pages/SuperAdmin/Roles";
-import SuperAdminSettings from "../pages/SuperAdmin/Settings";
-import AuditLogs from "../pages/SuperAdmin/AuditLogs";
-import SuperAdminProfile from "../pages/SuperAdmin/Profile";
-import HrManpowerRequests from "../pages/SuperAdmin/HrManpowerRequests";
-import HrJobLibrary from "../pages/SuperAdmin/HrJobLibrary";
-import HrJobPosting from "../pages/SuperAdmin/HrJobPosting";
-import HrApplicants from "../pages/SuperAdmin/HrApplicants";
-import HrAiScreening from "../pages/SuperAdmin/HrAiScreening";
-import HrInterviews from "../pages/SuperAdmin/HrInterviews";
-import HrPipeline from "../pages/SuperAdmin/HrPipeline";
-import HrEmployees from "../pages/SuperAdmin/HrEmployees";
-import HrReports from "../pages/SuperAdmin/HrReports";
-import HrAttendance from "../pages/SuperAdmin/HrAttendance";
+// ── Lazy-Loaded Super Admin Pages ───────────────────────────────────────────
+const SuperAdminDashboard = lazy(() => import("../pages/SuperAdmin/Dashboard"));
+const Users = lazy(() => import("../pages/SuperAdmin/Users"));
+const ArchivedUsers = lazy(() => import("../pages/SuperAdmin/ArchivedUsers"));
+const Departments = lazy(() => import("../pages/SuperAdmin/Departments"));
+const Roles = lazy(() => import("../pages/SuperAdmin/Roles"));
+const SuperAdminSettings = lazy(() => import("../pages/SuperAdmin/Settings"));
+const AuditLogs = lazy(() => import("../pages/SuperAdmin/AuditLogs"));
+const SuperAdminProfile = lazy(() => import("../pages/SuperAdmin/Profile"));
+const HrManpowerRequests = lazy(() => import("../pages/SuperAdmin/HrManpowerRequests"));
+const HrJobLibrary = lazy(() => import("../pages/SuperAdmin/HrJobLibrary"));
+const HrJobPosting = lazy(() => import("../pages/SuperAdmin/HrJobPosting"));
+const HrApplicants = lazy(() => import("../pages/SuperAdmin/HrApplicants"));
+const HrAiScreening = lazy(() => import("../pages/SuperAdmin/HrAiScreening"));
+const HrInterviews = lazy(() => import("../pages/SuperAdmin/HrInterviews"));
+const HrPipeline = lazy(() => import("../pages/SuperAdmin/HrPipeline"));
+const HrEmployees = lazy(() => import("../pages/SuperAdmin/HrEmployees"));
+const HrReports = lazy(() => import("../pages/SuperAdmin/HrReports"));
+const HrAttendance = lazy(() => import("../pages/SuperAdmin/HrAttendance"));
 
 // Debug (temporary)
-import DebugPermissions from "../pages/DebugPermissions";
+const DebugPermissions = lazy(() => import("../pages/DebugPermissions"));
 
 export default function AppRoutes() {
   const { loading } = useAuth();
@@ -94,298 +96,276 @@ export default function AppRoutes() {
 
   return (
     <BrowserRouter>
-      <Routes>
-
-        {/* ── Public site (no auth required) ───────────────────────────── */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/jobs/:id" element={<JobDetails />} />
-          <Route path="/apply/:id" element={<Apply />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/application-guide" element={<ApplicationGuide />} />
-        </Route>
-
-        {/* ── Applicant Video Interview Room (Public link sent in invitation email) ── */}
-        <Route path="/interview/:id/room" element={<ActiveInterviewRoom isApplicant={true} />} />
-
-        {/* ── Auth pages (redirect to dashboard if already logged in) ───── */}
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/otp" element={<OtpVerification />} />
-          <Route path="/setup-account" element={<SetupAccount />} />
-        </Route>
-
-        {/* ── Access Denied ─────────────────────────────────────────────── */}
-        <Route path="/access-denied" element={<AccessDenied />} />
-
-        {/* ── Department Head (role-protected) ──────────────────────────── */}
-        <Route element={<ProtectedRoute allowedRoles={["department_head"]} />}>
-          <Route path="/department-head" element={<DepartmentHeadLayout />}>
-            <Route index element={<Navigate to="/department-head/dashboard" replace />} />
-            <Route path="dashboard" element={<DepartmentHeadDashboard />} />
-            
-            {/* Protected by permissions */}
-            <Route
-              path="manpower-request"
-              element={
-                <PermissionProtectedRoute permission="view_manpower_request">
-                  <ManpowerRequest />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="request-history"
-              element={
-                <PermissionProtectedRoute permission="view_request_history">
-                  <RequestHistory />
-                </PermissionProtectedRoute>
-              }
-            />
-            
-            <Route path="notifications" element={<DepartmentHeadNotifications />} />
-            <Route path="profile" element={<DepartmentHeadProfile />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* ── Public site (no auth required) ───────────────────────────── */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetails />} />
+            <Route path="/apply/:id" element={<Apply />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/application-guide" element={<ApplicationGuide />} />
           </Route>
-        </Route>
 
-        {/* ── HR Admin (role-protected) ─────────────────────────────────── */}
-        <Route element={<ProtectedRoute allowedRoles={["hr_admin", "employee"]} />}>
+          {/* ── Applicant Video Interview Room ── */}
+          <Route path="/interview/:id/room" element={<ActiveInterviewRoom isApplicant={true} />} />
 
-          {/* ── Video Interview Room — full-screen, no sidebar ───────────── */}
-          <Route
-            path="/admin/interviews/:id/room"
-            element={<ActiveInterviewRoom />}
-          />
-          <Route
-            path="/admin/interviews/:id/report"
-            element={
-              <PermissionProtectedRoute permission="view_interviews">
-                <InterviewReport />
-              </PermissionProtectedRoute>
-            }
-          />
+          {/* ── Auth pages ───── */}
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/otp" element={<OtpVerification />} />
+            <Route path="/setup-account" element={<SetupAccount />} />
+          </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            
-            {/* Protected by permissions */}
+          {/* ── Access Denied ─────────────────────────────────────────────── */}
+          <Route path="/access-denied" element={<AccessDenied />} />
+
+          {/* ── Department Head (role-protected) ──────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={["department_head"]} />}>
+            <Route path="/department-head" element={<DepartmentHeadLayout />}>
+              <Route index element={<Navigate to="/department-head/dashboard" replace />} />
+              <Route path="dashboard" element={<DepartmentHeadDashboard />} />
+              
+              <Route
+                path="manpower-request"
+                element={
+                  <PermissionProtectedRoute permission="view_manpower_request">
+                    <ManpowerRequest />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="request-history"
+                element={
+                  <PermissionProtectedRoute permission="view_request_history">
+                    <RequestHistory />
+                  </PermissionProtectedRoute>
+                }
+              />
+              
+              <Route path="notifications" element={<DepartmentHeadNotifications />} />
+              <Route path="profile" element={<DepartmentHeadProfile />} />
+            </Route>
+          </Route>
+
+          {/* ── HR Admin (role-protected) ─────────────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={["hr_admin", "employee"]} />}>
+            <Route path="/admin/interviews/:id/room" element={<ActiveInterviewRoom />} />
             <Route
-              path="manpower-requests"
-              element={
-                <PermissionProtectedRoute permission="view_manpower_requests">
-                  <AdminManpowerRequests />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="job-library"
-              element={
-                <PermissionProtectedRoute permission="view_job_library">
-                  <JobLibrary />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="job-posting"
-              element={
-                <PermissionProtectedRoute permission="view_job_postings">
-                  <JobPosting />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="applicants"
-              element={
-                <PermissionProtectedRoute permission="view_applicants">
-                  <Applicants />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="ai-screening"
-              element={
-                <PermissionProtectedRoute permission="view_ai_screening">
-                  <AiScreening />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="interviews"
+              path="/admin/interviews/:id/report"
               element={
                 <PermissionProtectedRoute permission="view_interviews">
-                  <Interviews />
+                  <InterviewReport />
                 </PermissionProtectedRoute>
               }
             />
-            <Route
-              path="interviews/calendar"
-              element={
-                <PermissionProtectedRoute permission="view_interviews">
-                  <InterviewCalendar />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="pipeline"
-              element={
-                <PermissionProtectedRoute permission="view_pipeline">
-                  <Pipeline />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="employees"
-              element={
-                <PermissionProtectedRoute permission="view_employees">
-                  <Employees />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="reports"
-              element={
-                <PermissionProtectedRoute permission="view_reports">
-                  <Reports />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="attendance"
-              element={
-                <PermissionProtectedRoute permission="view_employees">
-                  <Attendance />
-                </PermissionProtectedRoute>
-              }
-            />
-            
-            <Route path="notifications" element={<AdminNotifications />} />
-            <Route path="profile" element={<AdminProfile />} />
-            <Route path="settings" element={<Settings />} />
+
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              
+              <Route
+                path="manpower-requests"
+                element={
+                  <PermissionProtectedRoute permission="view_manpower_requests">
+                    <AdminManpowerRequests />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="job-library"
+                element={
+                  <PermissionProtectedRoute permission="view_job_library">
+                    <JobLibrary />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="job-posting"
+                element={
+                  <PermissionProtectedRoute permission="view_job_postings">
+                    <JobPosting />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="applicants"
+                element={
+                  <PermissionProtectedRoute permission="view_applicants">
+                    <Applicants />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="ai-screening"
+                element={
+                  <PermissionProtectedRoute permission="view_ai_screening">
+                    <AiScreening />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="interviews"
+                element={
+                  <PermissionProtectedRoute permission="view_interviews">
+                    <Interviews />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="interviews/calendar"
+                element={
+                  <PermissionProtectedRoute permission="view_interviews">
+                    <InterviewCalendar />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="pipeline"
+                element={
+                  <PermissionProtectedRoute permission="view_pipeline">
+                    <Pipeline />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="employees"
+                element={
+                  <PermissionProtectedRoute permission="view_employees">
+                    <Employees />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <PermissionProtectedRoute permission="view_reports">
+                    <Reports />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="attendance"
+                element={
+                  <PermissionProtectedRoute permission="view_employees">
+                    <Attendance />
+                  </PermissionProtectedRoute>
+                }
+              />
+              
+              <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="profile" element={<AdminProfile />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* ── COO (role-protected, own portal) ──────────────────────────── */}
-        <Route element={<ProtectedRoute allowedRoles={["coo"]} />}>
-          <Route path="/coo" element={<CooLayout />}>
-            <Route index element={<Navigate to="/coo/dashboard" replace />} />
-            <Route path="dashboard" element={<CooDashboard />} />
-            
-            {/* Protected by permissions */}
-            <Route
-              path="prf-approvals"
-              element={
-                <PermissionProtectedRoute permission="view_prf_approvals">
-                  <ManpowerApprovals />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="job-library-approvals"
-              element={
-                <PermissionProtectedRoute permission="view_job_library_approvals">
-                  <JobLibraryApprovals />
-                </PermissionProtectedRoute>
-              }
-            />
-            
-            <Route path="notifications" element={<CooNotifications />} />
-            <Route path="profile" element={<CooProfile />} />
+          {/* ── COO (role-protected) ──────────────────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={["coo"]} />}>
+            <Route path="/coo" element={<CooLayout />}>
+              <Route index element={<Navigate to="/coo/dashboard" replace />} />
+              <Route path="dashboard" element={<CooDashboard />} />
+              
+              <Route
+                path="prf-approvals"
+                element={
+                  <PermissionProtectedRoute permission="view_prf_approvals">
+                    <ManpowerApprovals />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="job-library-approvals"
+                element={
+                  <PermissionProtectedRoute permission="view_job_library_approvals">
+                    <JobLibraryApprovals />
+                  </PermissionProtectedRoute>
+                }
+              />
+              
+              <Route path="notifications" element={<CooNotifications />} />
+              <Route path="profile" element={<CooProfile />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* ── Super Admin (role-protected) ──────────────────────────────── */}
-        <Route element={<ProtectedRoute allowedRoles={["super_admin"]} />}>
+          {/* ── Super Admin (role-protected) ──────────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={["super_admin"]} />}>
+            <Route path="/superadmin/interviews/:id/room" element={<ActiveInterviewRoom />} />
+            <Route path="/superadmin/interviews/:id/report" element={<InterviewReport />} />
 
-          {/* ── Video Interview Room — full-screen, no sidebar ───────────── */}
-          <Route path="/superadmin/interviews/:id/room" element={<ActiveInterviewRoom />} />
-          <Route path="/superadmin/interviews/:id/report" element={<InterviewReport />} />
-
-          <Route path="/superadmin" element={<SuperAdminLayout />}>
-            <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
-            <Route path="dashboard" element={<SuperAdminDashboard />} />
-            
-            {/* Protected by permissions */}
-            <Route
-              path="users"
-              element={
-                <PermissionProtectedRoute permission="view_users">
-                  <Users />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="archived-users"
-              element={
-                <PermissionProtectedRoute permission="view_users">
-                  <ArchivedUsers />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="departments"
-              element={
-                <PermissionProtectedRoute permission="view_departments">
-                  <Departments />
-                </PermissionProtectedRoute>
-              }
-            />
-            <Route
-              path="roles"
-              element={
-                <PermissionProtectedRoute permission="view_roles">
-                  <Roles />
-                </PermissionProtectedRoute>
-              }
-            />
-            
-            <Route path="settings" element={<SuperAdminSettings />} />
-            <Route path="audit-logs" element={<AuditLogs />} />
-            <Route path="notifications" element={<AdminNotifications />} />
-            <Route path="profile" element={<SuperAdminProfile />} />
-            
-            {/* Debug Page (temporary) */}
-            <Route path="debug-permissions" element={<DebugPermissions />} />
-            
-            {/* HR Admin Access within SuperAdmin Layout (Direct & Prefixed routes) */}
-            <Route path="manpower-requests" element={<HrManpowerRequests />} />
-            <Route path="hr-manpower-requests" element={<HrManpowerRequests />} />
-
-            <Route path="job-library" element={<HrJobLibrary />} />
-            <Route path="hr-job-library" element={<HrJobLibrary />} />
-
-            <Route path="job-posting" element={<HrJobPosting />} />
-            <Route path="hr-job-posting" element={<HrJobPosting />} />
-
-            <Route path="applicants" element={<HrApplicants />} />
-            <Route path="hr-applicants" element={<HrApplicants />} />
-
-            <Route path="ai-screening" element={<HrAiScreening />} />
-            <Route path="hr-ai-screening" element={<HrAiScreening />} />
-
-            <Route path="interviews" element={<HrInterviews />} />
-            <Route path="hr-interviews" element={<HrInterviews />} />
-
-            <Route path="pipeline" element={<HrPipeline />} />
-            <Route path="hr-pipeline" element={<HrPipeline />} />
-
-            <Route path="employees" element={<HrEmployees />} />
-            <Route path="hr-employees" element={<HrEmployees />} />
-
-            <Route path="reports" element={<HrReports />} />
-            <Route path="hr-reports" element={<HrReports />} />
-
-            <Route path="attendance" element={<HrAttendance />} />
-            <Route path="hr-attendance" element={<HrAttendance />} />
+            <Route path="/superadmin" element={<SuperAdminLayout />}>
+              <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
+              <Route path="dashboard" element={<SuperAdminDashboard />} />
+              
+              <Route
+                path="users"
+                element={
+                  <PermissionProtectedRoute permission="view_users">
+                    <Users />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="archived-users"
+                element={
+                  <PermissionProtectedRoute permission="view_users">
+                    <ArchivedUsers />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="departments"
+                element={
+                  <PermissionProtectedRoute permission="view_departments">
+                    <Departments />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
+                path="roles"
+                element={
+                  <PermissionProtectedRoute permission="view_roles">
+                    <Roles />
+                  </PermissionProtectedRoute>
+                }
+              />
+              
+              <Route path="settings" element={<SuperAdminSettings />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
+              <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="profile" element={<SuperAdminProfile />} />
+              
+              <Route path="debug-permissions" element={<DebugPermissions />} />
+              
+              <Route path="manpower-requests" element={<HrManpowerRequests />} />
+              <Route path="hr-manpower-requests" element={<HrManpowerRequests />} />
+              <Route path="job-library" element={<HrJobLibrary />} />
+              <Route path="hr-job-library" element={<HrJobLibrary />} />
+              <Route path="job-posting" element={<HrJobPosting />} />
+              <Route path="hr-job-posting" element={<HrJobPosting />} />
+              <Route path="applicants" element={<HrApplicants />} />
+              <Route path="hr-applicants" element={<HrApplicants />} />
+              <Route path="ai-screening" element={<HrAiScreening />} />
+              <Route path="hr-ai-screening" element={<HrAiScreening />} />
+              <Route path="interviews" element={<HrInterviews />} />
+              <Route path="hr-interviews" element={<HrInterviews />} />
+              <Route path="pipeline" element={<HrPipeline />} />
+              <Route path="hr-pipeline" element={<HrPipeline />} />
+              <Route path="employees" element={<HrEmployees />} />
+              <Route path="hr-employees" element={<HrEmployees />} />
+              <Route path="reports" element={<HrReports />} />
+              <Route path="hr-reports" element={<HrReports />} />
+              <Route path="attendance" element={<HrAttendance />} />
+              <Route path="hr-attendance" element={<HrAttendance />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* ── Fallback ──────────────────────────────────────────────────── */}
-        <Route path="*" element={<NotFound />} />
-
-      </Routes>
+          {/* ── Fallback ──────────────────────────────────────────────────── */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

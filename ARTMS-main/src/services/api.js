@@ -39,8 +39,11 @@ api.interceptors.response.use(
 
     if (status === 401) {
       const isPublicUrl = error.config?.url?.includes('/public/');
-      const isPublicPage = window.location.pathname.startsWith('/interview/') || window.location.pathname.startsWith('/jobs') || window.location.pathname === '/';
-      
+      const isPublicPage =
+        window.location.pathname.startsWith('/interview/') ||
+        window.location.pathname.startsWith('/jobs') ||
+        window.location.pathname === '/';
+
       if (!isPublicUrl && !isPublicPage) {
         localStorage.removeItem('artms_token');
         localStorage.removeItem('artms_user');
@@ -60,13 +63,14 @@ api.interceptors.response.use(
   },
 );
 
-// ── In-Memory API Cache & Invalidation System ──────────────────────────────
+// ── High-Performance In-Memory Cache & In-Flight Deduplication Store ────────
 const cacheStore = new Map();
-const DEFAULT_TTL_MS = 60 * 1000; // 60 seconds TTL
+const inFlightRequests = new Map();
+const DEFAULT_TTL_MS = 60 * 1000; // 60 seconds default TTL
 
 /**
  * Invalidate specific cache keys or clear all cache.
- * @param {string} [pattern] - Optional URL keyword pattern to clear (e.g., "applicants", "interviews")
+ * @param {string} [pattern] - Optional URL keyword pattern to clear
  */
 export const clearApiCache = (pattern) => {
   if (!pattern) {
@@ -82,17 +86,58 @@ export const clearApiCache = (pattern) => {
 };
 
 /**
- * Auto-clear related caches when a mutation occurs.
- * We clear everything to guarantee perfectly fresh data across all tables and dashboards.
+ * Targeted domain-based cache invalidator on mutations (POST/PUT/PATCH/DELETE)
  */
 const autoInvalidateForUrl = (url = "") => {
-  clearApiCache(); // Clear everything on any mutation
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes('applicant')) {
+    clearApiCache('applicant');
+    clearApiCache('pipeline');
+    clearApiCache('dashboard');
+    clearApiCache('sidebar');
+  } else if (lowerUrl.includes('interview')) {
+    clearApiCache('interview');
+    clearApiCache('pipeline');
+    clearApiCache('dashboard');
+    clearApiCache('sidebar');
+  } else if (lowerUrl.includes('job-posting') || lowerUrl.includes('job_posting')) {
+    clearApiCache('job-posting');
+    clearApiCache('job_posting');
+    clearApiCache('dashboard');
+    clearApiCache('sidebar');
+  } else if (lowerUrl.includes('job-library') || lowerUrl.includes('job_library')) {
+    clearApiCache('job-library');
+    clearApiCache('job_library');
+  } else if (lowerUrl.includes('employee')) {
+    clearApiCache('employee');
+    clearApiCache('dashboard');
+  } else if (lowerUrl.includes('department')) {
+    clearApiCache('department');
+    clearApiCache('dashboard');
+    clearApiCache('boot');
+  } else if (lowerUrl.includes('permission') || lowerUrl.includes('role')) {
+    clearApiCache('permission');
+    clearApiCache('role');
+    clearApiCache('boot');
+  } else if (lowerUrl.includes('manpower')) {
+    clearApiCache('manpower');
+    clearApiCache('dashboard');
+    clearApiCache('sidebar');
+  } else if (lowerUrl.includes('leave') || lowerUrl.includes('attendance')) {
+    clearApiCache('leave');
+    clearApiCache('attendance');
+    clearApiCache('dashboard');
+  } else {
+    // Fallback: clear entire store for unclassified mutations
+    clearApiCache();
+  }
 };
 
-// ── Wrap api.get for seamless caching ──────────────────────────────────────
+// ── Wrap api.get with Request Deduplication & High-Performance Caching ─────
 const originalGet = api.get;
 api.get = function (url, config = {}) {
-  // Skip caching if explicitly configured or for real-time endpoints
+  // Skip caching if explicitly configured or for real-time streaming endpoints
   if (
     config.skipCache ||
     url.includes("/livekit-token") ||
@@ -105,17 +150,30 @@ api.get = function (url, config = {}) {
   const cacheKey = `GET:${url}:${JSON.stringify(config.params || {})}`;
   const cached = cacheStore.get(cacheKey);
 
+  // Return cached result if fresh
   if (cached && Date.now() - cached.timestamp < (config.ttl || DEFAULT_TTL_MS)) {
     return Promise.resolve(cached.response);
   }
 
-  return originalGet.call(this, url, config).then((response) => {
-    cacheStore.set(cacheKey, {
-      timestamp: Date.now(),
-      response,
+  // Deduplicate identical in-flight network requests
+  if (inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey);
+  }
+
+  const requestPromise = originalGet.call(this, url, config)
+    .then((response) => {
+      cacheStore.set(cacheKey, {
+        timestamp: Date.now(),
+        response,
+      });
+      return response;
+    })
+    .finally(() => {
+      inFlightRequests.delete(cacheKey);
     });
-    return response;
-  });
+
+  inFlightRequests.set(cacheKey, requestPromise);
+  return requestPromise;
 };
 
 // ── Wrap mutation methods (post, put, patch, delete) for auto-invalidation ──

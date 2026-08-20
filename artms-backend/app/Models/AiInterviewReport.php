@@ -16,6 +16,7 @@ class AiInterviewReport extends Model
         'confidence_score',
         'strengths',
         'weaknesses',
+        'dialect_summary',
         'hiring_recommendation',
         'raw_ai_response',
         'model_used',
@@ -26,6 +27,7 @@ class AiInterviewReport extends Model
     protected $casts = [
         'strengths'       => 'array',
         'weaknesses'      => 'array',
+        'dialect_summary' => 'array',
         'raw_ai_response' => 'array',
         'generated_at'    => 'datetime',
         'overall_score'   => 'integer',

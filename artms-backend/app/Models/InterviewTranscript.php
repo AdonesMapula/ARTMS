@@ -14,6 +14,8 @@ class InterviewTranscript extends Model
         'speaker_identity',
         'speaker_role',
         'text',
+        'dialect_detected',
+        'translated_text',
         'segment_offset',
         'spoken_at',
     ];

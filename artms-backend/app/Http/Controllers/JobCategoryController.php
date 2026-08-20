@@ -3,13 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\JobCategory;
+use App\Services\Cache\CacheKeyService;
+use App\Services\Cache\CacheService;
 use Illuminate\Http\Request;
 
 class JobCategoryController extends Controller
 {
+    protected CacheService $cache;
+
+    public function __construct(CacheService $cache)
+    {
+        $this->cache = $cache;
+    }
+
     public function index()
     {
-        return response()->json(JobCategory::orderBy('name')->get());
+        $categories = $this->cache->remember(CacheKeyService::jobCategories(), 1800, function () {
+            return JobCategory::orderBy('name')->get();
+        });
+
+        return response()->json($categories);
     }
 
     public function store(Request $request)
@@ -19,7 +32,8 @@ class JobCategoryController extends Controller
         ]);
 
         $category = JobCategory::create($validated);
-        
+        $this->cache->forget(CacheKeyService::jobCategories());
+
         return response()->json($category, 201);
     }
 }

@@ -58,10 +58,10 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1012) => env('MYSQL_ATTR_SSL_CA') ?: (file_exists(storage_path('certs/ca.pem')) ? storage_path('certs/ca.pem') : null),
+                (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1012) => env('MYSQL_ATTR_SSL_CA') ?: (file_exists(storage_path('certs/ca.pem')) && !in_array(env('DB_HOST', '127.0.0.1'), ['127.0.0.1', 'localhost']) ? storage_path('certs/ca.pem') : null),
                 (defined('PDO::MYSQL_ATTR_SSL_CERT') ? PDO::MYSQL_ATTR_SSL_CERT : 1013) => env('MYSQL_ATTR_SSL_CERT'),
                 (defined('PDO::MYSQL_ATTR_SSL_KEY') ? PDO::MYSQL_ATTR_SSL_KEY : 1014) => env('MYSQL_ATTR_SSL_KEY'),
-                (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT : 1020) => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', true),
+                (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT : 1020) => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', !in_array(env('DB_HOST', '127.0.0.1'), ['127.0.0.1', 'localhost'])),
             ]) : [],
         ],
 

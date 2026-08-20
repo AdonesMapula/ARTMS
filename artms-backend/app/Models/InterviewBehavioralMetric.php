@@ -14,12 +14,14 @@ class InterviewBehavioralMetric extends Model
         'interview_id',
         'aggregated_metrics',
         'speech_metrics',
+        'affect_metrics',
         'is_mocked',
     ];
 
     protected $casts = [
         'aggregated_metrics' => 'array',
         'speech_metrics'     => 'array',
+        'affect_metrics'     => 'array',
         'is_mocked'          => 'boolean',
     ];
 

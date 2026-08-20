@@ -462,8 +462,8 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
             <span className={cn(
               "text-[9px] font-black px-2 py-0.5 rounded border tracking-wide uppercase",
               liveScores.emotion === "Distracted / Looking Away" && "bg-amber-500/10 border-amber-500/30 text-amber-400",
-              liveScores.emotion === "Hesitant / Tense" && "bg-orange-500/10 border-orange-500/30 text-orange-400",
-              liveScores.emotion === "Engaged & Friendly" && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+              liveScores.emotion === "Hesitant / Stressed" && "bg-orange-500/10 border-orange-500/30 text-orange-400",
+              liveScores.emotion === "Engaged & Positive" && "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
               liveScores.emotion === "Composed & Focused" && "bg-indigo-500/10 border-indigo-500/30 text-indigo-400",
               liveScores.emotion === "Neutral & Attentive" && "bg-slate-700/10 border-slate-500/30 text-slate-300",
               liveScores.emotion === "No Face Detected" && "bg-red-500/10 border-red-500/30 text-red-400"
@@ -471,7 +471,7 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
               {liveScores.emotion}
             </span>
             <span className="text-[9px] font-bold text-slate-400 ml-1">
-              (Composed: {liveScores.composedScore}% • Attentive: {liveScores.attentiveScore}%)
+              (Composed: {liveScores.composedScore}% • Attentive: {liveScores.attentiveScore}% • Valence: {liveScores.valence ?? 75}%)
             </span>
           </div>
         )}
@@ -526,6 +526,7 @@ function ZoomVideoStage({ applicantName, onHangup, isApplicant, latestCaption, s
             >
               <option value="fil-PH" className="bg-[#111723] text-white"> Tagalog / Taglish</option>
               <option value="ceb-PH" className="bg-[#111723] text-white"> Cebuano / Bisaya</option>
+              <option value="hil-PH" className="bg-[#111723] text-white"> Hiligaynon / Ilonggo</option>
               <option value="en-PH" className="bg-[#111723] text-white"> PH English</option>
               <option value="en-US" className="bg-[#111723] text-white"> US English</option>
             </select>
@@ -678,13 +679,14 @@ function TwoWayTranscriptionManager({
         id: `seg_${role}_${now}_${Math.random().toString(36).substring(2, 6)}`,
         speaker_role: role,
         speaker_identity: identity || role,
+        dialect_detected: speechLang || "fil-PH",
         text: trimmed,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: new Date().toISOString(),
       };
 
       const startT = performance.now();
-      console.log(`[STT FINAL +${startT.toFixed(0)}ms] (${role}): "${trimmed}"`);
+      console.log(`[STT FINAL +${startT.toFixed(0)}ms] (${role}) [${speechLang}]: "${trimmed}"`);
 
       // Step A: Instant Local UI Update (0ms) - GUARANTEED
       try {
@@ -702,12 +704,12 @@ function TwoWayTranscriptionManager({
 
       // Step C: Asynchronous Non-Blocking MySQL Persistence (Background)
       const persistCall = isApplicant
-        ? interviewService.storePublicTranscript(interviewId, trimmed, role, 0)
-        : interviewService.storeTranscript(interviewId, trimmed, role, 0);
+        ? interviewService.storePublicTranscript(interviewId, trimmed, role, 0, speechLang)
+        : interviewService.storeTranscript(interviewId, trimmed, role, 0, speechLang);
 
       persistCall.catch((e) => console.warn("Background persistence notice:", e));
     },
-    [interviewId, isApplicant, onLiveSegmentProduced, broadcastData]
+    [interviewId, isApplicant, speechLang, onLiveSegmentProduced, broadcastData]
   );
 
   // Stable reference for processFinalSegment to prevent dependency re-triggers
@@ -884,6 +886,7 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSessi
   const metricsRef = useRef([]);
   const isFlushingRef = useRef(false);
   const latestComputedMetricsRef = useRef(null);
+  const [speechLang, setSpeechLang] = useState("fil-PH");
 
   // Flush accumulated MediaPipe metrics to backend
   const flushMetrics = useCallback(async () => {
@@ -895,8 +898,29 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSessi
     const itemsToSend = [...metricsRef.current];
     const sendCount = itemsToSend.length;
 
+    // Calculate affect summary
+    const detected = itemsToSend.filter((s) => s.faceDetected);
+    const dCount = detected.length;
+    let affectSummary = null;
+    if (dCount > 0) {
+      const avgAtt = Math.round(detected.reduce((a, b) => a + (b.attentiveScore || 0), 0) / dCount);
+      const avgComp = Math.round(detected.reduce((a, b) => a + (b.composedScore || 0), 0) / dCount);
+      const avgVal = Math.round(detected.reduce((a, b) => a + (b.valence || 50), 0) / dCount);
+      const avgBlink = Math.round(detected.reduce((a, b) => a + (b.blinkStress || 0), 0) / dCount);
+      const eyeCount = detected.filter((s) => (s.eyeOpenness || 0) >= 0.22).length;
+      const eyeRatio = Math.round((eyeCount / dCount) * 100);
+
+      affectSummary = {
+        avg_attentiveness: avgAtt,
+        avg_composure: avgComp,
+        facial_valence: avgVal,
+        blink_stress_index: avgBlink,
+        eye_contact_ratio: eyeRatio,
+      };
+    }
+
     try {
-      await interviewService.savePublicBehavioralMetrics(interviewId, itemsToSend);
+      await interviewService.savePublicBehavioralMetrics(interviewId, itemsToSend, affectSummary);
       // Clear only the metrics that were successfully persisted
       metricsRef.current = metricsRef.current.slice(sendCount);
     } catch (err) {
@@ -914,14 +938,17 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSessi
         metricsRef.current.push({
           timestamp: Math.floor(Date.now() / 1000),
           faceDetected: true,
-          eyeOpenness: parseFloat(latest.ear.toFixed(4)),
-          mouthMovement: parseFloat(latest.smile.toFixed(4)),
-          headYaw: parseFloat(latest.yaw.toFixed(4)),
-          headPitch: parseFloat(latest.pitch.toFixed(4)),
-          headRoll: parseFloat(latest.roll.toFixed(4)),
-          composedScore: latest.composedScore,
-          engagedScore: latest.engagedScore,
-          attentiveScore: latest.attentiveScore
+          eyeOpenness: parseFloat((latest.ear || 0).toFixed(4)),
+          mouthMovement: parseFloat((latest.smile || 0).toFixed(4)),
+          headYaw: parseFloat((latest.yaw || 0).toFixed(4)),
+          headPitch: parseFloat((latest.pitch || 0).toFixed(4)),
+          headRoll: parseFloat((latest.roll || 0).toFixed(4)),
+          composedScore: latest.composedScore || 0,
+          engagedScore: latest.engagedScore || 0,
+          attentiveScore: latest.attentiveScore || 0,
+          valence: latest.valence || 50,
+          arousal: latest.arousal || 50,
+          blinkStress: latest.blinkStress || 0,
         });
       } else {
         // Face not detected in this interval
@@ -935,7 +962,10 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSessi
           headRoll: 0,
           composedScore: 0,
           engagedScore: 0,
-          attentiveScore: 0
+          attentiveScore: 0,
+          valence: 50,
+          arousal: 50,
+          blinkStress: 0,
         });
       }
     }, 3000);
@@ -958,6 +988,11 @@ function ZoomApplicantLayout({ interviewId, applicantName, onHangup, endingSessi
 
   return (
     <div className="h-screen w-screen bg-[#111723] flex flex-col justify-between p-4 overflow-hidden">
+      <TwoWayTranscriptionManager
+        interviewId={interviewId}
+        isApplicant={true}
+        speechLang={speechLang}
+      />
       <div className="flex-1 w-full max-w-[1400px] mx-auto h-full py-2">
         <ZoomVideoStage
           applicantName={applicantName}
@@ -980,11 +1015,14 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
   const [notes, setNotes]           = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("Recording initialization...");
+  const [speechLang, setSpeechLang] = useState("fil-PH");
+  const [liveTranscripts, setLiveTranscripts] = useState([]);
 
   const [liveMetrics, setLiveMetrics] = useState({
     confidence_score: 85,
     enthusiasm_score: 75,
     calmness_score: 82,
+    valence_score: 80,
     keywords: ["COMMUNICATION SKILLS", "LEADERSHIP", "ACTIVE LISTENING", "SCALABILITY", "PROBLEM SOLVING"],
     overall_match: 84,
   });
@@ -993,10 +1031,20 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
     if (!metrics.faceDetected) return;
     setLiveMetrics((prev) => ({
       ...prev,
-      confidence_score: metrics.composedScore,
-      enthusiasm_score: metrics.engagedScore,
-      calmness_score: metrics.attentiveScore,
+      confidence_score: metrics.composedScore || prev.confidence_score,
+      enthusiasm_score: metrics.engagedScore || prev.enthusiasm_score,
+      calmness_score: metrics.attentiveScore || prev.calmness_score,
+      valence_score: metrics.valence || prev.valence_score,
     }));
+  }, []);
+
+  const handleLiveSegmentProduced = useCallback((seg) => {
+    if (!seg || !seg.text) return;
+    setLiveTranscripts((prev) => {
+      const exists = prev.some((p) => p.id === seg.id || (p.text === seg.text && Math.abs((p.timestamp || 0) - (seg.timestamp || 0)) < 3000));
+      if (exists) return prev;
+      return [...prev, seg];
+    });
   }, []);
 
   // Poll backend for actual Egress recording status to prevent false UI claims
@@ -1043,6 +1091,12 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 p-6 font-sans">
+      <TwoWayTranscriptionManager
+        interviewId={interviewId}
+        isApplicant={false}
+        speechLang={speechLang}
+        onLiveSegmentProduced={handleLiveSegmentProduced}
+      />
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* ── Left Column: Video Stage + Analytics (8 Cols) ──────────────── */}
@@ -1055,6 +1109,8 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
               onHangup={onHangup}
               isApplicant={false}
               endingSession={endingSession}
+              speechLang={speechLang}
+              setSpeechLang={setSpeechLang}
               onMetricsComputed={handleMetricsComputed}
             />
           </div>
@@ -1075,7 +1131,7 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
               <div className="space-y-3.5">
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    <span>CONFIDENCE BASELINE</span>
+                    <span>COMPOSURE INDEX</span>
                     <span>{liveMetrics.confidence_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -1085,11 +1141,11 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
 
                 <div>
                   <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    <span>ENGAGEMENT</span>
-                    <span>{liveMetrics.enthusiasm_score}%</span>
+                    <span>POSITIVE AFFECT (VALENCE)</span>
+                    <span>{liveMetrics.valence_score || liveMetrics.enthusiasm_score}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: `${liveMetrics.enthusiasm_score}%` }} />
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${liveMetrics.valence_score || liveMetrics.enthusiasm_score}%` }} />
                   </div>
                 </div>
 
@@ -1164,9 +1220,10 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
             </div>
 
             {/* Navigation Tabs */}
-            <div className="space-y-1 mb-6">
+            <div className="grid grid-cols-2 gap-1 mb-6">
               {[
                 { id: "ai_analysis", label: "Recording Status", icon: "🎙️" },
+                { id: "transcripts", label: "Live Transcripts", icon: "💬" },
                 { id: "notes",       label: "Notes",            icon: "📝" },
                 { id: "scorecard",   label: "Scorecard",        icon: "📋" },
               ].map((tab) => (
@@ -1174,13 +1231,13 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all cursor-pointer",
+                    "flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer",
                     activeTab === tab.id
                       ? "bg-blue-50/90 text-blue-700 shadow-sm"
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                   )}
                 >
-                  <span className="text-base">{tab.icon}</span>
+                  <span className="text-sm">{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}
@@ -1244,6 +1301,37 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Tab Content: Live Transcripts */}
+            {activeTab === "transcripts" && (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    REAL-TIME TRANSCRIPT STREAM
+                  </span>
+                  <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">
+                    {liveTranscripts.length} segments
+                  </span>
+                </div>
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                  {liveTranscripts.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-6 text-center">Speaking will display live speech recognition here…</p>
+                  ) : (
+                    liveTranscripts.map((t, idx) => (
+                      <div key={t.id || idx} className="text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={cn("font-bold text-[10px] uppercase", t.speaker_role === "hr" ? "text-blue-600" : "text-emerald-600")}>
+                            {t.speaker_role === "hr" ? "HR Interviewer" : applicantName}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono">{t.time || ""}</span>
+                        </div>
+                        <p className="text-slate-700">{t.text}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 

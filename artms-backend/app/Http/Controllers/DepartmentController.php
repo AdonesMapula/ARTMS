@@ -4,21 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Department;
+use App\Services\Cache\DepartmentCacheService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    protected DepartmentCacheService $departmentCache;
+
+    public function __construct(DepartmentCacheService $departmentCache)
+    {
+        $this->departmentCache = $departmentCache;
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $departments = Department::withCount(['employees', 'users'])
-            ->with('departmentHeads')
-            ->when($request->search, fn ($q) =>
-                $q->where('department_name', 'like', "%{$request->search}%")
-                    ->orWhere('department_code', 'like', "%{$request->search}%")
-            )
-            ->orderBy('department_name')
-            ->get();
+        $departments = $this->departmentCache->all($request->search);
 
         return response()->json(['departments' => $departments]);
     }
@@ -34,6 +35,8 @@ class DepartmentController extends Controller
 
         $dept = Department::create($data);
         AuditLog::record('create', 'department', "Created department: {$dept->department_name}");
+
+        $this->departmentCache->invalidate($dept->id);
 
         return response()->json(['message' => 'Department created.', 'department' => $dept], 201);
     }
@@ -55,6 +58,8 @@ class DepartmentController extends Controller
         $department->update($data);
         AuditLog::record('update', 'department', "Updated department: {$department->department_name}");
 
+        $this->departmentCache->invalidate($department->id);
+
         return response()->json(['message' => 'Department updated.', 'department' => $department]);
     }
 
@@ -65,7 +70,10 @@ class DepartmentController extends Controller
         }
 
         AuditLog::record('delete', 'department', "Deleted department: {$department->department_name}");
+        $id = $department->id;
         $department->delete();
+
+        $this->departmentCache->invalidate($id);
 
         return response()->json(['message' => 'Department deleted.']);
     }

@@ -1,5 +1,5 @@
 /**
- * Behavioral Metrics Calculation & Formulas
+ * Behavioral & Facial Affect Metrics Calculation & Formulas
  *
  * NOTE: The thresholds and limits defined below are INITIAL DEFAULTS PENDING CALIBRATION
  * against real interview footage. They can be dynamically configured at runtime via URL query
@@ -14,10 +14,10 @@ export const BEHAVIOR_CONFIG = {
   head_deg_limit: parseFloat(new URLSearchParams(window.location.search).get("head_deg_limit")) || 25.0,
 
   // Threshold above which stress blendshapes (brow down, mouth press) indicate tension
-  stress_threshold: parseFloat(new URLSearchParams(window.location.search).get("stress_threshold")) || 0.40,
+  stress_threshold: parseFloat(new URLSearchParams(window.location.search).get("stress_threshold")) || 0.38,
 
-  // Threshold above which smile blendshape indicates active engagement / warmth
-  smile_threshold: parseFloat(new URLSearchParams(window.location.search).get("smile_threshold")) || 0.35,
+  // Threshold above which smile blendshape indicates active positive affect / warmth
+  smile_threshold: parseFloat(new URLSearchParams(window.location.search).get("smile_threshold")) || 0.30,
 
   // Threshold above which composure score is considered composed & focused
   composed_threshold: parseFloat(new URLSearchParams(window.location.search).get("composed_threshold")) || 75.0,
@@ -81,21 +81,26 @@ export function estimateHeadPose(landmarks) {
 }
 
 /**
- * Main evaluation scoring function.
- * Computes live metrics from landmarks and blendshape categories.
+ * Main evaluation scoring & facial affect function.
+ * Computes live metrics from 478 3D landmarks and blendshape categories.
  */
-export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
+export function evaluateBehavior(landmarks, blendshapes, headHistory = [], blinkHistory = []) {
   if (!landmarks || landmarks.length === 0) {
     return {
       faceDetected: false,
       attentiveScore: 0,
       composedScore: 0,
       engagedScore: 0,
+      valence: 50,
+      arousal: 50,
+      blinkStress: 0,
       emotion: "No Face Detected",
       ear: 0,
       yaw: 0,
       pitch: 0,
       roll: 0,
+      smile: 0,
+      stress: 0,
     };
   }
 
@@ -110,10 +115,15 @@ export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
 
   const browDownLeft = getBlendshapeValue("browDownLeft");
   const browDownRight = getBlendshapeValue("browDownRight");
+  const browOuterUpLeft = getBlendshapeValue("browOuterUpLeft");
+  const browOuterUpRight = getBlendshapeValue("browOuterUpRight");
+  const eyeBlinkLeft = getBlendshapeValue("eyeBlinkLeft");
+  const eyeBlinkRight = getBlendshapeValue("eyeBlinkRight");
   const mouthSmileLeft = getBlendshapeValue("mouthSmileLeft");
   const mouthSmileRight = getBlendshapeValue("mouthSmileRight");
   const mouthPressLeft = getBlendshapeValue("mouthPressLeft");
   const mouthPressRight = getBlendshapeValue("mouthPressRight");
+  const jawOpen = getBlendshapeValue("jawOpen");
 
   // 1. Attentiveness Score calculation
   const headDev = Math.sqrt(yaw * yaw + pitch * pitch);
@@ -124,9 +134,9 @@ export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
   )));
 
   // 2. Composure Score calculation
-  // Substitute jawClench (unsupported) with average lip/jaw tension (mouthPressLeft / mouthPressRight)
   const mouthPressAvg = (mouthPressLeft + mouthPressRight) / 2.0;
-  const stressBlendshapesVal = (browDownLeft + browDownRight + mouthPressAvg) / 3.0;
+  const browDownAvg = (browDownLeft + browDownRight) / 2.0;
+  const stressBlendshapesVal = (browDownAvg * 1.5 + mouthPressAvg) / 2.5;
 
   // Calculate Head Jitter / Fidgeting over sliding window
   let headJitter = 0;
@@ -139,8 +149,13 @@ export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
     const varPitch = pitches.reduce((a, b) => a + Math.pow(b - meanPitch, 2), 0) / pitches.length;
     headJitter = Math.sqrt(varYaw + varPitch);
   }
+
+  // Blink Stress Indicator (spikes in rapid blink blendshapes)
+  const isBlinkingNow = (eyeBlinkLeft + eyeBlinkRight) / 2.0 > 0.6;
+  const blinkStress = Math.min(100, Math.round(stressBlendshapesVal * 80.0 + (isBlinkingNow ? 20 : 0)));
+
   const composedScore = Math.max(0, Math.min(100, Math.round(
-    100.0 - (stressBlendshapesVal * 60.0 + headJitter * 8.0)
+    100.0 - (stressBlendshapesVal * 55.0 + headJitter * 7.0 + (blinkStress * 0.15))
   )));
 
   // 3. Engagement Score calculation
@@ -149,19 +164,27 @@ export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
     0.4 * attentiveScore + 0.6 * (smileVal * 100.0)
   )));
 
-  // 4. Live Badge Emotion Label Precedence (Explicit Ordered Chain)
+  // 4. Facial Affect & Valence (Positive/Negative) & Arousal (Energy)
+  // Valence: 0 = Negative/Tense, 50 = Neutral, 100 = Warm/Positive
+  const valence = Math.max(0, Math.min(100, Math.round(
+    50 + (smileVal * 50) - (stressBlendshapesVal * 50)
+  )));
+
+  // Arousal: 0 = Low energy/Passive, 100 = High reactivity
+  const browUpAvg = (browOuterUpLeft + browOuterUpRight) / 2.0;
+  const arousal = Math.max(0, Math.min(100, Math.round(
+    30 + (jawOpen * 40) + (browUpAvg * 30)
+  )));
+
+  // 5. Live Emotion Badge Classification (Precedence Chain)
   let emotion = "Neutral & Attentive";
   if (attentiveScore < (BEHAVIOR_CONFIG.ear_limit * 100.0)) {
-    // Condition A: Distracted (Looks away or eyes closed)
     emotion = "Distracted / Looking Away";
-  } else if (stressBlendshapesVal > BEHAVIOR_CONFIG.stress_threshold) {
-    // Condition B: Tense (Brows lowered, lips tight)
-    emotion = "Hesitant / Tense";
-  } else if (smileVal > BEHAVIOR_CONFIG.smile_threshold) {
-    // Condition C: Friendly (Active smiling)
-    emotion = "Engaged & Friendly";
+  } else if (stressBlendshapesVal > BEHAVIOR_CONFIG.stress_threshold || blinkStress > 65) {
+    emotion = "Hesitant / Stressed";
+  } else if (smileVal > BEHAVIOR_CONFIG.smile_threshold || valence >= 70) {
+    emotion = "Engaged & Positive";
   } else if (composedScore >= BEHAVIOR_CONFIG.composed_threshold) {
-    // Condition D: Focused (Steady head, relaxed face)
     emotion = "Composed & Focused";
   }
 
@@ -170,12 +193,16 @@ export function evaluateBehavior(landmarks, blendshapes, headHistory = []) {
     attentiveScore,
     composedScore,
     engagedScore,
+    valence,
+    arousal,
+    blinkStress,
     emotion,
     ear,
     yaw,
     pitch,
     roll,
     smile: smileVal,
-    stress: stressBlendshapesVal
+    stress: stressBlendshapesVal,
+    headJitter: parseFloat(headJitter.toFixed(2)),
   };
 }

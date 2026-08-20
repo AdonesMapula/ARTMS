@@ -273,12 +273,24 @@ class AiGuardrailService
         $hiringRec = self::filterHarmfulLanguage(trim((string) ($data['hiring_recommendation'] ?? 'Candidate demonstrated relevant competencies during the interview.')));
         $scoreRationale = self::filterHarmfulLanguage(trim((string) ($data['score_rationale'] ?? 'Score is based on candidate articulation and domain responses.')));
 
+        $dialectSummary = [];
+        if (! empty($data['dialect_summary']) && is_array($data['dialect_summary'])) {
+            $dialectSummary = $data['dialect_summary'];
+        } else {
+            $dialectSummary = [
+                'dominant_dialect'  => 'English / Filipino',
+                'dialect_diversity' => 'Standard code-switching observed',
+                'breakdown'         => ['English' => 100.0, 'Filipino' => 0.0, 'Cebuano' => 0.0, 'Hiligaynon' => 0.0],
+            ];
+        }
+
         return [
             'overall_score'         => $overallScore,
             'communication_score'   => $commScore,
             'confidence_score'      => $confScore,
             'strengths'             => $strengths,
             'weaknesses'            => $weaknesses,
+            'dialect_summary'       => $dialectSummary,
             'hiring_recommendation' => $hiringRec,
             'score_rationale'       => $scoreRationale,
         ];

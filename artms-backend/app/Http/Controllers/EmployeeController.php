@@ -16,7 +16,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $employees = Employee::with(['user', 'department', 'documents'])
+        $employees = Employee::with(['user:id,name,email,employee_id,avatar', 'department:id,department_name,department_code'])
             ->when($request->search, function ($q, $search) {
                 $q->whereHas('user', function ($u) use ($search) {
                     $u->where('name', 'like', "%{$search}%")
@@ -30,13 +30,18 @@ class EmployeeController extends Controller
             ->orderBy('id', 'desc')
             ->paginate($request->per_page ?? 15);
 
-        // Stats summary
+        // Single aggregate query for status summary
+        $rawCounts = Employee::selectRaw("employment_status, COUNT(*) as count")
+            ->groupBy('employment_status')
+            ->pluck('count', 'employment_status')
+            ->toArray();
+
         $stats = [
-            'total'      => Employee::count(),
-            'active'     => Employee::where('employment_status', 'active')->count(),
-            'on_leave'   => Employee::where('employment_status', 'on_leave')->count(),
-            'resigned'   => Employee::where('employment_status', 'resigned')->count(),
-            'terminated' => Employee::where('employment_status', 'terminated')->count(),
+            'total'      => array_sum($rawCounts),
+            'active'     => (int) ($rawCounts['active'] ?? 0),
+            'on_leave'   => (int) ($rawCounts['on_leave'] ?? 0),
+            'resigned'   => (int) ($rawCounts['resigned'] ?? 0),
+            'terminated' => (int) ($rawCounts['terminated'] ?? 0),
         ];
 
         return response()->json([
