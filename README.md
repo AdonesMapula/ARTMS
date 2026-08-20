@@ -1,4 +1,4 @@
-# ARTMS — AI-assisted Recruitment and Talent Management System
+# ARTMS — AI-Assisted Recruitment and Talent Management System
 
 An enterprise-grade, full-stack recruitment and talent acquisition platform designed to streamline hiring workflows, candidate pipeline tracking, real-time video assessments, and role-based workforce management.
 
@@ -221,6 +221,6 @@ For questions, support, or collaboration inquiries:
 
 **Proprietary License**
 
-Copyright © 2024–2026 ARTMS. All rights reserved.
+Copyright © 2024–2026 Southwestern University PHINMA. All rights reserved.
 
 This software and associated documentation files are proprietary and confidential. Unauthorized copying, distribution, modification, public display, reverse engineering, or transfer of this software, via any medium, is strictly prohibited without explicit prior written authorization from the copyright holder.
