@@ -1,249 +1,226 @@
-# ARTMS — Automated Recruitment and Talent Management System
+# ARTMS — AI-assisted Recruitment and Talent Management System
 
-A full-stack, high-performance web application built with **React (Vite)** for the frontend, **Laravel 11** for the backend REST API, **MySQL 8.0** database with composite indexing, **LiveKit Cloud WebRTC** for video conferencing, and **Redis** for sub-millisecond read caching.
+An enterprise-grade, full-stack recruitment and talent acquisition platform designed to streamline hiring workflows, candidate pipeline tracking, real-time video assessments, and role-based workforce management.
 
 ---
 
-## Project Structure
+## 📌 Description & Purpose
+
+### The Problem
+Traditional recruitment processes suffer from fragmented toolsets, manual candidate tracking, scheduling friction, and subjective evaluations. These bottlenecks lead to prolonged hiring cycles, inconsistent candidate experiences, and administrative overhead across departments.
+
+### The Solution
+**ARTMS** centralizes the end-to-end recruitment lifecycle into a single high-performance web application. It integrates automated application tracking, synchronized departmental hiring requisitions, live WebRTC video interviewing, and AI-assisted candidate evaluation into a unified workflow.
+
+### Core Features
+- **Applicant Tracking System (ATS)**: Multi-stage candidate pipelines, automated status progression, resume parsing, and application screening.
+- **WebRTC Video Conferencing**: Low-latency, browser-based video interviews powered by **LiveKit Cloud**.
+- **AI-Assisted Evaluations**: Live transcript analysis, automated scoring, and structured candidate assessment reports via **xAI Grok**.
+- **Role-Based Access Control (RBAC)**: Fine-grained permissions across Super Admin, HR Admin, COO, and Department Heads.
+- **Manpower Requisitions**: Multi-tier approval workflows for departmental staffing requests and job vacancy authorizations.
+- **High-Performance Architecture**: Composite-indexed MySQL database, sub-millisecond Redis cache-aside layer, and consolidated single-flight boot APIs.
+
+---
+
+## 📁 File Structure
 
 ```
 ARTMS/
-├── ARTMS-main/          # React Vite Frontend (port 5173)
-└── artms-backend/       # Laravel REST API Backend (port 8000)
+├── ARTMS-main/                  # Frontend Web Application (React 19, Vite, Tailwind CSS)
+│   ├── public/                  # Static assets and favicon resources
+│   ├── src/                     # React application source code
+│   │   ├── assets/              # Images, icons, and static media
+│   │   ├── components/          # Reusable UI components (tables, inputs, cards)
+│   │   ├── context/             # Global state and authentication providers
+│   │   ├── hooks/               # Custom React lifecycle and data hooks
+│   │   ├── layouts/             # Dashboard, portal, and authentication layouts
+│   │   ├── modals/              # Interactive dialogs and form overlays
+│   │   ├── pages/               # Route-level views (Pipeline, Jobs, Interviews)
+│   │   ├── routes/              # Client-side routing and protected route guards
+│   │   ├── services/            # Axios API service integrations
+│   │   └── utils/               # Formatting, constants, and helper utilities
+│   ├── package.json             # Frontend dependencies and npm scripts
+│   └── vite.config.js           # Vite development and bundle configuration
+│
+├── artms-backend/               # Backend REST API (Laravel 11, PHP 8.2+)
+│   ├── app/                     # Core application logic
+│   │   ├── Console/Commands/    # Artisan commands (e.g., cache warming)
+│   │   ├── Http/Controllers/    # API controllers handling business workflows
+│   │   ├── Models/              # Eloquent ORM models and relationships
+│   │   ├── Observers/           # Model observers for cache invalidation
+│   │   └── Services/            # Service layer (LiveKit, AI evaluation, caching)
+│   ├── config/                  # Application, database, and service configurations
+│   ├── database/                # Migrations, seeders, and composite indexes
+│   ├── routes/                  # API endpoints (`routes/api.php`)
+│   ├── storage/                 # Application storage, logs, and generated assets
+│   ├── composer.json            # PHP dependencies and PSR-4 autoload rules
+│   └── .env.example             # Backend environment template
+│
+├── docs/                        # Architecture guides and database documentation
+└── README.md                    # Root project documentation and setup guide
 ```
 
 ---
 
-## Prerequisites
+## 🛠️ Setup & Installation
 
-Install all of the following before running the project on any device.
+### Prerequisites
 
-| Software | Minimum Version | Verify Command | Download / Notes |
-|---|---|---|---|
-| PHP | 8.2+ | `php -v` | [windows.php.net](https://windows.php.net/download/) or via XAMPP |
-| Composer | 2.x | `composer -V` | [getcomposer.org](https://getcomposer.org/Composer-Setup.exe) |
-| Node.js | 18+ | `node -v` | [nodejs.org](https://nodejs.org) |
-| npm | 9+ | `npm -v` | Included with Node.js |
-| MySQL | 8.0+ | `mysql --version` | [dev.mysql.com](https://dev.mysql.com/downloads/installer/) |
-| ngrok / localtunnel | latest | `ngrok --version` | [ngrok.com](https://ngrok.com) (for temporary public hosting & webhooks) |
-| Redis (Optional) | 6.0+ | `redis-cli ping` | Recommended for low-latency boot caching |
-| Git | any | `git --version` | [git-scm.com](https://git-scm.com) |
+Ensure the following dependencies are installed and available in your system path:
+
+| Dependency | Minimum Version | Verification Command |
+|---|---|---|
+| **PHP** | 8.2+ | `php -v` |
+| **Composer** | 2.x | `composer -V` |
+| **Node.js** | 18+ (LTS) | `node -v` |
+| **npm** | 9+ | `npm -v` |
+| **MySQL** | 8.0+ | `mysql --version` |
+| **Redis** *(Optional)* | 6.0+ | `redis-cli ping` |
 
 ---
 
-## 💻 Setting Up the System on a New Device
+### Step 1: Clone the Repository
 
-Follow this initial setup checklist when opening the repository on a new computer or laptop:
-
-### Step 1 — Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/ARTMS.git
+git clone https://github.com/AdonesMapula/ARTMS.git
 cd ARTMS
 ```
 
-### Step 2 — Backend Initialization (Laravel 11)
-```bash
-cd artms-backend
-
-# 1. Install PHP dependencies
-composer install
-
-# 2. Create environment configuration
-cp .env.example .env
-
-# 3. Generate Laravel encryption key
-php artisan key:generate
-```
-
-Open `artms-backend/.env` and configure your database, LiveKit, and ngrok values:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=artms_db
-DB_USERNAME=root
-DB_PASSWORD=your_mysql_password
-
-# LiveKit WebRTC Video Conferencing Keys
-LIVEKIT_URL=wss://artms-8tdvtcz7.livekit.cloud
-LIVEKIT_API_KEY=APIHjgS5A8nwofZ
-LIVEKIT_API_SECRET=Z7U9FUGf21cWva4Bitvpryfiebjh9g11Doref6AXTNzG
-LIVEKIT_HOST=wss://artms-8tdvtcz7.livekit.cloud
-LIVEKIT_WEBHOOK_URL=https://your-ngrok-url.ngrok-free.dev/api/livekit/webhook
-
-# xAI Grok Evaluation
-XAI_API_KEY=your_xai_grok_api_key_here
-```
-
-Create the database in MySQL and run migrations with seeders & composite indexes:
-```bash
-# Create MySQL DB
-mysql -u root -p -e "CREATE DATABASE artms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-# Run migrations, seed accounts, and build performance indexes
-php artisan migrate --seed
-
-# Pre-warm boot payload cache
-php artisan artms:warm-cache --active-only
-```
-
-### Step 3 — Frontend Initialization (React + Vite)
-Open a new terminal and navigate to the frontend:
-```bash
-cd ARTMS-main
-
-# 1. Install JavaScript dependencies
-npm install
-
-# 2. Create environment configuration
-cp .env.example .env
-```
-
-Ensure `ARTMS-main/.env` points to your backend API URL:
-```env
-VITE_API_URL=http://localhost:8000/api
-```
-
 ---
 
-## 📹 LiveKit Cloud WebRTC & Video Conferencing Setup
+### Step 2: Backend Setup (Laravel 11)
 
-ARTMS features full video interviewing powered by **LiveKit Cloud** and **xAI Grok API**:
+1. Navigate to the backend directory:
+   ```bash
+   cd artms-backend
+   ```
 
-1. **Token Generation**: When an interviewer or applicant joins a video room, Laravel validates the request and issues a signed JWT via `InterviewController.php`.
-2. **WebSockets Connection**: The React frontend (`ZoomVideoStage.jsx`) connects directly to `wss://artms-8tdvtcz7.livekit.cloud` using `@livekit/components-react`.
-3. **Live Transcripts & AI Reports**: Clicking **End Interview** dispatches background processing to generate AI evaluation scorecards via xAI Grok (`grok-4.5`).
+2. Install PHP dependencies:
+   ```bash
+   composer install
+   ```
 
----
+3. Create the environment configuration file:
+   ```bash
+   cp .env.example .env
+   ```
 
-## 🌐 ngrok Public Tunnel & Remote Access Setup
+4. Generate the application encryption key:
+   ```bash
+   php artisan key:generate
+   ```
 
-ngrok allows external applicants on mobile phones or remote devices to join video calls and access the public job application pages.
-
-### 1. Authenticate ngrok (One-Time Setup)
-```bash
-ngrok config add-authtoken YOUR_NGROK_AUTHTOKEN
-```
-*(Get your token at [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken))*
-
-### 2. Start ngrok Tunnel
-```bash
-ngrok http 5173
-```
-- Copy the generated HTTPS forwarding URL (e.g. `https://xxxx.ngrok-free.app`).
-- Update `LIVEKIT_WEBHOOK_URL` in `artms-backend/.env` with your ngrok domain + `/api/livekit/webhook`.
-
----
-
-## 🚀 How to Start the System (Daily Operation)
-
-To launch the full system, open **3 separate CLI terminal windows** on your device:
-
-### Terminal 1 — Start Backend Server (Laravel API)
-```bash
-cd artms-backend
-php artisan serve --host=0.0.0.0 --port=8000
-```
-> `--host=0.0.0.0` binds Laravel to all network interfaces so local devices and ngrok tunnels can reach it.
-
-### Terminal 2 — Start Frontend Server (React Vite)
-```bash
-cd ARTMS-main
-npm run dev -- --host
-```
-> `-- --host` exposes the Vite frontend to external network access and tunnel proxies.
-
-### Terminal 3 — Start ngrok (Temporary Public Hosting & Device Testing)
-To expose the React Vite frontend so mobile phones, tablets, or external devices can access the web application and test the video conferencing module:
-
-```bash
-ngrok http 5173
-```
-
-- **Backend Tunnel URL**: `https://strategic-shifty-gauntlet.ngrok-free.dev/`
-- **Frontend Tunnel URL**: Copy the temporary HTTPS URL output by ngrok (e.g. `https://xxxx.ngrok-free.app`) and open it on your mobile device or external browser.
-
-> **Note:** Make sure `php artisan serve --host=0.0.0.0 --port=8000` is running in Terminal 1 so ngrok API calls reach your backend server.
-
----
-
-## ⚡ New Implementations & Performance Features
-
-### 1. High-Performance Cache-Aside & Tagged Redis Layer
-- **`BootCacheService`** ([App\Services\Cache\BootCacheService](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Services/Cache/BootCacheService.php)): Encapsulates read-heavy boot payloads (User profiles, roles, permissions, department structure) in sub-millisecond cache with tag-based invalidation.
-
-### 2. Event-Driven Cache Invalidation
-- **`UserObserver`** ([App\Observers\UserObserver](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Observers/UserObserver.php)): Automatically invalidates user cache entries instantly upon data updates or deletions.
-
-### 3. Composite Multi-Column Database Indexing
-- **Migration**: [2026_07_28_000001_add_performance_indexes.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/database/migrations/2026_07_28_000001_add_performance_indexes.php)
-- Adds high-efficiency ESR indexes (`users(department_id, is_active, role)`, `job_postings(status, is_active, created_at)`, `applicants(job_posting_id, status)`), eliminating full table scans in MySQL.
-
-### 4. Cache Warming Automation
-- **Artisan Command**: `php artisan artms:warm-cache` ([WarmCacheCommand.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Console/Commands/WarmCacheCommand.php))
-- Asynchronously pre-populates Redis memory with active user payloads during system startup or deployment.
-
-### 5. Consolidated Single-Flight Boot API
-- **Endpoint**: `GET /api/boot` and `GET /api/public/boot` ([AppBootController.php](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Http/Controllers/AppBootController.php))
-- Consolidates initial frontend data fetches into **1 single HTTP network roundtrip**.
-
----
-
-## Default Login Accounts
-
-These accounts are created automatically when running `php artisan migrate --seed`:
-
-| Role | Email | Password |
-|---|---|---|
-| Super Admin | superadmin@artms.com | SuperAdmin@2024 |
-| HR Admin | hradmin@artms.com | HrAdmin@2024 |
-| COO | coo@artms.com | CooUser@2024 |
-| Department Head | depthead@artms.com | DeptHead@2024 |
-
----
-
-## Troubleshooting
-
-### `php artisan` is not recognized
-PHP is not in your system PATH. Add `C:\xampp\php` (or your PHP path) to Environment Variables -> PATH.
-
-### ngrok prints USAGE help menu instead of starting
-In ngrok v3, an **Auth Token** is required.
-1. Get a free token from [dashboard.ngrok.com](https://dashboard.ngrok.com)
-2. Run: `ngrok config add-authtoken YOUR_AUTHTOKEN_HERE`
-3. Alternatively, use zero-config localtunnel: `npx localtunnel --port 5173`
-
-### Cache errors / stale data
-Clear the Laravel config and application cache:
-```bash
-cd artms-backend
-php artisan config:clear
-php artisan cache:clear
-php artisan artms:warm-cache --active-only
-```
-
----
-
-## ☁️ Aiven MySQL Setup (Production DB)
-
-For production deployment or remote testing, ARTMS can connect to **Aiven MySQL** over a TLS-secured connection:
-
-1. **Aiven Account**: Create a MySQL service in the [Aiven Console](https://console.aiven.io/).
-2. **CA Certificate**: Download the CA certificate (`ca.pem`) from the Overview page and store it securely (e.g., `storage/certs/ca.pem`).
-3. **Environment Setup**: In `.env`, set:
+5. Configure database and service credentials in `.env`:
    ```env
    DB_CONNECTION=mysql
-   DB_HOST=<AIVEN_HOST>
-   DB_PORT=<AIVEN_PORT>
-   DB_DATABASE=defaultdb
-   DB_USERNAME=avnadmin
-   DB_PASSWORD=<AIVEN_PASSWORD>
-   MYSQL_ATTR_SSL_CA=storage/certs/ca.pem
-   MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=true
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=artms_db
+   DB_USERNAME=root
+   DB_PASSWORD=your_mysql_password
+
+   # LiveKit WebRTC Configuration
+   LIVEKIT_URL=wss://your-livekit-host.livekit.cloud
+   LIVEKIT_API_KEY=your_livekit_api_key
+   LIVEKIT_API_SECRET=your_livekit_api_secret
+
+   # AI Evaluation Service
+   XAI_API_KEY=your_xai_grok_api_key
    ```
-4. **Verification**: Clear configuration cache and run the diagnostic check:
+
+6. Create the MySQL database and run migrations with seed data:
    ```bash
-   php artisan config:clear
-   php artisan artms:db-health
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS artms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   php artisan migrate --seed
    ```
-5. **Detailed Instructions**: Refer to the full [Aiven MySQL Migration Guide](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/docs/aiven-mysql-migration.md) in the `docs/` folder.
+
+7. *(Optional)* Warm the Redis application boot cache:
+   ```bash
+   php artisan artms:warm-cache --active-only
+   ```
+
+---
+
+### Step 3: Frontend Setup (React + Vite)
+
+1. Navigate to the frontend directory in a separate terminal:
+   ```bash
+   cd ARTMS-main
+   ```
+
+2. Install JavaScript dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create the environment configuration file:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Verify API target URL in `ARTMS-main/.env`:
+   ```env
+   VITE_API_URL=http://localhost:8000/api
+   ```
+
+---
+
+### Step 4: Running the Application Locally
+
+Start the development servers across two terminal windows:
+
+#### Terminal 1 — Backend API Server
+```bash
+cd artms-backend
+php artisan serve --port=8000
+```
+> API available at: `http://localhost:8000/api`
+
+#### Terminal 2 — Frontend Dev Server
+```bash
+cd ARTMS-main
+npm run dev
+```
+> Application available at: `http://localhost:5173`
+
+#### Building for Production
+```bash
+cd ARTMS-main
+npm run build
+```
+
+---
+
+## 👥 Default Test Accounts
+
+Running `php artisan migrate --seed` provisions the following predefined roles for local testing:
+
+| Role | Email | Default Password | Access Level |
+|---|---|---|---|
+| **Super Admin** | `superadmin@artms.com` | `SuperAdmin@2024` | Full system control & configuration |
+| **HR Admin** | `hradmin@artms.com` | `HrAdmin@2024` | Recruitment pipelines, job postings & candidates |
+| **COO** | `coo@artms.com` | `CooUser@2024` | High-level executive approvals & reporting |
+| **Department Head** | `depthead@artms.com` | `DeptHead@2024` | Manpower requests & technical evaluations |
+
+---
+
+## 📬 Contact Information
+
+For questions, support, or collaboration inquiries:
+
+- **Lead Maintainer**: [Adones Mapula](https://github.com/AdonesMapula) — `adonesmapula.dev@gmail.com`
+- **Collaborators**:
+  - [Greg Gotot](https://github.com/gregbaringgotot) (`@gregbaringgotot`)
+  - [Cristian Jeff Ludivese](https://github.com/LudiveseCristian) (`@LudiveseCristian`)
+  - [Rye Nicholas Lao Guico](https://github.com/Qro0w) (`@Qro0w`)
+- **Repository Issues**: [ARTMS Issues](https://github.com/AdonesMapula/ARTMS/issues)
+
+---
+
+## 📄 License
+
+**Proprietary License**
+
+Copyright © 2024–2026 ARTMS. All rights reserved.
+
+This software and associated documentation files are proprietary and confidential. Unauthorized copying, distribution, modification, public display, reverse engineering, or transfer of this software, via any medium, is strictly prohibited without explicit prior written authorization from the copyright holder.
