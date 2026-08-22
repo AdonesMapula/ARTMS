@@ -161,42 +161,45 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300">
-      {/* ── Top Header Banner ────────────────────────────────────────── */}
-      <div className="shrink-0 bg-gradient-to-r from-[#111A62] via-[#1a257c] to-[#0d1550] px-6 py-5 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-lg font-black text-white ring-2 ring-white/20">
-              {(app.first_name?.[0] || "") + (app.last_name?.[0] || "")}
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-extrabold text-white truncate">
-                  {app.first_name} {app.last_name}
-                </h2>
-                <Badge tone={STATUS_TONE[app.status] || "default"} className="px-2.5 py-0.5 text-xs font-bold capitalize">
-                  {app.status ? app.status.replace(/_/g, " ") : "Applied"}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-2 flex-wrap">
-                <span>Applied for: <strong className="text-white">{jobTitle}</strong></span>
-                <span>•</span>
-                <span>ID #{app.id}</span>
-              </p>
+      {/* ── Top Header Banner (Styled like Modal.jsx) ────────────────── */}
+      <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111A62]/10 text-lg font-black text-[#111A62] ring-2 ring-[#111A62]/5 border border-[#111A62]/20">
+            {(app.first_name?.[0] || "") + (app.last_name?.[0] || "")}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-slate-700">
+                APP-{String(app.id).padStart(3, "0")}
+              </span>
+              <Badge tone={STATUS_TONE[app.status] || "default"} className="capitalize">
+                {app.status ? app.status.replace(/_/g, " ") : "Applied"}
+              </Badge>
             </div>
+            <h3 className="text-lg font-extrabold text-[#111A62] tracking-tight truncate">
+              {app.first_name} {app.last_name}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600 leading-relaxed truncate">
+              Applied for: <strong className="text-slate-800">{jobTitle}</strong>
+            </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 cursor-pointer"
-                title="Close Applicant Panel"
-              >
-                <X size={15} />
-                <span>Close</span>
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {onClose && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose?.();
+              }}
+              aria-label="Close"
+              className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 cursor-pointer shadow-sm"
+            >
+              <X className="h-4 w-4 transition-transform group-hover:scale-110" />
+            </button>
+          )}
         </div>
       </div>
 
