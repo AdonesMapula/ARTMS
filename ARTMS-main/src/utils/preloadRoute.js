@@ -50,7 +50,7 @@ const ROUTE_REGISTRY = {
   },
   '/admin/pipeline': {
     importComponent: () => import('../pages/Admin/Pipeline'),
-    prefetchApis: ['/applicants/pipeline'],
+    prefetchApis: ['/applicants?per_page=300', '/job-postings?per_page=100'],
   },
 };
 
