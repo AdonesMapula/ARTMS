@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Briefcase, Eye, EyeOff, CheckCircle, Clock, XCircle,
   Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw, ChevronRight, ChevronDown,
-  GraduationCap, List, FileCheck, Building2, MapPin, DollarSign, Save,
+  GraduationCap, List, FileCheck, Building2, MapPin, DollarSign, Save, Loader
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
