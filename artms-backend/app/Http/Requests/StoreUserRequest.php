@@ -15,12 +15,18 @@ class StoreUserRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $deptId = $this->department_id;
+        if ($deptId === '' || $deptId === '0' || $deptId === 0 || $deptId === 'null' || $deptId === 'undefined') {
+            $deptId = null;
+        }
+
         $this->merge([
-            'first_name'  => is_string($this->first_name) ? trim($this->first_name) : $this->first_name,
-            'middle_name' => is_string($this->middle_name) ? trim($this->middle_name) : $this->middle_name,
-            'last_name'   => is_string($this->last_name) ? trim($this->last_name) : $this->last_name,
-            'email'       => is_string($this->email) ? trim($this->email) : $this->email,
-            'password'    => is_string($this->password) ? trim($this->password) : $this->password,
+            'first_name'    => is_string($this->first_name) ? trim($this->first_name) : $this->first_name,
+            'middle_name'   => (is_string($this->middle_name) && trim($this->middle_name) !== '') ? trim($this->middle_name) : null,
+            'last_name'     => is_string($this->last_name) ? trim($this->last_name) : $this->last_name,
+            'email'         => is_string($this->email) ? strtolower(trim($this->email)) : $this->email,
+            'password'      => (is_string($this->password) && trim($this->password) !== '') ? trim($this->password) : null,
+            'department_id' => $deptId,
         ]);
     }
 
@@ -30,9 +36,18 @@ class StoreUserRequest extends FormRequest
             'first_name'    => ['required', 'string', 'max:255'],
             'middle_name'   => ['nullable', 'string', 'max:255'],
             'last_name'     => ['required', 'string', 'max:255'],
-            'email'         => ['required', 'email', 'unique:users,email'],
+            'email'         => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password'      => $this->filled('password') ? ['string', 'min:8'] : ['nullable'],
-            'role'          => ['required', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
+            'role'          => ['required', 'string', function ($attribute, $value, $fail) {
+                $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+                if (in_array($value, $standard, true)) {
+                    return;
+                }
+                if (DB::table('custom_roles')->where('key', $value)->orWhere('name', $value)->exists()) {
+                    return;
+                }
+                $fail("The selected role ({$value}) is invalid.");
+            }],
             'department_id' => ['nullable', 'exists:departments,id'],
             'avatar'        => ['nullable'],
         ];
@@ -48,15 +63,16 @@ class StoreUserRequest extends FormRequest
                 $lastName = trim($this->last_name);
                 
                 // Construct full name
-                $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
+                $fullName = trim(preg_replace('/\s+/', ' ', "{$firstName} {$middleName} {$lastName}"));
                 
-                // Check if a user with the same full name already exists
+                // Check if an active user with the same full name already exists
                 $exists = DB::table('users')
                     ->where('name', $fullName)
+                    ->whereNull('deleted_at')
                     ->exists();
                 
                 if ($exists) {
-                    $validator->errors()->add('name', 'A user with this name already exists.');
+                    $validator->errors()->add('name', 'An active user with this name already exists.');
                 }
             }
         });

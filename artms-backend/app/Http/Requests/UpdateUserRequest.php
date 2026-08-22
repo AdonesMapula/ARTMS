@@ -19,20 +19,27 @@ class UpdateUserRequest extends FormRequest
         if ($this->has('first_name') && is_string($this->first_name)) {
             $merge['first_name'] = trim($this->first_name);
         }
-        if ($this->has('middle_name') && is_string($this->middle_name)) {
-            $merge['middle_name'] = trim($this->middle_name);
+        if ($this->has('middle_name')) {
+            $merge['middle_name'] = (is_string($this->middle_name) && trim($this->middle_name) !== '') ? trim($this->middle_name) : null;
         }
         if ($this->has('last_name') && is_string($this->last_name)) {
             $merge['last_name'] = trim($this->last_name);
         }
         if ($this->has('email') && is_string($this->email)) {
-            $merge['email'] = trim($this->email);
+            $merge['email'] = strtolower(trim($this->email));
         }
         if ($this->has('password') && is_string($this->password)) {
-            $merge['password'] = trim($this->password);
+            $merge['password'] = trim($this->password) !== '' ? trim($this->password) : null;
         }
         if ($this->has('password_confirmation') && is_string($this->password_confirmation)) {
-            $merge['password_confirmation'] = trim($this->password_confirmation);
+            $merge['password_confirmation'] = trim($this->password_confirmation) !== '' ? trim($this->password_confirmation) : null;
+        }
+        if ($this->has('department_id')) {
+            $deptId = $this->department_id;
+            if ($deptId === '' || $deptId === '0' || $deptId === 0 || $deptId === 'null' || $deptId === 'undefined') {
+                $deptId = null;
+            }
+            $merge['department_id'] = $deptId;
         }
         if (!empty($merge)) {
             $this->merge($merge);
@@ -47,9 +54,18 @@ class UpdateUserRequest extends FormRequest
             'first_name'    => ['sometimes', 'string', 'max:255'],
             'middle_name'   => ['nullable', 'string', 'max:255'],
             'last_name'     => ['sometimes', 'string', 'max:255'],
-            'email'         => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId)],
-            'password'      => ['sometimes', 'string', 'min:8', 'confirmed'],
-            'role'          => ['sometimes', Rule::in(['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'])],
+            'email'         => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId)->whereNull('deleted_at')],
+            'password'      => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
+            'role'          => ['sometimes', 'string', function ($attribute, $value, $fail) {
+                $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+                if (in_array($value, $standard, true)) {
+                    return;
+                }
+                if (DB::table('custom_roles')->where('key', $value)->orWhere('name', $value)->exists()) {
+                    return;
+                }
+                $fail("The selected role ({$value}) is invalid.");
+            }],
             'department_id' => ['nullable', 'exists:departments,id'],
             'is_active'     => ['sometimes', 'boolean'],
             'avatar'        => ['nullable'],
@@ -85,14 +101,15 @@ class UpdateUserRequest extends FormRequest
                     // Construct full name
                     $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
                     
-                    // Check if another user with the same full name already exists
+                    // Check if another active user with the same full name already exists
                     $exists = DB::table('users')
                         ->where('name', $fullName)
                         ->where('id', '!=', $userId)
+                        ->whereNull('deleted_at')
                         ->exists();
                     
                     if ($exists) {
-                        $validator->errors()->add('name', 'A user with this name already exists.');
+                        $validator->errors()->add('name', 'An active user with this name already exists.');
                     }
                 }
             }
