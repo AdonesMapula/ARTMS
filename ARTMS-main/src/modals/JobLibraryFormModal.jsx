@@ -77,8 +77,11 @@ export default function JobLibraryFormModal({
   const ACCEPTED_TYPES = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"];
 
   const SAMPLE_DOC_TEXT = `JOB TITLE: Customer Service Representative
-JOB CATEGORY: Operations
+DEPARTMENT: Operations
+JOB CATEGORY: Customer Service
 EMPLOYMENT TYPE: full_time
+EXPERIENCE LEVEL: entry
+SALARY TYPE: monthly
 SALARY RANGE: 25000 - 35000
 
 JOB DESCRIPTION:
@@ -105,8 +108,8 @@ Documentation & Reporting:
 - Provide weekly feedback to team leads on common user complaints`;
 
   const downloadCsvTemplate = () => {
-    const csvContent = `"Job Title","Job Category","Employment Type","Salary Min","Salary Max","Job Description","Qualifications","Responsibilities"
-"Customer Service Representative","Operations","full_time","25000","35000","We are looking for a dedicated Customer Service Representative to handle customer inquiries, resolve technical issues, and provide exceptional customer satisfaction.","[Education & Experience]
+    const csvContent = `"Job Title","Department","Job Category","Employment Type","Experience Level","Salary Type","Salary Min","Salary Max","Job Description","Qualifications","Responsibilities"
+"Customer Service Representative","Operations","Customer Service","full_time","entry","monthly","25000","35000","We are looking for a dedicated Customer Service Representative to handle customer inquiries, resolve technical issues, and provide exceptional customer satisfaction.","[Education & Experience]
 - High school diploma, GED, or Bachelor's degree
 - 1+ years experience in customer support or call center
 [Key Skills]
@@ -664,12 +667,12 @@ Documentation & Reporting:
                         </h5>
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                           <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-                            <span className="font-bold text-slate-700 block">1. Job Title & Category</span>
-                            <span className="text-slate-500">e.g. Customer Service Representative | Operations</span>
+                            <span className="font-bold text-slate-700 block">1. Basic Info</span>
+                            <span className="text-slate-500">Job Title, Department, Category</span>
                           </div>
                           <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-                            <span className="font-bold text-slate-700 block">2. Employment Type & Salary</span>
-                            <span className="text-slate-500">full_time, part_time, etc. | ₱25,000 - ₱35,000</span>
+                            <span className="font-bold text-slate-700 block">2. Details & Salary</span>
+                            <span className="text-slate-500">Employment Type, Experience Level, Salary Min/Max</span>
                           </div>
                           <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                             <span className="font-bold text-slate-700 block">3. Job Description</span>

@@ -478,10 +478,11 @@ class PermissionController extends Controller
     {
         try {
             DB::beginTransaction();
-            
             // Run the permission seeder
-            \Artisan::call('db:seed', ['--class' => 'PermissionSeeder']);
-            
+            \Artisan::call('db:seed', [
+                '--class' => 'PermissionSeeder',
+                '--force' => true
+            ]);
             DB::commit();
 
             $user = request()->user();
