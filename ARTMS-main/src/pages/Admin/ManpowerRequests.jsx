@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X, ArrowUpDown } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X, ArrowUpDown, Loader } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
@@ -655,112 +655,115 @@ export default function AdminManpowerRequests() {
                 </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-xl" />
-                    ))}
-                  </div>
-                ) : paginated.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <FileText size={48} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-semibold text-slate-600">No requests found</p>
-                  </div>
-                ) : (
-                  <>
-                    <Table>
-                      <THead>
-                        <tr>
-                          <TH className="w-10 text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.length === paginated.length && paginated.length > 0}
-                              onChange={() => handleToggleSelectAll(paginated)}
-                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
-                              title="Select all on this page"
-                            />
-                          </TH>
-                          <TH>Request ID</TH>
-                          <TH>Position</TH>
-                          <TH>Department</TH>
-                          <TH>Requested By</TH>
-                          <TH>Headcount</TH>
-                          <TH>Urgency</TH>
-                          <TH>Status</TH>
-                          <TH className="text-right">Actions</TH>
-                        </tr>
-                      </THead>
-                      <tbody>
-                        {paginated.map((r) => {
-                          const isChecked = selectedIds.includes(r.id);
-                          return (
-                            <tr
-                              key={r.id}
-                              onClick={() => setSelectedRequestId(r.id)}
-                              className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
-                            >
-                              <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => handleToggleSelectOne(r.id, e)}
-                                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
-                                />
-                              </TD>
-                              <TD>
-                                <div className="font-semibold text-slate-900">
-                                  PRF-{String(r.id).padStart(3, "0")}
-                                </div>
-                              </TD>
-                              <TD>
-                                <div className="font-bold text-slate-900">
-                                  {r.position_needed || "—"}
-                                </div>
-                              </TD>
-                              <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
-                              <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
-                              <TD className="font-bold text-slate-900">{r.headcount}</TD>
-                              <TD>
-                                <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
-                                  {r.urgency}
-                                </Badge>
-                              </TD>
-                              <TD>
-                                <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
-                                  {r.status === "revised" || r.status === "needs_revision" ? "Needs Revision" : r.status}
-                                </Badge>
-                              </TD>
-                              <TD className="text-right">
-                                <div className="inline-flex items-center justify-end gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedRequestId(r.id);
-                                    }}
-                                    className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
-                                  >
-                                    <Eye size={14} /> View Details <ChevronRight size={14} />
-                                  </button>
-                                </div>
-                              </TD>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-
-                    {paginatedTotal > 10 && (
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <Pagination
-                          page={page}
-                          pageSize={pageSize}
-                          total={paginatedTotal}
-                          onPageChange={setPage}
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH className="w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === paginated.length && paginated.length > 0}
+                          onChange={() => handleToggleSelectAll(paginated)}
+                          className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                          title="Select all on this page"
                         />
-                      </div>
+                      </TH>
+                      <TH>Request ID</TH>
+                      <TH>Position</TH>
+                      <TH>Department</TH>
+                      <TH>Requested By</TH>
+                      <TH>Headcount</TH>
+                      <TH>Urgency</TH>
+                      <TH>Status</TH>
+                      <TH className="text-right">Actions</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <TD colSpan={9} className="py-12 text-center text-slate-400">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader size={18} className="animate-spin text-[#111A62]" />
+                            <span>Loading manpower requests...</span>
+                          </div>
+                        </TD>
+                      </tr>
+                    ) : paginated.length === 0 ? (
+                      <tr>
+                        <TD colSpan={9} className="py-12 text-center">
+                          <FileText size={48} className="mx-auto mb-3 text-slate-300" />
+                          <p className="text-sm font-semibold text-slate-600">No requests found</p>
+                        </TD>
+                      </tr>
+                    ) : (
+                      paginated.map((r) => {
+                        const isChecked = selectedIds.includes(r.id);
+                        return (
+                          <tr
+                            key={r.id}
+                            onClick={() => setSelectedRequestId(r.id)}
+                            className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                          >
+                            <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => handleToggleSelectOne(r.id, e)}
+                                className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              />
+                            </TD>
+                            <TD>
+                              <div className="font-semibold text-slate-900">
+                                PRF-{String(r.id).padStart(3, "0")}
+                              </div>
+                            </TD>
+                            <TD>
+                              <div className="font-bold text-slate-900">
+                                {r.position_needed || "—"}
+                              </div>
+                            </TD>
+                            <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
+                            <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
+                            <TD className="font-bold text-slate-900">{r.headcount}</TD>
+                            <TD>
+                              <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
+                                {r.urgency}
+                              </Badge>
+                            </TD>
+                            <TD>
+                              <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
+                                {r.status === "revised" || r.status === "needs_revision" ? "Needs Revision" : r.status}
+                              </Badge>
+                            </TD>
+                            <TD className="text-right">
+                              <div className="inline-flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedRequestId(r.id);
+                                  }}
+                                  className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                                >
+                                  <Eye size={14} /> View Details <ChevronRight size={14} />
+                                </button>
+                              </div>
+                            </TD>
+                          </tr>
+                        );
+                      })
                     )}
-                  </>
+                  </tbody>
+                </Table>
+
+                {!loading && paginatedTotal > 10 && (
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <Pagination
+                      page={page}
+                      pageSize={pageSize}
+                      total={paginatedTotal}
+                      onPageChange={setPage}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>

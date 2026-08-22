@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, ChevronDown, X
+  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, ChevronDown, X, Loader
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -658,10 +658,11 @@ export default function JobLibrary() {
                 </CardHeader>
                 <CardContent>
                   {loading ? (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {[...Array(6)].map((_, i) => (
-                        <Skeleton key={i} className="h-44 rounded-2xl" />
-                      ))}
+                    <div className="py-20 text-center text-slate-400">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader size={18} className="animate-spin text-[#111A62]" />
+                        <span>Loading job templates...</span>
+                      </div>
                     </div>
                   ) : paginated.length === 0 ? (
                     <div className="py-12 text-center">

@@ -87,49 +87,55 @@ export default function ManpowerViewPanel({ requestId, onClose, onEdit, onUpdate
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300">
-      {/* ── Header Banner ────────────────────────────────────────── */}
-      <div className="shrink-0 bg-gradient-to-r from-[#111A62] via-[#1a257c] to-[#0d1550] px-6 py-5 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-white">
-                {prfId}
-              </span>
-              <Badge tone={STATUS_TONE[request?.status] ?? "default"} className="capitalize">
-                {request?.status === "revised" || request?.status === "needs_revision" ? "Needs Revision" : request?.status || "Pending"}
-              </Badge>
-              <Badge tone={URGENCY_TONE[request?.urgency] ?? "default"} className="capitalize">
-                Urgency: {request?.urgency || "normal"}
-              </Badge>
-            </div>
-            <h2 className="text-xl font-extrabold text-white truncate">{position}</h2>
-            <p className="text-xs text-slate-300">
-              Department: <strong className="text-white">{departmentName}</strong> • Created on {fmt(request?.created_at)}
-            </p>
+      {/* ── Top Header Banner (Styled like Modal.jsx) ────────────────── */}
+      <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-slate-700">
+              {prfId}
+            </span>
+            <Badge tone={STATUS_TONE[request?.status] ?? "default"} className="capitalize">
+              {request?.status === "revised" || request?.status === "needs_revision" ? "Needs Revision" : request?.status || "Pending"}
+            </Badge>
+            <Badge tone={URGENCY_TONE[request?.urgency] ?? "default"} className="capitalize">
+              Urgency: {request?.urgency || "normal"}
+            </Badge>
           </div>
+          <h3 className="text-lg font-extrabold text-[#111A62] tracking-tight truncate">
+            {position}
+          </h3>
+          <p className="mt-1 text-sm text-slate-600 leading-relaxed truncate">
+            Department: <strong className="text-slate-800">{departmentName}</strong> • Created on {fmt(request?.created_at)}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {onEdit && (request?.status === "revised" || request?.status === "needs_revision") && (
-              <button
-                onClick={() => onEdit(request)}
-                className="flex items-center gap-1.5 rounded-xl border border-amber-400 bg-amber-500 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 hover:border-amber-500 transition cursor-pointer"
-                title="Edit & Resubmit PRF"
-              >
-                <RefreshCw size={15} />
-                <span>Edit & Resubmit</span>
-              </button>
-            )}
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 cursor-pointer"
-                title="Close Details Panel"
-              >
-                <X size={15} />
-                <span>Close Details</span>
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {onEdit && (request?.status === "revised" || request?.status === "needs_revision") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(request)}
+              className="gap-1.5 text-slate-600 bg-white shadow-sm"
+            >
+              <RefreshCw size={14} />
+              <span>Edit & Resubmit</span>
+            </Button>
+          )}
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose?.();
+              }}
+              aria-label="Close"
+              className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 cursor-pointer shadow-sm"
+            >
+              <X className="h-4 w-4 transition-transform group-hover:scale-110" />
+            </button>
+          )}
         </div>
       </div>
 

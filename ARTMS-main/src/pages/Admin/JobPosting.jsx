@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Briefcase, Eye, EyeOff, CheckCircle, Clock, XCircle,
   Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw, ChevronRight, ChevronDown,
-  GraduationCap, List, FileCheck, Building2, MapPin, DollarSign, Save,
+  GraduationCap, List, FileCheck, Building2, MapPin, DollarSign, Save, Loader
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -658,121 +658,126 @@ export default function JobPosting() {
                 </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-xl" />
-                    ))}
-                  </div>
-                ) : paginated.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <Briefcase size={48} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-semibold text-slate-600">No job postings found</p>
-                  </div>
-                ) : (
-                  <>
-                    <Table>
-                      <THead>
-                        <tr>
-                          <TH className="w-10 text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.length === paginated.length && paginated.length > 0}
-                              onChange={() => handleToggleSelectAll(paginated)}
-                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
-                              title="Select all on this page"
-                            />
-                          </TH>
-                          <TH>Job Title</TH>
-                          <TH>Department</TH>
-                          <TH>Vacancies</TH>
-                          <TH>Applicants</TH>
-                          <TH>Status</TH>
-                          <TH className="text-right">Actions</TH>
-                        </tr>
-                      </THead>
-                      <tbody>
-                        {paginated.map((p) => {
-                          const isChecked = selectedIds.includes(p.id);
-                          return (
-                            <tr
-                              key={p.id}
-                              onClick={() => setSelectedPostingId(p.id)}
-                              className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
-                            >
-                              <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => handleToggleSelectOne(p.id, e)}
-                                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
-                                />
-                              </TD>
-                              <TD>
-                                <div className="flex items-center gap-2.5">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
-                                    JP
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-slate-900">
-                                      {p.job_library?.job_title || p.title || "N/A"}
-                                    </p>
-                                    <p className="text-xs text-slate-400">
-                                      JP-{String(p.id).padStart(3, "0")}
-                                    </p>
-                                  </div>
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH className="w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === paginated.length && paginated.length > 0}
+                          onChange={() => handleToggleSelectAll(paginated)}
+                          className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                          title="Select all on this page"
+                        />
+                      </TH>
+                      <TH>Job Title</TH>
+                      <TH>Department</TH>
+                      <TH>Vacancies</TH>
+                      <TH>Applicants</TH>
+                      <TH>Status</TH>
+                      <TH className="text-right">Actions</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <TD colSpan={7} className="py-12 text-center text-slate-400">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader size={18} className="animate-spin text-[#111A62]" />
+                            <span>Loading job postings...</span>
+                          </div>
+                        </TD>
+                      </tr>
+                    ) : paginated.length === 0 ? (
+                      <tr>
+                        <TD colSpan={7} className="py-12 text-center">
+                          <Briefcase size={48} className="mx-auto mb-3 text-slate-300" />
+                          <p className="text-sm font-semibold text-slate-600">No job postings found</p>
+                        </TD>
+                      </tr>
+                    ) : (
+                      paginated.map((p) => {
+                        const isChecked = selectedIds.includes(p.id);
+                        return (
+                          <tr
+                            key={p.id}
+                            onClick={() => setSelectedPostingId(p.id)}
+                            className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                          >
+                            <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => handleToggleSelectOne(p.id, e)}
+                                className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              />
+                            </TD>
+                            <TD>
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
+                                  JP
                                 </div>
-                              </TD>
-                              <TD className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TD>
-                              <TD className="font-bold text-slate-900">{p.vacancies_count}</TD>
-                              <TD>
-                                <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
-                                <span className="text-xs text-slate-400"> apps</span>
-                              </TD>
-                              <TD>
-                                <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
-                              </TD>
-                              <TD className="text-right">
-                                <div className="inline-flex gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedPostingId(p.id);
-                                    }}
-                                    className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
-                                  >
-                                    <Edit size={14} /> Edit & View Specs <ChevronRight size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedPosting(p);
-                                      setDeleteModalOpen(true);
-                                    }}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
-                                    title="Delete Posting"
-                                  >
-                                    <Trash2 size={15} />
-                                  </button>
+                                <div>
+                                  <p className="font-bold text-slate-900">
+                                    {p.job_library?.job_title || p.title || "N/A"}
+                                  </p>
+                                  <p className="text-xs text-slate-400">
+                                    JP-{String(p.id).padStart(3, "0")}
+                                  </p>
                                 </div>
-                              </TD>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
+                              </div>
+                            </TD>
+                            <TD className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TD>
+                            <TD className="font-bold text-slate-900">{p.vacancies_count}</TD>
+                            <TD>
+                              <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
+                              <span className="text-xs text-slate-400"> apps</span>
+                            </TD>
+                            <TD>
+                              <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
+                            </TD>
+                            <TD className="text-right">
+                              <div className="inline-flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPostingId(p.id);
+                                  }}
+                                  className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                                >
+                                  <Edit size={14} /> Edit & View Specs <ChevronRight size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPosting(p);
+                                    setDeleteModalOpen(true);
+                                  }}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
+                                  title="Delete Posting"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </TD>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </Table>
 
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <Pagination
-                        page={page}
-                        pageSize={pageSize}
-                        total={filtered.length}
-                        onPageChange={setPage}
-                      />
-                    </div>
-                  </>
+                {!loading && filtered.length > 10 && (
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <Pagination
+                      page={page}
+                      pageSize={pageSize}
+                      total={filtered.length}
+                      onPageChange={setPage}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>
