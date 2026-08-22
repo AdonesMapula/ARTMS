@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   X, CheckCircle, File, Loader2, UploadCloud, AlertTriangle,
   MapPin, Briefcase, Clock, ChevronUp, User, Mail, Phone,
-  Calendar, ChevronsUpDown, Globe, Home, FileText,
+  Calendar, ChevronsUpDown, Globe, Home, FileText, CheckCircle2, AlertCircle
 } from "lucide-react";
 import axios from "axios";
 import applicantService from "../services/applicantService";
@@ -37,6 +37,7 @@ export default function ApplyModal({ open, job, onClose }) {
   const [submitError, setSubmitError] = useState(null);
   const [submitted, setSubmitted] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [emailStatus, setEmailStatus] = useState("empty");
   const [step, setStep] = useState(1); // 1: resume, 2: personal info, 3: review & submit
   const fileInputRef = useRef();
   const formRef = useRef();
@@ -53,6 +54,7 @@ export default function ApplyModal({ open, job, onClose }) {
       setSubmitError(null);
       setSubmitted(null);
       setFieldErrors({});
+      setEmailStatus("empty");
       setStep(1);
       // Scroll the form into view smoothly
       setTimeout(() => {
@@ -319,17 +321,17 @@ export default function ApplyModal({ open, job, onClose }) {
               <div className="mt-3 grid gap-4 sm:grid-cols-3">
                 <Field label="First Name" required error={fieldErrors.firstName}>
                   <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.firstName} onChange={set("firstName")} className={inputCls(fieldErrors.firstName)} required />
+                    <input value={form.firstName} onChange={set("firstName")} maxLength={50} className={inputCls(fieldErrors.firstName)} required />
                   </InlineInput>
                 </Field>
                 <Field label="Middle Name" error={fieldErrors.middleName}>
                   <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.middleName} onChange={set("middleName")} className={inputCls(fieldErrors.middleName)} />
+                    <input value={form.middleName} onChange={set("middleName")} maxLength={50} className={inputCls(fieldErrors.middleName)} />
                   </InlineInput>
                 </Field>
                 <Field label="Last Name" required error={fieldErrors.lastName}>
                   <InlineInput icon={<User className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.lastName} onChange={set("lastName")} className={inputCls(fieldErrors.lastName)} required />
+                    <input value={form.lastName} onChange={set("lastName")} maxLength={50} className={inputCls(fieldErrors.lastName)} required />
                   </InlineInput>
                 </Field>
               </div>
@@ -338,12 +340,60 @@ export default function ApplyModal({ open, job, onClose }) {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field label="Email Address" required error={fieldErrors.email}>
                   <InlineInput icon={<Mail className="h-4 w-4 text-slate-400" />}>
-                    <input type="email" value={form.email} onChange={set("email")} className={inputCls(fieldErrors.email)} required />
+                    <input 
+                      type="email" 
+                      value={form.email} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm((f) => ({ ...f, email: val }));
+                        if (!val) {
+                          setEmailStatus("empty");
+                        } else {
+                          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                          setEmailStatus(emailRegex.test(val) ? "valid" : "invalid");
+                        }
+                        if (fieldErrors.email) {
+                          setFieldErrors((prev) => ({ ...prev, email: null }));
+                        }
+                      }} 
+                      maxLength={100}
+                      className={`${inputCls(fieldErrors.email)} ${
+                        emailStatus === 'valid'
+                          ? "!border-emerald-400 focus:!border-emerald-500 focus:!ring-emerald-200"
+                          : emailStatus === 'invalid'
+                          ? "!border-rose-400 focus:!border-rose-500 focus:!ring-rose-200 text-rose-600"
+                          : ""
+                      }`}
+                      required 
+                    />
                   </InlineInput>
+                  <div className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${emailStatus === 'empty' && !fieldErrors.email ? 'h-0 opacity-0' : 'h-6 opacity-100'}`}>
+                    {emailStatus === 'valid' && !fieldErrors.email && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 transition-all">
+                        <CheckCircle2 size={14} className="animate-in zoom-in" /> 
+                        <span className="animate-in fade-in slide-in-from-left-2 duration-300">Valid email format</span>
+                      </div>
+                    )}
+                    {emailStatus === 'invalid' && !fieldErrors.email && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-rose-500 transition-all">
+                        <AlertCircle size={14} className="animate-pulse" /> 
+                        <span className="animate-in fade-in slide-in-from-left-2 duration-300">Invalid email format</span>
+                      </div>
+                    )}
+                  </div>
                 </Field>
                 <Field label="Mobile Number" error={fieldErrors.phone}>
                   <InlineInput icon={<Phone className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.phone} onChange={set("phone")} placeholder="09xxxxxxxxx" className={inputCls(fieldErrors.phone)} />
+                    <input 
+                      value={form.phone} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9+() -]/g, '');
+                        setForm((f) => ({ ...f, phone: val }));
+                      }} 
+                      maxLength={20}
+                      placeholder="09xxxxxxxxx" 
+                      className={inputCls(fieldErrors.phone)} 
+                    />
                   </InlineInput>
                 </Field>
                 <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
@@ -373,12 +423,12 @@ export default function ApplyModal({ open, job, onClose }) {
                 </Field>
                 <Field label="Nationality" error={fieldErrors.nationality}>
                   <InlineInput icon={<Globe className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.nationality} onChange={set("nationality")} placeholder="e.g. Filipino" className={inputCls(fieldErrors.nationality)} />
+                    <input value={form.nationality} onChange={set("nationality")} maxLength={100} placeholder="e.g. Filipino" className={inputCls(fieldErrors.nationality)} />
                   </InlineInput>
                 </Field>
                 <Field label="Address" error={fieldErrors.address} className="sm:col-span-2">
                   <InlineInput icon={<Home className="h-4 w-4 text-slate-400" />}>
-                    <input value={form.address} onChange={set("address")} placeholder="City, Province, Philippines" className={inputCls(fieldErrors.address)} />
+                    <input value={form.address} onChange={set("address")} maxLength={100} placeholder="City, Province, Philippines" className={inputCls(fieldErrors.address)} />
                   </InlineInput>
                 </Field>
               </div>
@@ -395,9 +445,15 @@ export default function ApplyModal({ open, job, onClose }) {
                 rows={4}
                 value={form.coverLetter}
                 onChange={set("coverLetter")}
-                placeholder={`Why are you a great fit for the ${jobTitle} role?`}
+                maxLength={500}
+                placeholder={`Why are you a great fit for the ${jobTitle} role? (Max 500 characters)`}
                 className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#111A62] focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 transition"
               />
+              <div className="mt-1.5 flex justify-end">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${form.coverLetter?.length >= 500 ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {form.coverLetter?.length || 0} / 500
+                </span>
+              </div>
             </div>
 
             {/* ── Informed Consent ───────────────────────────────── */}
