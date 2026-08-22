@@ -4,11 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\JobPosting;
+use App\Services\Cache\BootCacheService;
+use App\Services\Cache\CacheKeyService;
+use App\Services\Cache\CacheService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class JobPostingController extends Controller
 {
+    protected CacheService $cache;
+    protected BootCacheService $bootCache;
+
+    public function __construct(CacheService $cache, BootCacheService $bootCache)
+    {
+        $this->cache = $cache;
+        $this->bootCache = $bootCache;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $postings = JobPosting::with(['jobLibrary', 'department', 'requester'])
@@ -31,14 +43,29 @@ class JobPostingController extends Controller
      */
     public function publicIndex(Request $request): JsonResponse
     {
-        $postings = JobPosting::with(['jobLibrary', 'department'])
-            ->where('is_published', true)
-            ->where('status', 'published')
-            ->where(fn ($q) => $q->whereNull('closing_date')->orWhere('closing_date', '>=', today()))
-            ->orderBy('posting_date', 'desc')
-            ->paginate($request->per_page ?? 12);
+        $params = $request->only(['page', 'per_page', 'search', 'department_id']);
+        $cacheKey = CacheKeyService::make('job-postings', 'public:' . CacheKeyService::hashParams($params));
+
+        $postings = $this->cache->remember($cacheKey, 180, function () use ($request) {
+            return JobPosting::with(['jobLibrary', 'department'])
+                ->where('is_published', true)
+                ->where('status', 'published')
+                ->where(fn ($q) => $q->whereNull('closing_date')->orWhere('closing_date', '>=', today()))
+                ->orderBy('posting_date', 'desc')
+                ->paginate($request->per_page ?? 12);
+        });
 
         return response()->json($postings);
+    }
+
+    protected function invalidatePostingCaches(): void
+    {
+        try {
+            $this->bootCache->invalidateAllBootCache();
+            $this->cache->flushTag('job_postings');
+        } catch (\Throwable $e) {
+            \Log::warning("Posting cache invalidation notice: " . $e->getMessage());
+        }
     }
 
     public function store(Request $request): JsonResponse
@@ -136,6 +163,7 @@ class JobPostingController extends Controller
             ]);
         }
 
+        $this->invalidatePostingCaches();
         AuditLog::record('create', 'job_posting', "Created job posting ID {$posting->id}");
 
         return response()->json([
@@ -165,6 +193,7 @@ class JobPostingController extends Controller
         ]);
 
         $jobPosting->update($data);
+        $this->invalidatePostingCaches();
 
         return response()->json(['message' => 'Job posting updated successfully.', 'posting' => $jobPosting->fresh()]);
     }
@@ -177,6 +206,7 @@ class JobPostingController extends Controller
 
         AuditLog::record('delete', 'job_posting', "Deleted job posting ID {$jobPosting->id}");
         $jobPosting->delete();
+        $this->invalidatePostingCaches();
 
         return response()->json(['message' => 'Job posting deleted.']);
     }
@@ -215,6 +245,7 @@ class JobPostingController extends Controller
         }
 
         $jobPosting->update($updateData);
+        $this->invalidatePostingCaches();
 
         AuditLog::record('approve', 'job_posting', "Job posting {$finalStatus} ID {$jobPosting->id}");
 
@@ -255,6 +286,7 @@ class JobPostingController extends Controller
             'is_published' => ! $jobPosting->is_published,
             'status'       => ! $jobPosting->is_published ? 'published' : 'closed',
         ]);
+        $this->invalidatePostingCaches();
 
         $state = $jobPosting->is_published ? 'published' : 'unpublished';
 

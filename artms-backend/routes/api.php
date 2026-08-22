@@ -211,6 +211,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('ai/applicants',             [AiScreeningController::class, 'pendingQueue']);
         Route::get('ai/evaluations',            [AiScreeningController::class, 'index']);
         Route::post('ai/screen/{applicant}',    [AiScreeningController::class, 'screen'])->middleware('throttle:ai-screening');
+        Route::post('ai/screen-batch',          [AiScreeningController::class, 'screenBatch'])->middleware('throttle:ai-screening');
         Route::patch('ai/review/{applicant}',   [AiScreeningController::class, 'hrReview']);
         Route::get('ai/rankings',               [AiScreeningController::class, 'rankings']);
     });

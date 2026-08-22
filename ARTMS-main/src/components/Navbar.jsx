@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 import artmsLogoWhite from "../assets/Logo/LOGO_ARTMS_WHITE.png";
+import { preloadRoute, preloadIdleRoutes } from "../utils/preloadRoute";
 
 const NAV_LINKS = [
   { label: "Home",              to: "/" },
@@ -23,6 +24,11 @@ export default function Navbar() {
 
   const hasHero = TRANSPARENT_ROUTES.includes(pathname);
   const scrolled = !hasHero || scrolledPast;
+
+  // Preload top public routes during idle time
+  useEffect(() => {
+    preloadIdleRoutes(['/jobs', '/application-guide', '/about', '/contact', '/login']);
+  }, []);
 
   useEffect(() => {
     if (!hasHero) return; // no hero on this route, navbar just stays solid
@@ -89,7 +95,13 @@ export default function Navbar() {
           <ul className="flex items-center gap-9">
             {NAV_LINKS.map((link) => (
               <li key={link.to}>
-                <NavLink to={link.to} className={linkClasses} end={link.to === "/"}>
+                <NavLink
+                  to={link.to}
+                  className={linkClasses}
+                  end={link.to === "/"}
+                  onMouseEnter={() => preloadRoute(link.to)}
+                  onFocus={() => preloadRoute(link.to)}
+                >
                   {({ isActive }) => (
                     <span className="pb-1">
                       {link.label}

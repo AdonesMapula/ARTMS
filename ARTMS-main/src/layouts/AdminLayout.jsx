@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import DashboardShell from "./DashboardShell";
 import ScrollToTop from "../components/ScrollToTop";
 import Sidebar from "../components/Sidebar";
@@ -18,6 +19,7 @@ import {
   FiFileText,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import { preloadIdleRoutes } from "../utils/preloadRoute";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
@@ -30,6 +32,17 @@ const ROLE_LABELS = {
 export default function AdminLayout() {
   const { user } = useAuth();
   const roleLabel = ROLE_LABELS[user?.role] ?? (user?.role?.replace(/_/g, " ") ?? "HR Admin");
+
+  // Preload primary admin routes and API data during idle time
+  useEffect(() => {
+    preloadIdleRoutes([
+      '/admin/applicants',
+      '/admin/ai-screening',
+      '/admin/job-posting',
+      '/admin/interviews',
+      '/admin/pipeline',
+    ]);
+  }, []);
 
   const items = [
     // OVERVIEW Section

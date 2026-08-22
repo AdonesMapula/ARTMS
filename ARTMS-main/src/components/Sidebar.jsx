@@ -9,6 +9,7 @@ import artmsLogo from "../assets/Logo/LOGO_ARTMS_BLUE.png";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import { preloadRoute } from "../utils/preloadRoute";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
@@ -127,6 +128,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
                     <NavLink
                       to={child.to}
                       end={child.end}
+                      onMouseEnter={() => preloadRoute(child.to)}
+                      onFocus={() => preloadRoute(child.to)}
                       className={({ isActive }) =>
                         cn(
                           "flex items-center rounded-lg px-2 py-2 gap-2 text-sm font-semibold transition-all duration-200 focus:outline-none group",
@@ -173,6 +176,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
                 <NavLink
                   to={child.to}
                   end={child.end}
+                  onMouseEnter={() => preloadRoute(child.to)}
+                  onFocus={() => preloadRoute(child.to)}
                   className={({ isActive }) =>
                     cn(
                       "flex items-center rounded-xl font-semibold transition-all duration-200 group focus:outline-none px-3 py-2 gap-2 text-sm",
@@ -208,6 +213,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
     <NavLink
       to={it.to}
       end={it.end}
+      onMouseEnter={() => preloadRoute(it.to)}
+      onFocus={() => preloadRoute(it.to)}
       className={({ isActive }) =>
         cn(
           "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",

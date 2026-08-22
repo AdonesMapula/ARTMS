@@ -47,9 +47,9 @@ class InterviewController extends Controller
 
         $interview = Interview::create($data);
 
-        // Auto-generate ngrok meeting link for online interviews if not specified
+        // Auto-generate meeting link for online interviews if not specified
         if ($interview->interview_type === 'online' && empty($interview->meeting_link)) {
-            $baseUrl = rtrim(config('app.url'), '/');
+            $baseUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
             $interview->update(['meeting_link' => "{$baseUrl}/interview/{$interview->id}/room"]);
         }
 
@@ -180,7 +180,8 @@ class InterviewController extends Controller
             return response()->json(['message' => 'Interview confirmed. A reminder will be sent before the interview.']);
         }
 
-        $roomUrl = rtrim(config('app.url'), '/') . "/interview/{$interview->id}/room";
+        $frontendUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
+        $roomUrl = "{$frontendUrl}/interview/{$interview->id}/room";
         return redirect()->away($roomUrl);
     }
 

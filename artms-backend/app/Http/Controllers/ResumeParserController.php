@@ -137,10 +137,13 @@ class ResumeParserController extends Controller
         }
 
         // Apply Input Guardrails: Sanitize text and neutralize prompt injections
-        $cleanText = \App\Services\AiGuardrailService::sanitizeInput($rawText, 10000);
-        $inputText = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanText, 'Resume Parser');
+        $cleanText = \App\Services\AiGuardrailService::sanitizeInput($rawText, 8000);
+        $cacheKey = 'resume_parsed_' . md5($cleanText);
 
-        $prompt = <<<EOT
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($cleanText, $rawText) {
+            $inputText = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanText, 'Resume Parser');
+
+            $prompt = <<<EOT
 You are an expert ATS resume extraction parser. 
 Extract the candidate's details from the raw resume text below and return a valid JSON object matching the JSON schema.
 If a field is not present in the resume, return an empty string (or an empty array for skills).
@@ -167,30 +170,31 @@ Your response must be valid JSON only. Do not wrap in markdown or backticks.
 {$inputText}
 EOT;
 
-        try {
-            $systemInstruction = 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON matching the requested schema. No markdown, no code fences, no extra text.';
-            $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 2048, 'Resume Parser AI');
+            try {
+                $systemInstruction = 'You are a precise resume parser evaluator. Respond ONLY with valid, raw JSON matching the requested schema. No markdown, no code fences, no extra text.';
+                $extracted = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 1024, 'Resume Parser AI');
 
-            if (is_array($extracted)) {
-                // Sanitize extracted string fields
-                $sanitizedExtracted = [];
-                foreach ($extracted as $key => $val) {
-                    if (is_string($val)) {
-                        $sanitizedExtracted[$key] = strip_tags(trim($val));
-                    } elseif (is_array($val) && $key === 'skills') {
-                        $sanitizedExtracted[$key] = array_values(array_filter(array_map('trim', array_map('strip_tags', $val))));
-                    } else {
-                        $sanitizedExtracted[$key] = $val;
+                if (is_array($extracted)) {
+                    // Sanitize extracted string fields
+                    $sanitizedExtracted = [];
+                    foreach ($extracted as $key => $val) {
+                        if (is_string($val)) {
+                            $sanitizedExtracted[$key] = strip_tags(trim($val));
+                        } elseif (is_array($val) && $key === 'skills') {
+                            $sanitizedExtracted[$key] = array_values(array_filter(array_map('trim', array_map('strip_tags', $val))));
+                        } else {
+                            $sanitizedExtracted[$key] = $val;
+                        }
                     }
+
+                    return array_merge($this->emptyParsedData(), $sanitizedExtracted);
                 }
-
-                return array_merge($this->emptyParsedData(), $sanitizedExtracted);
+            } catch (\Throwable $e) {
+                Log::error('Gemini Resume Parsing Failed: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::error('Gemini Resume Parsing Failed: ' . $e->getMessage());
-        }
 
-        return $this->parseResumeTextFallback($rawText);
+            return $this->parseResumeTextFallback($rawText);
+        });
     }
 
     /**

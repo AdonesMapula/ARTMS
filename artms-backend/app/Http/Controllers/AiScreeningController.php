@@ -83,7 +83,7 @@ class AiScreeningController extends Controller
 
     /**
      * POST /api/ai/screen/{applicant}
-     * Parses the resume, sends to OpenAI, stores evaluation.
+     * Parses the resume, evaluates with Gemini, stores evaluation.
      */
     public function screen(Applicant $applicant): JsonResponse
     {
@@ -106,7 +106,7 @@ class AiScreeningController extends Controller
         }
 
         // Apply Input Guardrails: Sanitize, Bound Length, Neutralize Injections, and Anonymize PII
-        $cleanResumeText = \App\Services\AiGuardrailService::sanitizeInput($rawResumeText, 12000);
+        $cleanResumeText = \App\Services\AiGuardrailService::sanitizeInput($rawResumeText, 8000);
         $safeResumeText  = \App\Services\AiGuardrailService::detectAndNeutralizePromptInjection($cleanResumeText, 'AI Screening: Candidate #' . $applicant->id, auth()->id());
         $resumeText      = \App\Services\AiGuardrailService::anonymizePii($safeResumeText, [
             $applicant->first_name,
@@ -117,8 +117,8 @@ class AiScreeningController extends Controller
 
         // ── 2. Build PRF requirements from job posting chain ─────────────────
         $jobPosting = $applicant->jobPosting->load('jobLibrary', 'manpowerRequest');
-        $jobLib     = $jobPosting->jobLibrary;
-        $prf        = $jobPosting->manpowerRequest;
+        $jobLib     = $jobPosting?->jobLibrary;
+        $prf        = $jobPosting?->manpowerRequest;
 
         $positionTitle        = $this->formatRequirementAsString($jobLib?->job_title            ?? $prf?->position_needed ?? 'N/A');
         $educationReq         = $this->formatRequirementAsString($prf?->educational_background  ?? $jobLib?->qualifications ?? 'Not specified');
@@ -131,7 +131,7 @@ class AiScreeningController extends Controller
         // ── 3. Build AI prompt ───────────────────────────────────────────────
         $prompt = <<<EOT
 You are an expert HR screening AI for ARTMS. Evaluate the resume below objectively against the job requirements.
-Do NOT use discriminatory criteria (age, gender, marital status, race, or religion). Evaluate strictly based on skills, education, and relevant experience.
+Do NOT use discriminatory criteria. Evaluate strictly based on skills, education, and relevant experience.
 
 == POSITION ==
 Title: {$positionTitle}
@@ -157,7 +157,7 @@ Low Fit    : < {$mediumFitMin}
 == RESUME ==
 {$resumeText}
 
-Respond with ONLY valid JSON — no markdown, no extra text:
+Respond with ONLY valid JSON:
 {
   "ai_score": <0-100>,
   "confidence_level": <0-100>,
@@ -181,8 +181,11 @@ EOT;
 
         // ── 4. Call Google Gemini with Guardrails & Key Rotation ────
         try {
-            $systemInstruction = 'You are a precise HR screening AI. Always respond with valid JSON only matching the schema exactly. Evaluate purely on merit and qualifications.';
-            $rawAiData = \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.2, 2048, 'AI Screening: #' . $applicant->id);
+            $cacheKey = 'screening_eval_' . $applicant->id . '_' . md5($cleanResumeText . $positionTitle);
+            $rawAiData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($prompt, $applicant) {
+                $systemInstruction = 'You are a precise HR screening AI. Always respond with valid JSON only matching the schema exactly. Evaluate purely on merit and qualifications.';
+                return \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 1024, 'AI Screening: #' . $applicant->id);
+            });
 
             if (! $rawAiData || ! is_array($rawAiData)) {
                 return response()->json(['message' => 'Failed to parse Gemini AI response structure.'], 500);
@@ -242,6 +245,48 @@ EOT;
         return response()->json([
             'message'    => 'AI screening completed.',
             'evaluation' => $evaluation->load('applicant'),
+        ]);
+    }
+
+    /**
+     * POST /api/ai/screen-batch
+     * Batch-screens multiple applicants in one request.
+     */
+    public function screenBatch(Request $request): JsonResponse
+    {
+        $applicantIds = $request->input('applicant_ids', []);
+        if (empty($applicantIds)) {
+            return response()->json(['message' => 'No applicant IDs provided.'], 422);
+        }
+
+        $results = [];
+        $applicants = Applicant::whereIn('id', $applicantIds)->with('jobPosting.jobLibrary', 'jobPosting.manpowerRequest')->get();
+
+        foreach ($applicants as $applicant) {
+            if (!$applicant->resume_path) continue;
+            try {
+                \App\Jobs\AutoScreenApplicantJob::dispatchSync($applicant->id);
+                $evaluation = AiEvaluation::where('applicant_id', $applicant->id)->first();
+                if ($evaluation) {
+                    $results[] = [
+                        'applicant_id' => $applicant->id,
+                        'ai_score'     => $evaluation->ai_score,
+                        'fit_label'    => $evaluation->fit_label,
+                        'status'       => 'success',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $results[] = [
+                    'applicant_id' => $applicant->id,
+                    'status'       => 'error',
+                    'message'      => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Batch screening completed.',
+            'results' => $results,
         ]);
     }
 

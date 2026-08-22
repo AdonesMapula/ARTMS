@@ -113,6 +113,13 @@ class ApplicantController extends Controller
             'application'
         );
 
+        // Automatically trigger background AI screening so candidates are pre-evaluated
+        try {
+            \App\Jobs\AutoScreenApplicantJob::dispatch($applicant->id);
+        } catch (\Throwable $e) {
+            \Log::warning("AutoScreen dispatch notice for #{$applicant->id}: " . $e->getMessage());
+        }
+
         return response()->json([
             'message'        => 'Application submitted successfully.',
             'application_id' => $appId,
