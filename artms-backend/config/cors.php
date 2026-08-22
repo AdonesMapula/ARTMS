@@ -17,11 +17,12 @@ return [
         env('FRONTEND_URL', 'http://localhost:5173'),
         'http://localhost:3000',
         'http://localhost:5174',
-        'https://strategic-shifty-gauntlet.ngrok-free.dev',
+        'https://strategic-shifty-gauntlet.ngrok-free.dev','https://artms-orpin.vercel.app',
         '*',
     ],
 
     'allowed_origins_patterns' => [
+        '*.vercel.app',
         '*.ngrok-free.app',
         '*.ngrok-free.dev',
     ],
