@@ -8,6 +8,7 @@ const jobService = {
     create: (data) => api.post('/job-library', data),
     update: (id, data) => api.put(`/job-library/${id}`, data),
     delete: (id) => api.delete(`/job-library/${id}`),
+    bulkDelete: (ids) => api.post('/job-library/bulk-delete', { ids }),
     approve: (id, data) => api.patch(`/job-library/${id}/approve`, data),
   },
 
@@ -19,6 +20,7 @@ const jobService = {
     create: (data) => api.post('/job-postings', data),
     update: (id, data) => api.put(`/job-postings/${id}`, data),
     delete: (id) => api.delete(`/job-postings/${id}`),
+    bulkDelete: (ids) => api.post('/job-postings/bulk-delete', { ids }),
     approve: (id, data) => api.patch(`/job-postings/${id}/approve`, data),
     togglePublish: (id) => api.patch(`/job-postings/${id}/toggle-publish`),
   },

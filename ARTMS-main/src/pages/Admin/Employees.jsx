@@ -3,7 +3,7 @@ import {
   FiUsers, FiUserCheck, FiUserX, FiClock, FiPlus,
   FiFileText, FiRefreshCw, FiChevronRight, FiLoader, FiSearch, FiX
 } from "react-icons/fi";
-import { Filter, Building2, ChevronDown } from "lucide-react";
+import { Filter, Building2, ChevronDown, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
@@ -11,6 +11,8 @@ import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { useToast } from "../../context/ToastContext";
 import Employee201Panel from "../../components/employee/Employee201Panel";
 import Modal from "../../components/ui/Modal";
 import employeeService from "../../services/employeeService";
@@ -24,6 +26,7 @@ const STATUS_TONES = {
 };
 
 export default function Employees() {
+  const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [allEmployeesList, setAllEmployeesList] = useState([]); // for sidebar selection
   const [stats, setStats] = useState({ total: 0, active: 0, on_leave: 0, resigned: 0, terminated: 0 });
@@ -33,6 +36,11 @@ export default function Employees() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Selection & Bulk Delete state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Departments list for filter / forms
   const [departments, setDepartments] = useState([]);
@@ -138,6 +146,38 @@ export default function Employees() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await employeeService.bulkDelete(selectedIds);
+      toast.success("Bulk Deletion Complete", res.data?.message || `Successfully removed ${selectedIds.length} employee record(s).`);
+      setSelectedIds([]);
+      fetchEmployees();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
+    } catch (err) {
+      toast.error("Bulk Deletion Failed", err.response?.data?.message || "Failed to delete selected employee records.");
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleSelectAll = (items) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map((e) => e.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* ── Page Title Header & Summary Stats Collapsible Container ── */}
@@ -150,11 +190,23 @@ export default function Employees() {
             <p className="mt-1 text-sm text-slate-500">Auto-generated employee files, document checklist tracking, and status controls.</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchEmployees} className="gap-1 text-slate-600 bg-white shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteConfirm(true)}
+                disabled={bulkDeleting}
+                className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={fetchEmployees} className="gap-1 text-slate-600 bg-white shadow-2xs cursor-pointer">
               <FiRefreshCw className={loading ? "animate-spin" : ""} size={14} /> Refresh
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5 bg-[#111A62]">
+            <Button variant="primary" size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5 bg-[#111A62] cursor-pointer">
               <FiPlus size={16} /> Add Employee Record
             </Button>
           </div>
@@ -240,6 +292,7 @@ export default function Employees() {
                     const empNum = e.user?.employee_id || `EMP-${e.id}`;
                     const empName = e.user?.name || "Employee";
                     const isSelected = e.id === selectedEmpId;
+                    const isChecked = selectedIds.includes(e.id);
 
                     return (
                       <div
@@ -251,6 +304,13 @@ export default function Employees() {
                           }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(evt) => handleToggleSelectOne(e.id, evt)}
+                            onClick={(evt) => evt.stopPropagation()}
+                            className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
+                          />
                           <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ${isSelected ? "bg-[#111A62] text-white" : "bg-slate-100 text-[#111A62]"
                             }`}>
                             {empName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
@@ -280,9 +340,23 @@ export default function Employees() {
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedEmpId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <FiFileText className="text-[#111A62]" /> 201 Employee Directory
-                  </CardTitle>
+                  <div className="flex items-center gap-2.5">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                      <FiFileText className="text-[#111A62]" /> 201 Employee Directory
+                    </CardTitle>
+                    {selectedIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setBulkDeleteConfirm(true)}
+                        disabled={bulkDeleting}
+                        className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer h-8 text-xs"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete Selected ({selectedIds.length})</span>
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto mt-2 lg:mt-0">
                     <div className="w-full sm:w-60 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
@@ -345,6 +419,15 @@ export default function Employees() {
                 <Table>
                   <THead>
                     <tr>
+                      <TH className="w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === employees.length && employees.length > 0}
+                          onChange={() => handleToggleSelectAll(employees)}
+                          className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                          title="Select all on this page"
+                        />
+                      </TH>
                       <TH>Employee ID & Name</TH>
                       <TH>Department</TH>
                       <TH>Position</TH>
@@ -358,7 +441,7 @@ export default function Employees() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <TD colSpan={8} className="py-12 text-center text-slate-400">
+                        <TD colSpan={9} className="py-12 text-center text-slate-400">
                           <div className="flex items-center justify-center gap-2">
                             <FiLoader size={18} className="animate-spin text-[#111A62]" />
                             <span>Loading 201 employee records...</span>
@@ -367,7 +450,7 @@ export default function Employees() {
                       </tr>
                     ) : employees.length === 0 ? (
                       <tr>
-                        <TD colSpan={8} className="py-12 text-center text-slate-400">
+                        <TD colSpan={9} className="py-12 text-center text-slate-400">
                           No employee records found matching your filters.
                         </TD>
                       </tr>
@@ -378,13 +461,22 @@ export default function Employees() {
                         const dept = e.department?.department_name || e.department?.name || "Unassigned";
                         const docs = e.documents || [];
                         const verifiedCount = docs.filter(d => d.status === "verified").length;
+                        const isChecked = selectedIds.includes(e.id);
 
                         return (
                           <tr
                             key={e.id}
                             onClick={() => handleSelectEmployee(e.id)}
-                            className="hover:bg-slate-50/80 transition cursor-pointer group"
+                            className={`hover:bg-slate-50/80 transition cursor-pointer group ${isChecked ? "bg-blue-50/40" : ""}`}
                           >
+                            <TD className="w-10 text-center" onClick={(evt) => evt.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(evt) => handleToggleSelectOne(e.id, evt)}
+                                className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              />
+                            </TD>
                             <TD>
                               <div className="flex items-center gap-3">
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#111A62]/10 text-xs font-black text-[#111A62]">
@@ -586,6 +678,17 @@ export default function Employees() {
           </form>
         </Modal>
       )}
+
+      {/* Bulk Delete Employees Confirmation Dialog */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete Selected Employee Records"
+        description={`Are you sure you want to remove all ${selectedIds.length} selected employee record(s)? This will mark them as removed.`}
+        confirmText={bulkDeleting ? "Deleting..." : "Delete Selected"}
+        variant="danger"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
+      />
     </div>
   );
 }

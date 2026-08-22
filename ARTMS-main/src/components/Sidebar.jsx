@@ -271,6 +271,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
 
   const [counts, setCounts] = useState({
     manpower_requests: null,
+    job_postings: null,
     job_library: null,
     applicants: null,
     notifications: null,

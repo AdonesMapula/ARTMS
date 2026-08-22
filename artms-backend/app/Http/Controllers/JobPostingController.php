@@ -212,6 +212,46 @@ class JobPostingController extends Controller
     }
 
     /**
+     * POST /api/job-postings/bulk-delete
+     * Permanently deletes multiple job postings by ID.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:job_postings,id',
+        ]);
+
+        $postings = JobPosting::whereIn('id', $validated['ids'])->get();
+        $deletedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($postings as $posting) {
+            // If posting has active applicants, skip or delete based on policy
+            if ($posting->applicants()->exists()) {
+                $skippedCount++;
+                continue;
+            }
+            $posting->delete();
+            $deletedCount++;
+        }
+
+        $this->invalidatePostingCaches();
+        AuditLog::record('bulk_delete', 'job_posting', "Bulk deleted {$deletedCount} job postings (skipped {$skippedCount})");
+
+        $message = "Successfully deleted {$deletedCount} job postings.";
+        if ($skippedCount > 0) {
+            $message .= " {$skippedCount} postings were skipped because they contain active applicants.";
+        }
+
+        return response()->json([
+            'message' => $message,
+            'count'   => $deletedCount,
+            'skipped' => $skippedCount,
+        ]);
+    }
+
+    /**
      * PATCH /api/job-postings/{id}/approve  — COO only
      */
     public function approve(Request $request, JobPosting $jobPosting): JsonResponse

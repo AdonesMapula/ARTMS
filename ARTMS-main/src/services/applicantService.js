@@ -34,6 +34,9 @@ const applicantService = {
   /** Delete applicant completely */
   delete: (id) => api.delete(`/applicants/${id}`),
 
+  /** Bulk delete applicants */
+  bulkDelete: (ids) => api.post('/applicants/bulk-delete', { ids }),
+
   /** Add note to applicant */
   addNote: (id, data) => api.post(`/applicants/${id}/notes`, data),
 

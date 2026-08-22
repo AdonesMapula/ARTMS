@@ -6,6 +6,7 @@ const manpowerService = {
   create:  (data)        => api.post('/manpower-requests', data),
   update:  (id, data)    => api.put(`/manpower-requests/${id}`, data),
   delete:  (id)          => api.delete(`/manpower-requests/${id}`),
+  bulkDelete: (ids)     => api.post('/manpower-requests/bulk-delete', { ids }),
   approve: (id, data)    => api.patch(`/manpower-requests/${id}/approve`, data),
   cleanRejected: ()      => api.delete('/manpower-requests/clean-rejected'),
 };

@@ -243,4 +243,42 @@ class ManpowerRequestController extends Controller
 
         return response()->json($requests);
     }
+
+    /**
+     * DELETE /api/manpower-requests/clean-rejected
+     * Permanently deletes all rejected manpower requests.
+     */
+    public function cleanRejected(): JsonResponse
+    {
+        $count = ManpowerRequest::where('status', 'rejected')->count();
+        ManpowerRequest::where('status', 'rejected')->delete();
+
+        AuditLog::record('delete', 'manpower_request', "Cleaned up {$count} rejected manpower requests");
+
+        return response()->json([
+            'message' => "Successfully cleaned up {$count} rejected manpower requests.",
+            'count'   => $count,
+        ]);
+    }
+
+    /**
+     * POST /api/manpower-requests/bulk-delete
+     * Permanently deletes multiple manpower requests by ID.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:manpower_requests,id',
+        ]);
+
+        $count = ManpowerRequest::whereIn('id', $validated['ids'])->delete();
+
+        AuditLog::record('bulk_delete', 'manpower_request', "Bulk deleted {$count} manpower requests");
+
+        return response()->json([
+            'message' => "Successfully deleted {$count} manpower requests.",
+            'count'   => $count,
+        ]);
+    }
 }

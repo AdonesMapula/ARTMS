@@ -341,6 +341,40 @@ class ApplicantController extends Controller
     }
 
     /**
+     * POST /api/applicants/bulk-delete
+     * Permanently deletes multiple applicants and their associated files/records.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:applicants,id',
+        ]);
+
+        $applicants = Applicant::whereIn('id', $validated['ids'])->get();
+        $count = 0;
+
+        foreach ($applicants as $applicant) {
+            if ($applicant->resume_path && Storage::disk('local')->exists($applicant->resume_path)) {
+                Storage::disk('local')->delete($applicant->resume_path);
+            }
+            $applicant->aiEvaluation()?->delete();
+            $applicant->documents()->delete();
+            $applicant->interviews()->delete();
+            $applicant->notes()->delete();
+            $applicant->delete();
+            $count++;
+        }
+
+        AuditLog::record('bulk_delete', 'applicant', "Bulk deleted {$count} applicants");
+
+        return response()->json([
+            'message' => "Successfully deleted {$count} applicants.",
+            'count'   => $count,
+        ]);
+    }
+
+    /**
      * POST /api/applicants/{id}/hire
      * Mark applicant as hired, auto-generate Employee 201 file record & assign Employee Number (EMP-YYYY-XXXXX).
      */

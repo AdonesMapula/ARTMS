@@ -71,6 +71,9 @@ export default function JobPosting() {
   const [selectedPosting, setSelectedPosting] = useState(null);
   const [prfToDelete, setPrfToDelete] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, postingId: null });
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [alertModal, setAlertModalState] = useState({
     open: false,
     variant: "success",
@@ -249,6 +252,48 @@ export default function JobPosting() {
     totalApps: postings.reduce((sum, p) => sum + (p.applicants_count || 0), 0),
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await jobService.postings.bulkDelete(selectedIds);
+      setAlertModal({
+        open: true,
+        variant: "success",
+        title: "Bulk Deletion Complete",
+        message: res.data?.message || `Successfully deleted ${selectedIds.length} job postings.`,
+      });
+      setSelectedIds([]);
+      fetchData();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
+    } catch (err) {
+      setAlertModal({
+        open: true,
+        variant: "danger",
+        title: "Bulk Deletion Failed",
+        message: err.response?.data?.message || "Failed to delete selected job postings.",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleSelectAll = (items) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map((p) => p.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Collapsible Title & Stats Container ─────────────────────── */}
@@ -266,10 +311,23 @@ export default function JobPosting() {
               Create job ads from approved PRFs, manage listings, and view candidate applications
             </p>
           </div>
-          <Button variant="outline" onClick={fetchData} disabled={loading} className="gap-2 bg-white">
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setBulkDeleteConfirm(true)}
+                disabled={bulkDeleting}
+                className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </Button>
+            )}
+            <Button variant="outline" onClick={fetchData} disabled={loading} className="gap-2 bg-white cursor-pointer">
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -494,6 +552,7 @@ export default function JobPosting() {
                     const title = p.job_library?.job_title || p.title || "Job Specification";
                     const dept = p.department?.department_name || p.department?.name || "General";
 
+                    const isChecked = selectedIds.includes(p.id);
                     return (
                       <div
                         key={p.id}
@@ -505,9 +564,18 @@ export default function JobPosting() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                            JP-{String(p.id).padStart(3, "0")}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleToggleSelectOne(p.id, e)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
+                            />
+                            <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                              JP-{String(p.id).padStart(3, "0")}
+                            </span>
+                          </div>
                           <Badge tone={STATUS_TONE[p.status] || "default"} className="text-[9px] px-1.5 py-0.2 capitalize">
                             {p.status?.replace(/_/g, " ")}
                           </Badge>
@@ -536,9 +604,23 @@ export default function JobPosting() {
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedPostingId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <Briefcase className="text-[#111A62]" size={18} /> Job Postings ({filtered.length})
-                  </CardTitle>
+                  <div className="flex items-center gap-2.5">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                      <Briefcase className="text-[#111A62]" size={18} /> Job Postings ({filtered.length})
+                    </CardTitle>
+                    {selectedIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setBulkDeleteConfirm(true)}
+                        disabled={bulkDeleting}
+                        className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer h-8 text-xs"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete Selected ({selectedIds.length})</span>
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto mt-2 sm:mt-0">
                     <div className="w-full sm:w-64 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
@@ -592,6 +674,15 @@ export default function JobPosting() {
                     <Table>
                       <THead>
                         <tr>
+                          <TH className="w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.length === paginated.length && paginated.length > 0}
+                              onChange={() => handleToggleSelectAll(paginated)}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              title="Select all on this page"
+                            />
+                          </TH>
                           <TH>Job Title</TH>
                           <TH>Department</TH>
                           <TH>Vacancies</TH>
@@ -601,60 +692,75 @@ export default function JobPosting() {
                         </tr>
                       </THead>
                       <tbody>
-                        {paginated.map((p) => (
-                          <tr key={p.id} onClick={() => setSelectedPostingId(p.id)} className="hover:bg-slate-50 cursor-pointer">
-                            <TD>
-                              <div className="flex items-center gap-2.5">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
-                                  JP
+                        {paginated.map((p) => {
+                          const isChecked = selectedIds.includes(p.id);
+                          return (
+                            <tr
+                              key={p.id}
+                              onClick={() => setSelectedPostingId(p.id)}
+                              className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                            >
+                              <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => handleToggleSelectOne(p.id, e)}
+                                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                                />
+                              </TD>
+                              <TD>
+                                <div className="flex items-center gap-2.5">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
+                                    JP
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-900">
+                                      {p.job_library?.job_title || p.title || "N/A"}
+                                    </p>
+                                    <p className="text-xs text-slate-400">
+                                      JP-{String(p.id).padStart(3, "0")}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-slate-900">
-                                    {p.job_library?.job_title || p.title || "N/A"}
-                                  </p>
-                                  <p className="text-xs text-slate-400">
-                                    JP-{String(p.id).padStart(3, "0")}
-                                  </p>
+                              </TD>
+                              <TD className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TD>
+                              <TD className="font-bold text-slate-900">{p.vacancies_count}</TD>
+                              <TD>
+                                <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
+                                <span className="text-xs text-slate-400"> apps</span>
+                              </TD>
+                              <TD>
+                                <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
+                              </TD>
+                              <TD className="text-right">
+                                <div className="inline-flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPostingId(p.id);
+                                    }}
+                                    className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                                  >
+                                    <Edit size={14} /> Edit & View Specs <ChevronRight size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPosting(p);
+                                      setDeleteModalOpen(true);
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
+                                    title="Delete Posting"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
                                 </div>
-                              </div>
-                            </TD>
-                            <TD className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TD>
-                            <TD className="font-bold text-slate-900">{p.vacancies_count}</TD>
-                            <TD>
-                              <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
-                              <span className="text-xs text-slate-400"> apps</span>
-                            </TD>
-                            <TD>
-                              <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
-                            </TD>
-                            <TD className="text-right">
-                              <div className="inline-flex gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedPostingId(p.id);
-                                  }}
-                                  className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
-                                >
-                                  <Edit size={14} /> Edit & View Specs <ChevronRight size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedPosting(p);
-                                    setDeleteModalOpen(true);
-                                  }}
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
-                                  title="Delete Posting"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </TD>
-                          </tr>
-                        ))}
+                              </TD>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </Table>
 
@@ -695,6 +801,17 @@ export default function JobPosting() {
         variant="danger"
         onConfirm={handleDeletePosting}
         onCancel={() => setDeleteModalOpen(false)}
+      />
+
+      {/* Bulk Delete Posting Confirmation Dialog */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete Selected Job Postings"
+        description={`Are you sure you want to delete all ${selectedIds.length} selected job posting(s)? Note: Postings with active applicants will be skipped to protect candidate data.`}
+        confirmText={bulkDeleting ? "Deleting..." : "Delete Selected"}
+        variant="danger"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
 
       {/* Delete PRF Confirmation Dialog */}

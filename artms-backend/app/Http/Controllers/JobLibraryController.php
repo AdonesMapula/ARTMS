@@ -150,6 +150,44 @@ class JobLibraryController extends Controller
     }
 
     /**
+     * POST /api/job-library/bulk-delete
+     * Permanently deletes multiple job library templates by ID.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:job_libraries,id',
+        ]);
+
+        $jobs = JobLibrary::whereIn('id', $validated['ids'])->get();
+        $deletedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($jobs as $job) {
+            if ($job->jobPostings()->exists()) {
+                $skippedCount++;
+                continue;
+            }
+            $job->delete();
+            $deletedCount++;
+        }
+
+        AuditLog::record('bulk_delete', 'job_library', "Bulk deleted {$deletedCount} job templates (skipped {$skippedCount})");
+
+        $message = "Successfully deleted {$deletedCount} job templates.";
+        if ($skippedCount > 0) {
+            $message .= " {$skippedCount} templates were skipped because they are associated with existing job postings.";
+        }
+
+        return response()->json([
+            'message' => $message,
+            'count'   => $deletedCount,
+            'skipped' => $skippedCount,
+        ]);
+    }
+
+    /**
      * PATCH /api/job-library/{id}/approve  — COO only
      */
     public function approve(Request $request, JobLibrary $jobLibrary): JsonResponse

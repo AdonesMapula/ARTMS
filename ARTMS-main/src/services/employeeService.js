@@ -6,6 +6,7 @@ const employeeService = {
   create: (data) => api.post('/employees', data),
   update: (id, data) => api.put(`/employees/${id}`, data),
   delete: (id) => api.delete(`/employees/${id}`),
+  bulkDelete: (ids) => api.post('/employees/bulk-delete', { ids }),
   terminate: (id, data) => api.patch(`/employees/${id}/terminate`, data),
   processClearance: (id) => api.patch(`/employees/${id}/clearance`),
 

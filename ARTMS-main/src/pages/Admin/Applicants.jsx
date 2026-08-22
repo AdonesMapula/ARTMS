@@ -54,6 +54,9 @@ export default function Applicants() {
   const [actionLoading, setActionLoading] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [interviewConfirm, setInterviewConfirm] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const pageSize = 50;
 
   useEffect(() => {
@@ -284,6 +287,38 @@ export default function Applicants() {
     setPage(1);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await applicantService.bulkDelete(selectedIds);
+      toast.success("Bulk Deletion Complete", res.data?.message || `Successfully deleted ${selectedIds.length} applicants.`);
+      setSelectedIds([]);
+      loadApplicants();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
+    } catch (err) {
+      toast.error("Bulk Deletion Failed", err.response?.data?.message || "Failed to delete selected applicants.");
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleSelectAll = (items) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map((a) => a.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Collapsible Title & Stats Container ─────────────────────── */}
@@ -301,15 +336,28 @@ export default function Applicants() {
               View and manage all job applications • AI-powered screening
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={loadApplicants}
-            disabled={loading}
-            className="gap-2 bg-white"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setBulkDeleteConfirm(true)}
+                disabled={bulkDeleting}
+                className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={loadApplicants}
+              disabled={loading}
+              className="gap-2 bg-white cursor-pointer"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {/* ── Side-by-Side Cards Layout (Stats 2x2 + Top AI Leaderboard Card) ── */}
@@ -562,6 +610,7 @@ export default function Applicants() {
                     const name = `${a.first_name || ""} ${a.last_name || ""}`;
                     const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
 
+                    const isChecked = selectedIds.includes(a.id);
                     return (
                       <div
                         key={a.id}
@@ -572,17 +621,26 @@ export default function Applicants() {
                             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                            isSelected ? "bg-[#111A62] text-white" : "bg-slate-100 text-[#111A62]"
-                          }`}>
-                            {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
-                          </span>
-                          <div className="min-w-0">
-                            <p className={`text-xs font-extrabold truncate ${isSelected ? "text-[#111A62]" : "text-slate-900"}`}>
-                              {name}
-                            </p>
-                            <p className="text-[10px] text-slate-500 truncate">{pos}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleToggleSelectOne(a.id, e)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
+                            />
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                              isSelected ? "bg-[#111A62] text-white" : "bg-slate-100 text-[#111A62]"
+                            }`}>
+                              {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
+                            </span>
+                            <div className="min-w-0">
+                              <p className={`text-xs font-extrabold truncate ${isSelected ? "text-[#111A62]" : "text-slate-900"}`}>
+                                {name}
+                              </p>
+                              <p className="text-[10px] text-slate-500 truncate">{pos}</p>
+                            </div>
                           </div>
                         </div>
 
@@ -742,6 +800,15 @@ export default function Applicants() {
                     <Table>
                       <THead>
                         <tr>
+                          <TH className="w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.length === processedApplicants.length && processedApplicants.length > 0}
+                              onChange={() => handleToggleSelectAll(processedApplicants)}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              title="Select all on this page"
+                            />
+                          </TH>
                           <TH>Applicant</TH>
                           <TH>Position Applied</TH>
                           <TH>Status</TH>
@@ -754,12 +821,21 @@ export default function Applicants() {
                         {processedApplicants.map((a) => {
                           const eval_ = a.ai_evaluation;
                           const job = a.job_posting?.job_library;
+                          const isChecked = selectedIds.includes(a.id);
                           return (
                             <tr
                               key={a.id}
-                              className="cursor-pointer transition hover:bg-slate-50"
+                              className={`cursor-pointer transition hover:bg-slate-50 ${isChecked ? "bg-blue-50/40" : ""}`}
                               onClick={() => handleViewDetails(a.id)}
                             >
+                              <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => handleToggleSelectOne(a.id, e)}
+                                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                                />
+                              </TD>
                               <TD>
                                 <div className="flex items-center gap-2.5">
                                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
@@ -857,6 +933,17 @@ export default function Applicants() {
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirm(null)}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete Selected Applicants"
+        description={`Are you sure you want to permanently delete all ${selectedIds.length} selected applicant(s)? This action cannot be undone.`}
+        confirmText={bulkDeleting ? "Deleting..." : "Delete Selected"}
+        variant="danger"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
 
       {/* Ready for Interview Confirmation Modal */}

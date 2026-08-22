@@ -154,6 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Employees  (HR Admin + Super Admin) ─────────────────────────────────
     Route::middleware('role:hr_admin,super_admin')->group(function () {
+        Route::post('employees/bulk-delete', [EmployeeController::class, 'bulkDelete']);
         Route::apiResource('employees', EmployeeController::class);
         Route::patch('employees/{employee}/terminate', [EmployeeController::class, 'terminate']);
         Route::patch('employees/{employee}/clearance', [EmployeeController::class, 'clearance']);
@@ -168,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('job-library/approved', [JobLibraryController::class, 'approved']);
     });
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
+        Route::post('job-library/bulk-delete', [JobLibraryController::class, 'bulkDelete']);
         Route::apiResource('job-library', JobLibraryController::class);
         Route::post('job-library/parse-document', [JobDocumentParserController::class, 'parse'])->middleware('throttle:ai-document-parser');
         Route::get('job-categories', [JobCategoryController::class, 'index']);
@@ -179,6 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Job Postings  (HR Admin creates; COO approves) ──────────────────────
     Route::middleware('role:hr_admin,super_admin,coo,department_head')->group(function () {
+        Route::post('job-postings/bulk-delete', [JobPostingController::class, 'bulkDelete']);
         Route::apiResource('job-postings', JobPostingController::class)->except(['store']);
     });
     Route::middleware('role:hr_admin,super_admin,department_head')->group(function () {
@@ -193,6 +196,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Applicants  (HR Admin manages) ──────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
+        Route::post('applicants/bulk-delete', [ApplicantController::class, 'bulkDelete']);
         Route::get('applicants', [ApplicantController::class, 'index']);
         Route::get('applicants/{applicant}', [ApplicantController::class, 'show']);
         Route::get('applicants/{applicant}/resume', [ApplicantController::class, 'resume']);
@@ -253,6 +257,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Manpower Requests ────────────────────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::delete('manpower-requests/clean-rejected', [ManpowerRequestController::class, 'cleanRejected']);
+        Route::post('manpower-requests/bulk-delete', [ManpowerRequestController::class, 'bulkDelete']);
     });
     Route::apiResource('manpower-requests', ManpowerRequestController::class);
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {

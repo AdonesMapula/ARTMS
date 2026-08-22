@@ -196,6 +196,27 @@ class EmployeeController extends Controller
     }
 
     /**
+     * POST /api/employees/bulk-delete
+     * Soft-deletes multiple employee 201 records by ID.
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:employees,id',
+        ]);
+
+        $count = Employee::whereIn('id', $validated['ids'])->delete();
+
+        AuditLog::record('bulk_delete', 'employee', "Bulk deleted {$count} employee records");
+
+        return response()->json([
+            'message' => "Successfully deleted {$count} employee records.",
+            'count'   => $count,
+        ]);
+    }
+
+    /**
      * PATCH /api/employees/{id}/terminate
      * Status Tagging Control: Update employment_status & sync user active status
      */

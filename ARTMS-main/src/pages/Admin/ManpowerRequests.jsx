@@ -55,6 +55,9 @@ export default function AdminManpowerRequests() {
   const [total, setTotal] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [cleanConfirm, setCleanConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Selected Request ID for Split View Detail Panel
   const [selectedRequestId, setSelectedRequestId] = useState(null);
@@ -155,6 +158,7 @@ export default function AdminManpowerRequests() {
         message: res.data?.message || "All rejected manpower requests have been permanently removed.",
       });
       loadRequests();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
     } catch (err) {
       setAlertModal({
         open: true,
@@ -165,6 +169,48 @@ export default function AdminManpowerRequests() {
     } finally {
       setCleanConfirm(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await manpowerService.bulkDelete(selectedIds);
+      setAlertModal({
+        open: true,
+        variant: "success",
+        title: "Bulk Deletion Complete",
+        message: res.data?.message || `Successfully deleted ${selectedIds.length} manpower requests.`,
+      });
+      setSelectedIds([]);
+      loadRequests();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
+    } catch (err) {
+      setAlertModal({
+        open: true,
+        variant: "danger",
+        title: "Bulk Deletion Failed",
+        message: err.response?.data?.message || "Failed to delete selected requests.",
+      });
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleSelectAll = (items) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const handleSaveEdit = async (formData) => {
@@ -253,12 +299,23 @@ export default function AdminManpowerRequests() {
               Review, edit revisions, and manage all department staffing requests
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setBulkDeleteConfirm(true)}
+                disabled={bulkDeleting}
+                className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </Button>
+            )}
             {stats.rejected > 0 && (
               <Button
                 variant="outline"
                 onClick={() => setCleanConfirm(true)}
-                className="gap-1.5 border-red-200 text-red-700 bg-red-50 hover:bg-red-100"
+                className="gap-1.5 border-red-200 text-red-700 bg-red-50 hover:bg-red-100 cursor-pointer"
               >
                 <Trash2 size={14} />
                 <span>Clean Up Rejected ({stats.rejected})</span>
@@ -268,7 +325,7 @@ export default function AdminManpowerRequests() {
               variant="outline"
               onClick={loadRequests}
               disabled={loading}
-              className="gap-2 bg-white"
+              className="gap-2 bg-white cursor-pointer"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               <span className="hidden sm:inline">Refresh</span>
@@ -284,10 +341,10 @@ export default function AdminManpowerRequests() {
           >
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <FileText size={24} className="text-blue-600" />
+                <FileText size={24} className="text-[#111A62]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-500">Total</p>
+                <p className="text-sm font-semibold text-slate-500">Total Requests</p>
                 <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
               </div>
             </CardContent>
@@ -295,7 +352,7 @@ export default function AdminManpowerRequests() {
 
           <Card
             onClick={() => handleStatusChange("pending")}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
+            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
           >
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
@@ -463,6 +520,7 @@ export default function AdminManpowerRequests() {
                   sorted.map((r) => {
                     const prfId = `PRF-${String(r.id).padStart(3, "0")}`;
                     const isSelected = r.id === selectedRequestId;
+                    const isChecked = selectedIds.includes(r.id);
                     const pos = r.position_needed || r.jobLibrary?.job_title || "Unspecified Position";
                     const dept = r.department?.department_name || r.department?.name || "—";
 
@@ -486,13 +544,20 @@ export default function AdminManpowerRequests() {
                             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                            {prfId}
-                          </span>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleToggleSelectOne(r.id, e)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer"
+                            />
+                            <span className="font-mono text-xs font-black text-slate-800">{prfId}</span>
+                          </div>
                           
                           {/* Color Dot Legend Badge Indicators */}
-                          <div className="flex items-center gap-1.5" title={`Urgency: ${r.urgency} | Status: ${r.status}`}>
+                          <div className="flex items-center gap-1" title={`Urgency: ${r.urgency} | Status: ${r.status}`}>
                             <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 border border-slate-200">
                               <span className={`h-2 w-2 rounded-full ${urgencyBg} inline-block`} />
                               <span className="capitalize">{r.urgency}</span>
@@ -522,9 +587,23 @@ export default function AdminManpowerRequests() {
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedRequestId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <FileText className="text-[#111A62]" size={18} /> Manpower Requests ({paginatedTotal})
-                  </CardTitle>
+                  <div className="flex items-center gap-2.5">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                      <FileText className="text-[#111A62]" size={18} /> Manpower Requests ({paginatedTotal})
+                    </CardTitle>
+                    {selectedIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setBulkDeleteConfirm(true)}
+                        disabled={bulkDeleting}
+                        className="gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold animate-fade-in cursor-pointer h-8 text-xs"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete Selected ({selectedIds.length})</span>
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto mt-2 lg:mt-0">
                     <div className="w-full sm:w-60 flex-1 sm:flex-initial min-w-[200px]">
                       <SearchBar
@@ -592,6 +671,15 @@ export default function AdminManpowerRequests() {
                     <Table>
                       <THead>
                         <tr>
+                          <TH className="w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.length === paginated.length && paginated.length > 0}
+                              onChange={() => handleToggleSelectAll(paginated)}
+                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                              title="Select all on this page"
+                            />
+                          </TH>
                           <TH>Request ID</TH>
                           <TH>Position</TH>
                           <TH>Department</TH>
@@ -603,47 +691,62 @@ export default function AdminManpowerRequests() {
                         </tr>
                       </THead>
                       <tbody>
-                        {paginated.map((r) => (
-                          <tr key={r.id} onClick={() => setSelectedRequestId(r.id)} className="hover:bg-slate-50 cursor-pointer">
-                            <TD>
-                              <div className="font-semibold text-slate-900">
-                                PRF-{String(r.id).padStart(3, "0")}
-                              </div>
-                            </TD>
-                            <TD>
-                              <div className="font-bold text-slate-900">
-                                {r.position_needed || "—"}
-                              </div>
-                            </TD>
-                            <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
-                            <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
-                            <TD className="font-bold text-slate-900">{r.headcount}</TD>
-                            <TD>
-                              <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
-                                {r.urgency}
-                              </Badge>
-                            </TD>
-                            <TD>
-                              <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
-                                {r.status === "revised" || r.status === "needs_revision" ? "Needs Revision" : r.status}
-                              </Badge>
-                            </TD>
-                            <TD className="text-right">
-                              <div className="inline-flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedRequestId(r.id);
-                                  }}
-                                  className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
-                                >
-                                  <Eye size={14} /> View Details <ChevronRight size={14} />
-                                </button>
-                              </div>
-                            </TD>
-                          </tr>
-                        ))}
+                        {paginated.map((r) => {
+                          const isChecked = selectedIds.includes(r.id);
+                          return (
+                            <tr
+                              key={r.id}
+                              onClick={() => setSelectedRequestId(r.id)}
+                              className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                            >
+                              <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => handleToggleSelectOne(r.id, e)}
+                                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                                />
+                              </TD>
+                              <TD>
+                                <div className="font-semibold text-slate-900">
+                                  PRF-{String(r.id).padStart(3, "0")}
+                                </div>
+                              </TD>
+                              <TD>
+                                <div className="font-bold text-slate-900">
+                                  {r.position_needed || "—"}
+                                </div>
+                              </TD>
+                              <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
+                              <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
+                              <TD className="font-bold text-slate-900">{r.headcount}</TD>
+                              <TD>
+                                <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
+                                  {r.urgency}
+                                </Badge>
+                              </TD>
+                              <TD>
+                                <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
+                                  {r.status === "revised" || r.status === "needs_revision" ? "Needs Revision" : r.status}
+                                </Badge>
+                              </TD>
+                              <TD className="text-right">
+                                <div className="inline-flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedRequestId(r.id);
+                                    }}
+                                    className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                                  >
+                                    <Eye size={14} /> View Details <ChevronRight size={14} />
+                                  </button>
+                                </div>
+                              </TD>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </Table>
 
@@ -697,6 +800,17 @@ export default function AdminManpowerRequests() {
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirm(null)}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete Selected Manpower Requests"
+        description={`Are you sure you want to permanently delete all ${selectedIds.length} selected manpower request(s)? This action cannot be undone.`}
+        confirmText={bulkDeleting ? "Deleting..." : "Delete Selected"}
+        variant="danger"
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
 
       {/* Clean Rejected Confirmation Dialog */}
