@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Users, UserCheck, Clock, XCircle, Eye, CheckCircle, Trash2, Filter, RefreshCw, ChevronRight, X, Trophy, Award, Sparkles, SlidersHorizontal, ArrowUpDown, Briefcase, ChevronDown } from "lucide-react";
+import { Users, UserCheck, Clock, XCircle, Eye, CheckCircle, Trash2, Filter, RefreshCw, ChevronRight, X, Trophy, Award, Sparkles, SlidersHorizontal, ArrowUpDown, Briefcase, ChevronDown, Loader } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
@@ -718,118 +718,121 @@ export default function Applicants() {
                 </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-xl" />
-                    ))}
-                  </div>
-                ) : processedApplicants.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <Users size={48} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-semibold text-slate-600">No applicants found</p>
-                    {isFiltered && (
-                      <button
-                        onClick={resetFilters}
-                        className="mt-3 text-xs font-bold text-[#111A62] underline hover:text-[#1a257c]"
-                      >
-                        Reset active filters
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <Table>
-                      <THead>
-                        <tr>
-                          <TH>Applicant</TH>
-                          <TH>Position Applied</TH>
-                          <TH>Status</TH>
-                          <TH>AI Score</TH>
-                          <TH>Fit Level</TH>
-                          <TH className="text-right">Actions</TH>
-                        </tr>
-                      </THead>
-                      <tbody>
-                        {processedApplicants.map((a) => {
-                          const eval_ = a.ai_evaluation;
-                          const job = a.job_posting?.job_library;
-                          return (
-                            <tr
-                              key={a.id}
-                              className="cursor-pointer transition hover:bg-slate-50"
-                              onClick={() => handleViewDetails(a.id)}
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH>Applicant</TH>
+                      <TH>Position Applied</TH>
+                      <TH>Status</TH>
+                      <TH>AI Score</TH>
+                      <TH>Fit Level</TH>
+                      <TH className="text-right">Actions</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <TD colSpan={6} className="py-12 text-center text-slate-400">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader size={18} className="animate-spin text-[#111A62]" />
+                            <span>Loading applicants...</span>
+                          </div>
+                        </TD>
+                      </tr>
+                    ) : processedApplicants.length === 0 ? (
+                      <tr>
+                        <TD colSpan={6} className="py-12 text-center">
+                          <Users size={48} className="mx-auto mb-3 text-slate-300" />
+                          <p className="text-sm font-semibold text-slate-600">No applicants found</p>
+                          {isFiltered && (
+                            <button
+                              onClick={resetFilters}
+                              className="mt-3 text-xs font-bold text-[#111A62] underline hover:text-[#1a257c]"
                             >
-                              <TD>
-                                <div className="flex items-center gap-2.5">
-                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
-                                    {a.first_name?.charAt(0)}{a.last_name?.charAt(0)}
-                                  </span>
-                                  <div>
-                                    <p className="font-semibold text-slate-900">
-                                      {a.first_name} {a.last_name}
-                                    </p>
-                                    <p className="text-xs text-slate-400">{a.email}</p>
-                                  </div>
+                              Reset active filters
+                            </button>
+                          )}
+                        </TD>
+                      </tr>
+                    ) : (
+                      processedApplicants.map((a) => {
+                        const eval_ = a.ai_evaluation;
+                        const job = a.job_posting?.job_library;
+                        return (
+                          <tr
+                            key={a.id}
+                            className="cursor-pointer transition hover:bg-slate-50"
+                            onClick={() => handleViewDetails(a.id)}
+                          >
+                            <TD>
+                              <div className="flex items-center gap-2.5">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
+                                  {a.first_name?.charAt(0)}{a.last_name?.charAt(0)}
+                                </span>
+                                <div>
+                                  <p className="font-semibold text-slate-900">
+                                    {a.first_name} {a.last_name}
+                                  </p>
+                                  <p className="text-xs text-slate-400">{a.email}</p>
                                 </div>
-                              </TD>
-                              <TD>
-                                <p className="font-semibold text-slate-900">{job?.job_title || "Unspecified"}</p>
-                              </TD>
-                              <TD>
-                                <StatusChip status={a.status} />
-                              </TD>
-                              <TD>
-                                {eval_?.ai_score != null ? (
-                                  <span className="font-mono text-xs font-bold text-slate-900">
-                                    {Math.round(Number(eval_.ai_score))}%
-                                  </span>
-                                ) : eval_?.composite_score != null ? (
-                                  <span className="font-mono text-xs font-bold text-slate-900">
-                                    {Math.round(Number(eval_.composite_score))}%
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-slate-400">—</span>
-                                )}
-                              </TD>
-                              <TD>
-                                {(eval_?.fit_label || a.fit_category) ? (
-                                  <Badge tone={FIT_TONE[eval_?.fit_label || a.fit_category] || "default"} className="capitalize">
-                                    {FIT_LABEL[eval_?.fit_label || a.fit_category] || (eval_?.fit_label || a.fit_category)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-xs text-slate-400">—</span>
-                                )}
-                              </TD>
-                              <TD className="text-right">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewDetails(a.id);
-                                  }}
-                                  className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
-                                >
-                                  <Eye size={14} /> View Candidate <ChevronRight size={14} />
-                                </button>
-                              </TD>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-
-                    {total > 10 && (
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <Pagination
-                          page={page}
-                          pageSize={pageSize}
-                          total={total}
-                          onPageChange={setPage}
-                        />
-                      </div>
+                              </div>
+                            </TD>
+                            <TD>
+                              <p className="font-semibold text-slate-900">{job?.job_title || "Unspecified"}</p>
+                            </TD>
+                            <TD>
+                              <StatusChip status={a.status} />
+                            </TD>
+                            <TD>
+                              {eval_?.ai_score != null ? (
+                                <span className="font-mono text-xs font-bold text-slate-900">
+                                  {Math.round(Number(eval_.ai_score))}%
+                                </span>
+                              ) : eval_?.composite_score != null ? (
+                                <span className="font-mono text-xs font-bold text-slate-900">
+                                  {Math.round(Number(eval_.composite_score))}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </TD>
+                            <TD>
+                              {(eval_?.fit_label || a.fit_category) ? (
+                                <Badge tone={FIT_TONE[eval_?.fit_label || a.fit_category] || "default"} className="capitalize">
+                                  {FIT_LABEL[eval_?.fit_label || a.fit_category] || (eval_?.fit_label || a.fit_category)}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </TD>
+                            <TD className="text-right">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDetails(a.id);
+                                }}
+                                className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                              >
+                                <Eye size={14} /> View Candidate <ChevronRight size={14} />
+                              </button>
+                            </TD>
+                          </tr>
+                        );
+                      })
                     )}
-                  </>
+                  </tbody>
+                </Table>
+
+                {!loading && total > 10 && (
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <Pagination
+                      page={page}
+                      pageSize={pageSize}
+                      total={total}
+                      onPageChange={setPage}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>

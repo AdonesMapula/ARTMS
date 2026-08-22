@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Briefcase, ChevronDown, RefreshCw, Calendar, Eye, Users, CheckCircle } from "lucide-react";
+import { Briefcase, ChevronDown, RefreshCw, Calendar, Eye, Users, CheckCircle, Loader } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
@@ -485,9 +485,9 @@ export default function Pipeline() {
       {/* Kanban Board Container (All 8 Stages fit in 1 line) */}
       {loading ? (
         <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
-          <div className="flex flex-col items-center gap-3 text-slate-500">
-            <span className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-            <p className="text-sm font-semibold">Loading candidate pipeline…</p>
+          <div className="flex flex-col items-center gap-2 text-slate-400">
+            <Loader size={18} className="animate-spin text-[#111A62]" />
+            <span className="text-sm font-semibold">Loading candidate pipeline...</span>
           </div>
         </div>
       ) : (

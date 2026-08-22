@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X, ArrowUpDown } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, Edit, AlertTriangle, ChevronRight, X, ArrowUpDown, Loader } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
@@ -576,35 +576,39 @@ export default function AdminManpowerRequests() {
                 </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-xl" />
-                    ))}
-                  </div>
-                ) : paginated.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <FileText size={48} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-semibold text-slate-600">No requests found</p>
-                  </div>
-                ) : (
-                  <>
-                    <Table>
-                      <THead>
-                        <tr>
-                          <TH>Request ID</TH>
-                          <TH>Position</TH>
-                          <TH>Department</TH>
-                          <TH>Requested By</TH>
-                          <TH>Headcount</TH>
-                          <TH>Urgency</TH>
-                          <TH>Status</TH>
-                          <TH className="text-right">Actions</TH>
-                        </tr>
-                      </THead>
-                      <tbody>
-                        {paginated.map((r) => (
-                          <tr key={r.id} onClick={() => setSelectedRequestId(r.id)} className="hover:bg-slate-50 cursor-pointer">
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH>Request ID</TH>
+                      <TH>Position</TH>
+                      <TH>Department</TH>
+                      <TH>Requested By</TH>
+                      <TH>Headcount</TH>
+                      <TH>Urgency</TH>
+                      <TH>Status</TH>
+                      <TH className="text-right">Actions</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <TD colSpan={8} className="py-12 text-center text-slate-400">
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader size={18} className="animate-spin text-[#111A62]" />
+                            <span>Loading manpower requests...</span>
+                          </div>
+                        </TD>
+                      </tr>
+                    ) : paginated.length === 0 ? (
+                      <tr>
+                        <TD colSpan={8} className="py-12 text-center">
+                          <FileText size={48} className="mx-auto mb-3 text-slate-300" />
+                          <p className="text-sm font-semibold text-slate-600">No requests found</p>
+                        </TD>
+                      </tr>
+                    ) : (
+                      paginated.map((r) => (
+                        <tr key={r.id} onClick={() => setSelectedRequestId(r.id)} className="hover:bg-slate-50 cursor-pointer">
                             <TD>
                               <div className="font-semibold text-slate-900">
                                 PRF-{String(r.id).padStart(3, "0")}
@@ -643,21 +647,20 @@ export default function AdminManpowerRequests() {
                               </div>
                             </TD>
                           </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-
-                    {paginatedTotal > 10 && (
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <Pagination
-                          page={page}
-                          pageSize={pageSize}
-                          total={paginatedTotal}
-                          onPageChange={setPage}
-                        />
-                      </div>
+                      ))
                     )}
-                  </>
+                  </tbody>
+                </Table>
+
+                {!loading && paginatedTotal > 10 && (
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <Pagination
+                      page={page}
+                      pageSize={pageSize}
+                      total={paginatedTotal}
+                      onPageChange={setPage}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>
