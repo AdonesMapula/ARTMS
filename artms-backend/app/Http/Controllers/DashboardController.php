@@ -7,6 +7,7 @@ use App\Models\AttendanceLog;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Interview;
+use App\Models\JobLibrary;
 use App\Models\JobPosting;
 use App\Models\LeaveRequest;
 use App\Models\ManpowerRequest;
@@ -119,7 +120,14 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Job Library Stats
+        $totalJobLibrary    = JobLibrary::count();
+        $pendingJobLibrary  = JobLibrary::where('approval_status', 'pending')->count();
+        $approvedJobLibrary = JobLibrary::where('approval_status', 'approved')->count();
+        $rejectedJobLibrary = JobLibrary::where('approval_status', 'rejected')->count();
+
         return response()->json([
+            // PRF Stats
             'total_requests'         => $total,
             'pending_requests'       => $pending,
             'approved_requests'      => $approved,
@@ -128,6 +136,12 @@ class DashboardController extends Controller
             'requests_by_urgency'    => $requestsByUrgency,
             'monthly_trends'         => $monthlyTrends,
             'recent_pending'         => $recentPending,
+            
+            // Job Library Stats
+            'total_job_library'      => $totalJobLibrary,
+            'pending_job_library'    => $pendingJobLibrary,
+            'approved_job_library'   => $approvedJobLibrary,
+            'rejected_job_library'   => $rejectedJobLibrary,
         ]);
     }
 
@@ -152,7 +166,8 @@ class DashboardController extends Controller
         return response()->json([
             'manpower_requests' => $pendingManpower->count(),
             'applicants'        => Applicant::count(),
-            'job_postings'      => JobPosting::where('status', 'published')->count(),
+            'job_postings'      => ManpowerRequest::where('status', 'approved')->whereNull('job_posting_id')->count(),
+            'job_library'       => JobLibrary::where('approval_status', 'pending')->count(),
             'interviews'        => Interview::whereIn('status', ['scheduled', 'confirmed'])->count(),
             'notifications'     => $unreadNotifs,
         ]);

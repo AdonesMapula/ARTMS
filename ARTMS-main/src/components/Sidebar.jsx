@@ -312,8 +312,10 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
 
       if (lowerTo.includes("manpower") || lowerLabel.includes("manpower") || lowerLabel.includes("prf")) {
         if (counts.manpower_requests !== null) badgeNum += counts.manpower_requests;
-      } else if (lowerTo.includes("job") || lowerLabel.includes("job")) {
+      } else if (lowerTo.includes("job-library") || lowerLabel.includes("job library")) {
         if (counts.job_library !== null && counts.job_library !== undefined) badgeNum += counts.job_library;
+      } else if (lowerTo.includes("job-posting") || lowerLabel.includes("job posting")) {
+        if (counts.job_postings !== null && counts.job_postings !== undefined) badgeNum += counts.job_postings;
       } else if (lowerTo.includes("applicant") || lowerLabel.includes("applicant")) {
         if (counts.applicants !== null) badgeNum += counts.applicants;
       } else if (lowerTo.includes("notification") || lowerLabel.includes("notification")) {
