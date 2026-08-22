@@ -409,8 +409,11 @@ class PermissionController extends Controller
     public function syncDefaultPermissions(): JsonResponse
     {
         try {
-            DB::beginTransaction();
-            \Artisan::call('db:seed', ['--class' => 'PermissionSeeder']);
+            // Run the permission seeder
+            \Artisan::call('db:seed', [
+                '--class' => 'PermissionSeeder',
+                '--force' => true,
+            ]);
             DB::commit();
 
             // Invalidate all caches

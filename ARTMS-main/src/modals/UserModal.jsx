@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, Mail, Lock, Shield, Building2, Plus, Check, KeyRound, Copy, Eye, EyeOff, ShieldCheck, AlertTriangle } from "lucide-react";
+import { User, Mail, Lock, Shield, Building2, Plus, Check, KeyRound, Copy, Eye, EyeOff, ShieldCheck, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -34,6 +34,7 @@ export default function UserModal({
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [emailStatus, setEmailStatus] = useState("empty");
   
   // Post-creation temporary password display state for HR
   const [createdPasswordData, setCreatedPasswordData] = useState(null);
@@ -76,6 +77,7 @@ export default function UserModal({
         });
       }
       setErrors({});
+      setEmailStatus("empty");
     }
   }, [open, editUser]);
 
@@ -354,10 +356,46 @@ export default function UserModal({
             <Input
               type="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm({ ...form, email: val });
+                
+                if (!val) {
+                  setEmailStatus("empty");
+                } else {
+                  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                  setEmailStatus(emailRegex.test(val) ? "valid" : "invalid");
+                }
+                
+                // Clear errors on typing
+                if (errors.email) {
+                  setErrors(prev => ({ ...prev, email: null }));
+                }
+              }}
               placeholder="user@example.com"
               error={errors.email?.[0]}
+              inputClassName={
+                emailStatus === 'valid'
+                  ? "!border-emerald-400 focus:!border-emerald-500 focus:!ring-emerald-200"
+                  : emailStatus === 'invalid'
+                  ? "!border-rose-400 focus:!border-rose-500 focus:!ring-rose-200 text-rose-600"
+                  : ""
+              }
             />
+            <div className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${emailStatus === 'empty' && !errors.email ? 'h-0 opacity-0' : 'h-6 opacity-100'}`}>
+              {emailStatus === 'valid' && !errors.email && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 transition-all">
+                  <CheckCircle2 size={14} className="animate-in zoom-in" /> 
+                  <span className="animate-in fade-in slide-in-from-left-2 duration-300">Valid email format</span>
+                </div>
+              )}
+              {emailStatus === 'invalid' && !errors.email && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-500 transition-all">
+                  <AlertCircle size={14} className="animate-pulse" /> 
+                  <span className="animate-in fade-in slide-in-from-left-2 duration-300">Invalid email format</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Password Notice / Section */}

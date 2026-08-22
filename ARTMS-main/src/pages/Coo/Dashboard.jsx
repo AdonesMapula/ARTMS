@@ -95,6 +95,12 @@ export default function CooDashboard() {
   const monthlyTrends = stats?.monthly_trends ?? [];
   const recentPending = stats?.recent_pending ?? [];
 
+  // Job Library stats
+  const totalJobLibrary = stats?.total_job_library ?? 0;
+  const pendingJobLibrary = stats?.pending_job_library ?? 0;
+  const approvedJobLibrary = stats?.approved_job_library ?? 0;
+  const rejectedJobLibrary = stats?.rejected_job_library ?? 0;
+
   return (
     <div className="space-y-6 pb-12">
       {/* ── STANDARD SYSTEM HEADER ─────────────────────────────────────────────── */}
@@ -123,6 +129,7 @@ export default function CooDashboard() {
 
       {/* ── TOP KPI GRID (4 CARDS) ────────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* PRF Stats row */}
         <KPIBox
           title="Total Requisition Forms"
           value={totalRequests}
@@ -133,7 +140,7 @@ export default function CooDashboard() {
           subtitle="Cumulative PRFs submitted"
         />
         <KPIBox
-          title="Pending COO Approval"
+          title="Pending PRF Approval"
           value={pendingRequests}
           trend={pendingRequests > 0 ? `${pendingRequests} Action Required` : "All Clear"}
           trendPositive={pendingRequests === 0}
@@ -151,13 +158,51 @@ export default function CooDashboard() {
           subtitle="Greenlit for recruitment"
         />
         <KPIBox
-          title="Rejected / Declined"
+          title="Rejected / Declined PRFs"
           value={rejectedRequests}
           trend={`${totalRequests > 0 ? Math.round((rejectedRequests / totalRequests) * 100) : 0}% Rejection Rate`}
           trendPositive={false}
           icon={<XCircle size={22} />}
           accentColor="indigo"
           subtitle="Returned or rejected PRFs"
+        />
+        
+        {/* Job Library Stats row */}
+        <KPIBox
+          title="Total Job Library"
+          value={totalJobLibrary}
+          trend="Realtime Tracking"
+          trendPositive={true}
+          icon={<Building2 size={22} />}
+          accentColor="navy"
+          subtitle="Total Job Profiles"
+        />
+        <KPIBox
+          title="Pending Job Library"
+          value={pendingJobLibrary}
+          trend={pendingJobLibrary > 0 ? `${pendingJobLibrary} Review Needed` : "All Clear"}
+          trendPositive={pendingJobLibrary === 0}
+          icon={<AlertTriangle size={22} />}
+          accentColor="orange"
+          subtitle="Awaiting job profile approval"
+        />
+        <KPIBox
+          title="Approved Job Profiles"
+          value={approvedJobLibrary}
+          trend={`${totalJobLibrary > 0 ? Math.round((approvedJobLibrary / totalJobLibrary) * 100) : 100}% Approval Rate`}
+          trendPositive={true}
+          icon={<ShieldCheck size={22} />}
+          accentColor="teal"
+          subtitle="Active & verified jobs"
+        />
+        <KPIBox
+          title="Rejected Job Profiles"
+          value={rejectedJobLibrary}
+          trend={`${totalJobLibrary > 0 ? Math.round((rejectedJobLibrary / totalJobLibrary) * 100) : 0}% Rejection Rate`}
+          trendPositive={false}
+          icon={<ShieldAlert size={22} />}
+          accentColor="indigo"
+          subtitle="Returned for revision"
         />
       </div>
 

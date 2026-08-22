@@ -18,6 +18,11 @@ class GeminiService
     ];
 
     /**
+     * API version to use for Gemini.
+     */
+    protected static string $apiVersion = 'v1beta';
+
+    /**
      * Maximum requests per minute per API key at the service level (Free-tier safe boundary).
      */
     protected static int $maxRequestsPerMinutePerKey = 14;
@@ -104,7 +109,10 @@ class GeminiService
                 try {
                     self::recordKeyUsage($apiKey);
 
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+                    $url = "https://generativelanguage.googleapis.com/" . self::$apiVersion . "/models/{$model}:generateContent?key={$apiKey}";
+
+                    // Thinking models need higher token budgets
+                    $effectiveMaxTokens = max($maxTokens, 4096);
 
                     $payload = [
                         'contents' => [
@@ -117,7 +125,7 @@ class GeminiService
                         ],
                         'generationConfig' => [
                             'temperature'     => $temperature,
-                            'maxOutputTokens' => $maxTokens,
+                            'maxOutputTokens' => $effectiveMaxTokens,
                             'responseMimeType' => 'application/json',
                         ],
                     ];
@@ -139,7 +147,8 @@ class GeminiService
                         ->post($url, $payload);
 
                     if ($response->successful()) {
-                        $rawText = $response->json('candidates.0.content.parts.0.text');
+                        // Extract text from parts, skipping thoughtSignature parts (thinking models)
+                        $rawText = self::extractTextFromResponse($response->json());
 
                         if (! empty($rawText)) {
                             // Strip markdown code fences if model returned them despite JSON mode
@@ -210,7 +219,10 @@ class GeminiService
                 try {
                     self::recordKeyUsage($apiKey);
 
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+                    $url = "https://generativelanguage.googleapis.com/" . self::$apiVersion . "/models/{$model}:generateContent?key={$apiKey}";
+
+                    // Thinking models need higher token budgets
+                    $effectiveMaxTokens = max($maxTokens, 4096);
 
                     $payload = [
                         'contents' => [
@@ -223,7 +235,7 @@ class GeminiService
                         ],
                         'generationConfig' => [
                             'temperature'     => $temperature,
-                            'maxOutputTokens' => $maxTokens,
+                            'maxOutputTokens' => $effectiveMaxTokens,
                         ],
                     ];
 
@@ -244,7 +256,7 @@ class GeminiService
                         ->post($url, $payload);
 
                     if ($response->successful()) {
-                        $rawText = $response->json('candidates.0.content.parts.0.text');
+                        $rawText = self::extractTextFromResponse($response->json());
                         if (! empty($rawText)) {
                             return trim($rawText);
                         }
@@ -267,5 +279,33 @@ class GeminiService
 
         throw new \Exception("Gemini text generation failed across all keys and models. Last error: {$lastError}");
     }
-}
 
+    /**
+     * Extract the actual text content from a Gemini response, skipping
+     * thoughtSignature parts that thinking models (e.g. gemini-3.6-flash) include.
+     */
+    protected static function extractTextFromResponse(?array $responseData): ?string
+    {
+        if (empty($responseData)) {
+            return null;
+        }
+
+        $parts = $responseData['candidates'][0]['content']['parts'] ?? [];
+
+        // Find the part that has a 'text' key but NOT a 'thoughtSignature' or 'thought' key
+        $textParts = [];
+        foreach ($parts as $part) {
+            if (isset($part['text']) && !isset($part['thought'])) {
+                $textParts[] = $part['text'];
+            }
+        }
+
+        // Return the last non-thought text part (the actual response)
+        if (!empty($textParts)) {
+            return end($textParts);
+        }
+
+        // Fallback: just grab any text from parts[0]
+        return $parts[0]['text'] ?? null;
+    }
+}

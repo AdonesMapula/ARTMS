@@ -366,12 +366,24 @@ EOT;
         foreach (['qualifications', 'responsibilities'] as $field) {
             if (!empty($data[$field]) && is_array($data[$field])) {
                 foreach ($data[$field] as $i => &$block) {
+                    // If block is a string instead of an array, wrap it
+                    if (is_string($block)) {
+                        $block = ['title' => $block, 'details' => []];
+                    }
+
                     if (!isset($block['id'])) {
                         $block['id'] = intval(microtime(true) * 1000) + $i;
                     }
                     if (!empty($block['details']) && is_array($block['details'])) {
                         foreach ($block['details'] as $j => &$detail) {
-                            if (!isset($detail['id'])) {
+                            // AI returns details as plain strings like ["Detail 1", "Detail 2"]
+                            // Frontend expects objects like [{id: 1, value: "Detail 1"}]
+                            if (is_string($detail)) {
+                                $detail = [
+                                    'id' => intval(microtime(true) * 1000) + $i * 100 + $j,
+                                    'value' => $detail,
+                                ];
+                            } elseif (is_array($detail) && !isset($detail['id'])) {
                                 $detail['id'] = intval(microtime(true) * 1000) + $i * 100 + $j;
                             }
                         }
