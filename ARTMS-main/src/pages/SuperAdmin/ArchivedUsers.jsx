@@ -43,6 +43,12 @@ export default function ArchivedUsers() {
   const [forceDeleteId, setForceDeleteId] = useState(null);
   const [forceDeleteUser, setForceDeleteUser] = useState(null);
 
+  // Multi-select bulk state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkRestoreConfirm, setBulkRestoreConfirm] = useState(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [slideOverOpen, setSlideOverOpen] = useState(false);
 
@@ -52,7 +58,10 @@ export default function ArchivedUsers() {
       .then((uRes) => {
         setUsers(uRes.data.data ?? uRes.data);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setSelectedIds([]);
+      });
   };
 
   useEffect(() => {
@@ -89,6 +98,58 @@ export default function ArchivedUsers() {
     }
   };
 
+  // Bulk actions
+  const handleToggleSelectAll = (e) => {
+    if (e.target.checked) {
+      const pageIds = paginated.map((u) => u.id);
+      setSelectedIds(Array.from(new Set([...selectedIds, ...pageIds])));
+    } else {
+      const pageIds = new Set(paginated.map((u) => u.id));
+      setSelectedIds(selectedIds.filter((id) => !pageIds.has(id)));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    e?.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await userService.bulkRestore(selectedIds);
+      toast.success("Users Restored", `Successfully restored ${selectedIds.length} user(s).`);
+      setBulkRestoreConfirm(false);
+      setSelectedIds([]);
+      load();
+    } catch (error) {
+      console.error("Bulk restore error:", error);
+      toast.error("Bulk Restore Failed", error.response?.data?.message || "Failed to restore selected users.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkForceDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await userService.bulkForceDelete(selectedIds);
+      toast.success("Users Permanently Deleted", `Successfully permanently deleted ${selectedIds.length} user(s).`);
+      setBulkDeleteConfirm(false);
+      setSelectedIds([]);
+      load();
+    } catch (error) {
+      console.error("Bulk force delete error:", error);
+      toast.error("Bulk Delete Failed", error.response?.data?.message || "Failed to permanently delete selected users.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   // Filter logic
   const filtered = users.filter((u) => {
     // Search filter
@@ -115,6 +176,8 @@ export default function ArchivedUsers() {
   const endIdx = startIdx + pageSize;
   const paginated = filtered.slice(startIdx, endIdx);
 
+  const isAllPageSelected = paginated.length > 0 && paginated.every((u) => selectedIds.includes(u.id));
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -127,10 +190,30 @@ export default function ArchivedUsers() {
             Archived Users
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            View and restore users that have been archived.
+            View, restore, or permanently delete users that have been archived.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <>
+              <Button
+                variant="primary"
+                onClick={() => setBulkRestoreConfirm(true)}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                <RefreshCcw size={15} />
+                Restore Selected ({selectedIds.length})
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => setBulkDeleteConfirm(true)}
+                className="gap-2 font-bold"
+              >
+                <Trash2 size={15} />
+                Delete Selected ({selectedIds.length})
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
@@ -182,6 +265,14 @@ export default function ArchivedUsers() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isAllPageSelected}
+                    onChange={handleToggleSelectAll}
+                    className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                  />
+                </TH>
                 <TH>Employee</TH>
                 <TH>Role</TH>
                 <TH>Department</TH>
@@ -192,6 +283,7 @@ export default function ArchivedUsers() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
+                    <TD className="w-10 text-center"><Skeleton className="h-4 w-4 rounded" /></TD>
                     <TD><Skeleton className="h-10 w-48 rounded-lg" /></TD>
                     <TD><Skeleton className="h-6 w-24 rounded-full" /></TD>
                     <TD><Skeleton className="h-6 w-32 rounded-lg" /></TD>
@@ -200,7 +292,7 @@ export default function ArchivedUsers() {
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-sm font-semibold text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-sm font-semibold text-slate-400">
                     <div className="flex flex-col items-center gap-2">
                       <div className="rounded-full bg-slate-50 p-3">
                         <UsersIcon size={24} className="text-slate-300" />
@@ -212,9 +304,18 @@ export default function ArchivedUsers() {
               ) : (
                 paginated.map((user) => {
                   const combinedName = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ") || user.name || "Unknown User";
-                  
+                  const isChecked = selectedIds.includes(user.id);
+
                   return (
-                    <tr key={user.id} className="transition-colors hover:bg-slate-50/80">
+                    <tr key={user.id} className={`transition-colors hover:bg-slate-50/80 ${isChecked ? 'bg-blue-50/40' : ''}`}>
+                      <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleSelectOne(user.id, e)}
+                          className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                        />
+                      </TD>
                       <TD>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600 shadow-sm border border-slate-200">
@@ -240,7 +341,7 @@ export default function ArchivedUsers() {
                       </TD>
                       <TD>
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-700">{user.department?.name || "N/A"}</span>
+                          <span className="text-sm font-bold text-slate-700">{user.department?.name || user.department?.department_name || "N/A"}</span>
                           {user.department && <span className="text-[10px] font-semibold text-slate-400">Dept ID: {user.department.id}</span>}
                         </div>
                       </TD>
@@ -291,6 +392,30 @@ export default function ArchivedUsers() {
           setRestoreId(null);
           setRestoreUser(null);
         }}
+      />
+
+      {/* Bulk Restore Confirm */}
+      <ConfirmDialog
+        open={bulkRestoreConfirm}
+        title="Restore Selected Users?"
+        description={`Are you sure you want to restore ${selectedIds.length} selected user account(s)? They will be moved back to the active user list and can log in normally.`}
+        confirmLabel={bulkActionLoading ? "Restoring..." : "Yes, Restore Selected"}
+        cancelLabel="Cancel"
+        tone="primary"
+        onConfirm={handleBulkRestore}
+        onClose={() => setBulkRestoreConfirm(false)}
+      />
+
+      {/* Bulk Force Delete Confirm */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Permanently Delete Selected Users?"
+        description={`Are you sure you want to permanently delete ${selectedIds.length} selected user account(s)? If they have associated system records, their personal data will be anonymized. This action CANNOT be undone.`}
+        confirmLabel={bulkActionLoading ? "Deleting..." : "Yes, Permanently Delete"}
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleBulkForceDelete}
+        onClose={() => setBulkDeleteConfirm(false)}
       />
 
       {/* Force Delete User Confirm */}

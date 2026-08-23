@@ -57,6 +57,11 @@ export default function Users() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteUser, setDeleteUser] = useState(null);
 
+  // Multi-select bulk state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkArchiveConfirm, setBulkArchiveConfirm] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   const load = () => {
     setLoading(true);
     Promise.all([
@@ -69,7 +74,10 @@ export default function Users() {
         setDepts(dRes.data.departments ?? dRes.data);
         setRoles(rRes.data.roles ?? rRes.data ?? []);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setSelectedIds([]);
+      });
   };
 
   useEffect(() => {
@@ -179,6 +187,41 @@ export default function Users() {
     }
   };
 
+  // Bulk actions
+  const handleToggleSelectAll = (e) => {
+    if (e.target.checked) {
+      const pageIds = paginated.map((u) => u.id);
+      setSelectedIds(Array.from(new Set([...selectedIds, ...pageIds])));
+    } else {
+      const pageIds = new Set(paginated.map((u) => u.id));
+      setSelectedIds(selectedIds.filter((id) => !pageIds.has(id)));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    e?.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await userService.bulkArchive(selectedIds);
+      toast.success("Users Archived", `Successfully archived ${selectedIds.length} user(s).`);
+      setBulkArchiveConfirm(false);
+      setSelectedIds([]);
+      load();
+    } catch (error) {
+      console.error("Bulk archive error:", error);
+      toast.error("Bulk Archive Failed", error.response?.data?.message || "Failed to archive selected users.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   // Filter logic
   const filtered = users.filter((u) => {
     // Search filter
@@ -232,7 +275,17 @@ export default function Users() {
             Manage user accounts, roles, and permissions across the system.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <Button
+              variant="danger"
+              onClick={() => setBulkArchiveConfirm(true)}
+              className="gap-2 font-bold"
+            >
+              <Trash2 size={15} />
+              Archive Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
@@ -383,6 +436,14 @@ export default function Users() {
               <Table>
                 <THead>
                   <tr>
+                    <TH className="w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={paginated.length > 0 && paginated.every((u) => selectedIds.includes(u.id))}
+                        onChange={handleToggleSelectAll}
+                        className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                      />
+                    </TH>
                     <TH>Name</TH>
                     <TH>Email</TH>
                     <TH>Role</TH>
@@ -394,9 +455,18 @@ export default function Users() {
                 <tbody>
                   {paginated.map((u) => {
                     const displayName = [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(" ") || u.name || "Unknown User";
-                    
+                    const isChecked = selectedIds.includes(u.id);
+
                     return (
-                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${isChecked ? 'bg-blue-50/40' : ''}`}>
+                        <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => handleToggleSelectOne(u.id, e)}
+                            className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                          />
+                        </TD>
                         <TD className="font-semibold text-slate-900">
                           <div className="flex items-center gap-3">
                             {u.avatar ? (
@@ -556,6 +626,18 @@ export default function Users() {
           setDeleteId(null);
           setDeleteUser(null);
         }}
+      />
+
+      {/* Bulk Archive Confirm */}
+      <ConfirmDialog
+        open={bulkArchiveConfirm}
+        title="Archive Selected Users?"
+        description={`Are you sure you want to move all ${selectedIds.length} selected user account(s) to the archive? You can restore them anytime from the Archived Users page.`}
+        confirmLabel={bulkActionLoading ? "Archiving..." : "Yes, Archive Selected"}
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleBulkArchive}
+        onClose={() => setBulkArchiveConfirm(false)}
       />
     </div>
   );

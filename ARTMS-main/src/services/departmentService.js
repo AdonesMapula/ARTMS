@@ -6,6 +6,7 @@ const departmentService = {
   create: (data) => api.post('/departments', data),
   update: (id, data) => api.put(`/departments/${id}`, data),
   delete: (id) => api.delete(`/departments/${id}`),
+  bulkDelete: (ids) => api.post('/departments/bulk-delete', { ids }),
 };
 
 export default departmentService;

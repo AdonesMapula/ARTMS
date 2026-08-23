@@ -202,8 +202,7 @@ class UserController extends Controller
     }
     /**
      * DELETE /api/users/{id}/force
-     * Hard-deletes the user. If database constraints block deletion (e.g., they have manpower requests),
-     * it falls back to anonymizing their personal data while keeping the row to maintain referential integrity.
+     * Hard-deletes the user. If database constraints block deletion, falls back to anonymizing.
      */
     public function forceDeleteUser($id): JsonResponse
     {
@@ -214,26 +213,22 @@ class UserController extends Controller
         }
 
         try {
-            // Attempt an actual database row deletion
             $user->forceDelete();
             AuditLog::record('delete', 'user', "Permanently deleted user ID: {$id}", null, null, User::class, $id);
             return response()->json(['message' => 'User permanently deleted.']);
         } catch (\Illuminate\Database\QueryException $e) {
-            // 23000 is the SQLSTATE code for integrity constraint violations
             if ($e->getCode() == '23000') {
-                // Fallback to Anonymization
                 $user->update([
                     'first_name'  => 'Deleted',
                     'middle_name' => null,
                     'last_name'   => 'User',
                     'name'        => 'Deleted User',
-                    'email'       => 'deleted_' . \Illuminate\Support\Str::uuid() . '@example.com',
-                    'password'    => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+                    'email'       => 'deleted_' . Str::uuid() . '@example.com',
+                    'password'    => Hash::make(Str::random(32)),
                     'avatar'      => null,
                     'is_active'   => false,
                 ]);
 
-                // Ensure they are still soft deleted just in case
                 if (!$user->trashed()) {
                     $user->delete();
                 }
@@ -242,8 +237,115 @@ class UserController extends Controller
                 return response()->json(['message' => 'User anonymized permanently (data retained due to relations).']);
             }
 
-            // Re-throw if it's another error
             throw $e;
         }
+    }
+
+    /**
+     * POST /api/users/bulk-archive
+     */
+    public function bulkArchive(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $currentUserId = auth()->id();
+        $ids = array_values(array_filter($ids, fn ($id) => (int)$id !== (int)$currentUserId));
+
+        if (empty($ids)) {
+            return response()->json(['message' => 'No valid users to archive.'], 422);
+        }
+
+        $users = User::whereIn('id', $ids)->get();
+        $count = 0;
+        foreach ($users as $user) {
+            $user->delete();
+            AuditLog::record('delete', 'user', "Archived user: {$user->email}", null, null, User::class, $user->id);
+            $count++;
+        }
+
+        return response()->json([
+            'message' => "Successfully archived {$count} user(s).",
+            'count'   => $count,
+        ]);
+    }
+
+    /**
+     * POST /api/users/bulk-restore
+     */
+    public function bulkRestore(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $users = User::onlyTrashed()->whereIn('id', $ids)->get();
+        $count = 0;
+        foreach ($users as $user) {
+            $user->restore();
+            AuditLog::record('update', 'user', "Restored user: {$user->email}", null, $user->toArray(), User::class, $user->id);
+            $count++;
+        }
+
+        return response()->json([
+            'message' => "Successfully restored {$count} user(s).",
+            'count'   => $count,
+        ]);
+    }
+
+    /**
+     * POST /api/users/bulk-force-delete
+     */
+    public function bulkForceDelete(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $currentUserId = auth()->id();
+        $ids = array_values(array_filter($ids, fn ($id) => (int)$id !== (int)$currentUserId));
+
+        if (empty($ids)) {
+            return response()->json(['message' => 'No valid users to permanently delete.'], 422);
+        }
+
+        $count = 0;
+        foreach ($ids as $id) {
+            $user = User::withTrashed()->find($id);
+            if (!$user) continue;
+
+            try {
+                $user->forceDelete();
+                AuditLog::record('delete', 'user', "Permanently deleted user ID: {$id}", null, null, User::class, $id);
+                $count++;
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() == '23000') {
+                    $user->update([
+                        'first_name'  => 'Deleted',
+                        'middle_name' => null,
+                        'last_name'   => 'User',
+                        'name'        => 'Deleted User',
+                        'email'       => 'deleted_' . Str::uuid() . '@example.com',
+                        'password'    => Hash::make(Str::random(32)),
+                        'avatar'      => null,
+                        'is_active'   => false,
+                    ]);
+                    if (!$user->trashed()) {
+                        $user->delete();
+                    }
+                    AuditLog::record('delete', 'user', "Anonymized user ID: {$id} due to constraints", null, null, User::class, $id);
+                    $count++;
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Successfully permanently deleted {$count} user(s).",
+            'count'   => $count,
+        ]);
     }
 }

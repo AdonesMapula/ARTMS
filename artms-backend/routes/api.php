@@ -122,6 +122,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Users  (Super Admin only) ────────────────────────────────────────────
     Route::middleware('role:super_admin')->group(function () {
         Route::get('users/archived', [UserController::class, 'archived']);
+        Route::post('users/bulk-archive', [UserController::class, 'bulkArchive']);
+        Route::post('users/bulk-restore', [UserController::class, 'bulkRestore']);
+        Route::post('users/bulk-force-delete', [UserController::class, 'bulkForceDelete']);
         Route::post('users/{id}/restore', [UserController::class, 'restore']);
         Route::delete('users/{id}/force', [UserController::class, 'forceDeleteUser']);
         Route::apiResource('users', UserController::class);
@@ -149,6 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Departments  (Super Admin + HR Admin) ────────────────────────────────
     Route::middleware('role:super_admin,hr_admin')->group(function () {
+        Route::post('departments/bulk-delete', [DepartmentController::class, 'bulkDelete']);
         Route::apiResource('departments', DepartmentController::class);
     });
 

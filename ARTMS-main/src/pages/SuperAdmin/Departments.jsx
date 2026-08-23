@@ -31,12 +31,20 @@ export default function Departments() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteDept, setDeleteDept] = useState(null);
 
+  // Multi-select bulk state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   const load = () => {
     setLoading(true);
     departmentService
       .getAll()
       .then((r) => setDepts(r.data.departments ?? r.data))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setSelectedIds([]);
+      });
   };
 
   useEffect(() => {
@@ -78,6 +86,41 @@ export default function Departments() {
     }
   };
 
+  // Bulk actions
+  const handleToggleSelectAll = (e) => {
+    if (e.target.checked) {
+      const pageIds = paginated.map((d) => d.id);
+      setSelectedIds(Array.from(new Set([...selectedIds, ...pageIds])));
+    } else {
+      const pageIds = new Set(paginated.map((d) => d.id));
+      setSelectedIds(selectedIds.filter((id) => !pageIds.has(id)));
+    }
+  };
+
+  const handleToggleSelectOne = (id, e) => {
+    e?.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      const res = await departmentService.bulkDelete(selectedIds);
+      toast.success("Departments Deleted", res.data?.message || `Successfully deleted ${selectedIds.length} department(s).`);
+      setBulkDeleteConfirm(false);
+      setSelectedIds([]);
+      load();
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast.error("Bulk Delete Failed", error.response?.data?.message || "Failed to delete selected departments.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   // Filter logic
   const filtered = depts.filter((d) => {
     // Search filter
@@ -102,6 +145,8 @@ export default function Departments() {
   const endIdx = startIdx + pageSize;
   const paginated = filtered.slice(startIdx, endIdx);
 
+  const isAllPageSelected = paginated.length > 0 && paginated.every((d) => selectedIds.includes(d.id));
+
   // Statistics
   const stats = {
     total: depts.length,
@@ -125,7 +170,17 @@ export default function Departments() {
             Manage departments, track staff members, and monitor organizational structure.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedIds.length > 0 && (
+            <Button
+              variant="danger"
+              onClick={() => setBulkDeleteConfirm(true)}
+              className="gap-2 font-bold"
+            >
+              <Trash2 size={15} />
+              Delete Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
@@ -231,10 +286,21 @@ export default function Departments() {
       {/* Departments Grid */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle>
               Departments ({filtered.length} {filtered.length === 1 ? "department" : "departments"})
             </CardTitle>
+            {paginated.length > 0 && (
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+                <input
+                  type="checkbox"
+                  checked={isAllPageSelected}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                />
+                <span>Select All on Page ({paginated.length})</span>
+              </label>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-2">
@@ -257,108 +323,124 @@ export default function Departments() {
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {paginated.map((d) => (
-                  <Card
-                    key={d.id}
-                    className="border-blue-100 bg-gradient-to-br from-white to-blue-50/30 transition-all hover:shadow-lg hover:border-blue-300"
-                  >
-                    <CardContent className="p-5">
-                      {/* Header */}
-                      <div className="mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-extrabold text-[#111A62]">
-                            {d.department_name}
-                          </h3>
-                          {d.department_code && (
-                            <div className="mt-1 flex items-center gap-1.5">
-                              <Hash size={12} className="text-slate-400" />
-                              <Badge tone="default" className="text-xs">
-                                {d.department_code}
-                              </Badge>
+                {paginated.map((d) => {
+                  const isChecked = selectedIds.includes(d.id);
+
+                  return (
+                    <Card
+                      key={d.id}
+                      className={`border transition-all hover:shadow-lg ${
+                        isChecked
+                          ? "border-[#111A62] bg-blue-50/60 ring-2 ring-[#111A62]/20"
+                          : "border-blue-100 bg-gradient-to-br from-white to-blue-50/30 hover:border-blue-300"
+                      }`}
+                    >
+                      <CardContent className="p-5">
+                        {/* Header */}
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleToggleSelectOne(d.id, e)}
+                              className="mt-1 rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                            />
+                            <div>
+                              <h3 className="text-lg font-extrabold text-[#111A62]">
+                                {d.department_name}
+                              </h3>
+                              {d.department_code && (
+                                <div className="mt-1 flex items-center gap-1.5">
+                                  <Hash size={12} className="text-slate-400" />
+                                  <Badge tone="default" className="text-xs">
+                                    {d.department_code}
+                                  </Badge>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
+                          <Badge tone={d.is_active ? "success" : "default"} className="text-xs shrink-0">
+                            {d.is_active ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
-                        <Badge tone={d.is_active ? "success" : "default"} className="text-xs">
-                          {d.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
 
-                      {/* Stats */}
-                      <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Users size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Employee</p>
-                            <p className="text-sm font-extrabold text-slate-900">
-                              {d.employees_count || 0}
-                            </p>
+                        {/* Stats */}
+                        <div className="mb-4 grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Users size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Employee</p>
+                              <p className="text-sm font-extrabold text-slate-900">
+                                {d.employees_count || 0}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <Building2 size={16} className="text-slate-400" />
+                            <div>
+                              <p className="text-xs text-slate-500">Users</p>
+                              <p className="text-sm font-extrabold text-slate-900">
+                                {d.users_count || 0}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                          <Building2 size={16} className="text-slate-400" />
-                          <div>
-                            <p className="text-xs text-slate-500">Users</p>
-                            <p className="text-sm font-extrabold text-slate-900">
-                              {d.users_count || 0}
-                            </p>
+
+                        {/* Department Head */}
+                        <div className="mb-4 rounded-lg bg-blue-50/30 border border-blue-100 px-3 py-2">
+                          <div className="flex items-start gap-2">
+                            <UserCheck size={16} className="text-blue-500 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs text-blue-600 font-semibold">Department Head</p>
+                              {d.department_heads && d.department_heads.length > 0 ? (
+                                <div className="mt-1 space-y-1">
+                                  {d.department_heads.map((head) => (
+                                    <p key={head.id} className="text-sm font-medium text-slate-700">
+                                      {head.name}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-slate-400 italic">Not assigned</p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Department Head */}
-                      <div className="mb-4 rounded-lg bg-blue-50/30 border border-blue-100 px-3 py-2">
-                        <div className="flex items-start gap-2">
-                          <UserCheck size={16} className="text-blue-500 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-xs text-blue-600 font-semibold">Department Head</p>
-                            {d.department_heads && d.department_heads.length > 0 ? (
-                              <div className="mt-1 space-y-1">
-                                {d.department_heads.map((head) => (
-                                  <p key={head.id} className="text-sm font-medium text-slate-700">
-                                    {head.name}
-                                  </p>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-slate-400 italic">Not assigned</p>
-                            )}
-                          </div>
+                        {/* Description */}
+                        {d.description && (
+                          <p className="mb-4 line-clamp-2 text-xs text-slate-600">
+                            {d.description}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEdit(d)}
+                            className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                          >
+                            <Edit size={14} />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteId(d.id);
+                              setDeleteDept(d);
+                            }}
+                            className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
                         </div>
-                      </div>
-
-                      {/* Description */}
-                      {d.description && (
-                        <p className="mb-4 line-clamp-2 text-xs text-slate-600">
-                          {d.description}
-                        </p>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEdit(d)}
-                          className="flex-1 gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                        >
-                          <Edit size={14} />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDeleteId(d.id);
-                            setDeleteDept(d);
-                          }}
-                          className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100 hover:border-red-300"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
 
               {/* Pagination */}
@@ -402,6 +484,18 @@ export default function Departments() {
           setDeleteId(null);
           setDeleteDept(null);
         }}
+      />
+
+      {/* Bulk Delete Confirm */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="Delete Selected Departments?"
+        description={`Are you sure you want to permanently delete all ${selectedIds.length} selected department(s)? Note that departments with active employees will be skipped.`}
+        confirmLabel={bulkActionLoading ? "Deleting..." : "Yes, Delete Selected"}
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleBulkDelete}
+        onClose={() => setBulkDeleteConfirm(false)}
       />
     </div>
   );

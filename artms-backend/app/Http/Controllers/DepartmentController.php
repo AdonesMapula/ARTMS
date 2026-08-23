@@ -77,4 +77,38 @@ class DepartmentController extends Controller
 
         return response()->json(['message' => 'Department deleted.']);
     }
+
+    /**
+     * POST /api/departments/bulk-delete
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $ids = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $depts = Department::whereIn('id', $ids)->get();
+        $deletedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($depts as $dept) {
+            if ($dept->employees()->exists()) {
+                $skippedCount++;
+                continue;
+            }
+
+            AuditLog::record('delete', 'department', "Deleted department: {$dept->department_name}");
+            $id = $dept->id;
+            $dept->delete();
+            $this->departmentCache->invalidate($id);
+            $deletedCount++;
+        }
+
+        return response()->json([
+            'message' => "Successfully deleted {$deletedCount} department(s)" . ($skippedCount > 0 ? " ({$skippedCount} skipped due to active employees)." : "."),
+            'deleted_count' => $deletedCount,
+            'skipped_count' => $skippedCount,
+        ]);
+    }
 }
