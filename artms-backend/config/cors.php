@@ -5,19 +5,20 @@ return [
     |--------------------------------------------------------------------------
     | Laravel CORS Configuration
     |--------------------------------------------------------------------------
-    | Allow the React Vite frontend (localhost:5173) to communicate with
-    | this Laravel API.
+    | Allow the React Vite frontend (Vercel / localhost) to communicate with
+    | this Laravel API seamlessly with full preflight support.
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['*'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:5173'),
         'http://localhost:3000',
+        'http://localhost:5173',
         'http://localhost:5174',
-        'https://strategic-shifty-gauntlet.ngrok-free.dev','https://artms-orpin.vercel.app',
+        'https://artms-orpin.vercel.app',
         '*',
     ],
 
@@ -29,9 +30,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['*'],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
     'supports_credentials' => false,
 ];

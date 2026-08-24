@@ -3,9 +3,20 @@ import axios from 'axios';
 /**
  * Base Axios instance for all ARTMS API calls.
  * Reads the backend URL from .env — set VITE_API_URL in your .env file.
+ * Automatically guarantees the base URL always ends with `/api`.
  */
-const rawApiUrl = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
-export const API_BASE_URL = rawApiUrl.replace(/\/api\/api$/, '/api');
+const getBaseApiUrl = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+  if (!envUrl) {
+    return '/api';
+  }
+  if (envUrl.endsWith('/api')) {
+    return envUrl;
+  }
+  return `${envUrl}/api`;
+};
+
+export const API_BASE_URL = getBaseApiUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
