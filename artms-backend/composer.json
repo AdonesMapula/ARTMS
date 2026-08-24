@@ -14,6 +14,7 @@
         "openai-php/client": "^0.20.1",
         "phpoffice/phpspreadsheet": "*",
         "phpoffice/phpword": "*",
+        "resend/resend-laravel": "*",
         "smalot/pdfparser": "*",
         "thiagoalessio/tesseract_ocr": "^2.13"
     },

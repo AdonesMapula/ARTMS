@@ -27,61 +27,15 @@ class NotificationService
     }
 
     /**
-     * Notify an explicitly resolved collection of User recipients (both In-App DB + Asynchronous Email).
-     * Enforces recipient deduplication and idempotency to prevent duplicate notifications.
-     */
-    public static function notifyRecipients(
-        iterable $recipients,
-        string $title,
-        string $message,
-        string $link = '/',
-        string $category = 'alert',
-        ?string $entityType = null,
-        ?int $entityId = null
-    ): void {
-        $uniqueUsers = collect($recipients)
-            ->filter(fn ($u) => $u instanceof User && $u->is_active)
-            ->unique('id');
-
-        foreach ($uniqueUsers as $user) {
-            self::notifyUser($user, $title, $message, $link, $category, $entityType, $entityId);
-        }
-    }
-
-    /**
      * Notify a specific User (In-App Database Notification + Email).
      */
-    public static function notifyUser(
-        User $user,
-        string $title,
-        string $message,
-        string $link = '/',
-        string $category = 'alert',
-        ?string $entityType = null,
-        ?int $entityId = null
-    ): void {
-        if (! $user || ! $user->is_active) {
-            return;
-        }
-
-        // Idempotency: Check if an identical notification was created for this user in the last 15 seconds
-        $recentDuplicate = DB::table('notifications')
-            ->where('notifiable_id', $user->id)
-            ->where('notifiable_type', User::class)
-            ->where('created_at', '>=', now()->subSeconds(15))
-            ->where('data', 'like', '%"title":' . json_encode($title) . '%')
-            ->where('data', 'like', '%"message":' . json_encode($message) . '%')
-            ->exists();
-
-        if ($recentDuplicate) {
-            return;
-        }
-
+    public static function notifyUser(User $user, string $title, string $message, string $link = '/', string $category = 'alert'): void
+    {
         $uuid = (string) Str::uuid();
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $fullActionUrl = str_starts_with($link, 'http') ? $link : rtrim($frontendUrl, '/') . '/' . ltrim($link, '/');
 
-        // 1. Create persistent user-owned in-app notification (instant DB insert)
+        // 1. Create persistent in-app notification (instant DB insert)
         DB::table('notifications')->insert([
             'id'              => $uuid,
             'type'            => 'App\\Notifications\\SystemNotification',
@@ -93,16 +47,12 @@ class NotificationService
                 'message'         => $message,
                 'link'            => $link,
                 'category'        => $category,
-                'entity_type'     => $entityType,
-                'entity_id'       => $entityId,
                 'created_at'      => now()->toISOString(),
             ]),
             'read_at'         => null,
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
-
-        \Log::info("[Notification] Created for User #{$user->id} ({$user->email}): {$title}");
 
         // 2. Dispatch Email notification asynchronously (non-blocking)
         if ($user->email) {
@@ -118,12 +68,11 @@ class NotificationService
 
     /**
      * Notify all users with specified role(s) (In-App + Email).
-     * Reserved strictly for genuine global broadcast alerts.
      */
     public static function notifyRoles(array|string $roles, string $title, string $message, string $link = '/', string $category = 'alert'): void
     {
         $roleList = (array) $roles;
-        $users = User::whereIn('role', $roleList)->where('is_active', true)->get();
+        $users = User::whereIn('role', $roleList)->get();
 
         foreach ($users as $user) {
             self::notifyUser($user, $title, $message, $link, $category);

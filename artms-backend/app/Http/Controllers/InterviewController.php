@@ -7,7 +7,6 @@ use App\Models\AuditLog;
 use App\Models\Interview;
 use App\Models\InterviewTranscript;
 use App\Services\LiveKitService;
-use App\Services\NotificationRecipientResolver;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,17 +85,24 @@ class InterviewController extends Controller
             $interview->update(['invitation_sent' => true]);
         }
 
-        // Targeted notification to Assigned Interviewer and Department Head
-        $recipients = NotificationRecipientResolver::resolve('interview.scheduled', $interview, $request->user());
-        NotificationService::notifyRecipients(
-            $recipients,
+        // Notify HR & Interviewers
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
             'New Interview Scheduled',
             "{$stageLabel} session scheduled for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
             '/admin/interviews',
-            'interview',
-            'interview',
-            $interview->id
+            'interview'
         );
+
+        if ($interview->interviewer) {
+            NotificationService::notifyUser(
+                $interview->interviewer,
+                'Assigned Interview Session',
+                "You are assigned to conduct an interview for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
+                '/admin/interviews',
+                'interview'
+            );
+        }
 
         // Update applicant status
         $stageStatus = [
@@ -162,15 +168,12 @@ class InterviewController extends Controller
         ]);
 
         $applicantName = $interview->applicant ? "{$interview->applicant->first_name} {$interview->applicant->last_name}" : "Applicant";
-        $recipients = NotificationRecipientResolver::resolve('interview.scheduled', $interview);
-        NotificationService::notifyRecipients(
-            $recipients,
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
             'Interview Confirmed by Candidate',
             "Candidate {$applicantName} confirmed attendance for their interview session.",
             '/admin/interviews',
-            'interview',
-            'interview',
-            $interview->id
+            'interview'
         );
 
         if ($request->wantsJson() && ! $request->isMethod('get')) {

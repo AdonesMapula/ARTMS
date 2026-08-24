@@ -40,22 +40,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;
     const cleanPassword = typeof password === 'string' ? password.trim() : password;
-    const res = await authService.login(cleanEmail, cleanPassword);
-
-    if (res.requires_otp) {
-      return res; // { requires_otp: true, verification_id, email_hint, ... }
-    }
-
-    if (res.user) {
-      setUser(res.user);
-      return res.user;
-    }
-
-    return res;
-  }, []);
-
-  const verifyLoginOtp = useCallback(async (verificationId, otp) => {
-    const { user: loggedInUser } = await authService.verifyLoginOtp(verificationId, otp);
+    const { user: loggedInUser } = await authService.login(cleanEmail, cleanPassword);
     setUser(loggedInUser);
     return loggedInUser;
   }, []);
@@ -87,7 +72,7 @@ export function AuthProvider({ children }) {
   const role = user?.role || null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, verifyLoginOtp, logout, updateUser, isAuthenticated, role }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isAuthenticated, role }}>
       {children}
     </AuthContext.Provider>
   );

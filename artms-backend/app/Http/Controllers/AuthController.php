@@ -6,7 +6,6 @@ use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\AuditLog;
-use App\Models\AuthenticationOtp;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,39 +17,7 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     /**
-     * Determine whether the given user requires an email OTP before completing login.
-     * Super Admin bypasses OTP for direct login.
-     */
-    protected function requiresLoginOtp(User $user): bool
-    {
-        return ! $user->isSuperAdmin();
-    }
-
-    /**
-     * Helper to mask an email address for safe frontend presentation (e.g., j***e@domain.com)
-     */
-    protected function maskEmail(string $email): string
-    {
-        $parts = explode('@', $email);
-        if (count($parts) !== 2) {
-            return $email;
-        }
-
-        $username = $parts[0];
-        $domain = $parts[1];
-
-        $len = strlen($username);
-        if ($len <= 2) {
-            $maskedUser = substr($username, 0, 1) . '***';
-        } else {
-            $maskedUser = substr($username, 0, 1) . '***' . substr($username, -1);
-        }
-
-        return $maskedUser . '@' . $domain;
-    }
-
-    /**
-     * POST /api/auth/login or /api/login
+     * POST /api/login
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -67,130 +34,17 @@ class AuthController extends Controller
             return response()->json(['message' => 'Your account has been deactivated.'], 403);
         }
 
-        // ── 1. SUPER ADMIN DIRECT LOGIN (NO OTP REQUIRED) ──
-        if (! $this->requiresLoginOtp($user)) {
-            $user->update([
-                'last_login_at' => now(),
-                'last_login_ip' => $request->ip(),
-            ]);
-
-            // Revoke old tokens, issue new one
-            $user->tokens()->delete();
-            $token = $user->createToken('artms-token')->plainTextToken;
-
-            AuditLog::record('login', 'auth', "Super Admin {$user->email} logged in directly.");
-
-            return response()->json([
-                'message'      => 'Login successful.',
-                'requires_otp' => false,
-                'token'        => $token,
-                'user'         => [
-                    'id'            => $user->id,
-                    'name'          => $user->name,
-                    'email'         => $user->email,
-                    'avatar'        => $user->avatar,
-                    'role'          => $user->role,
-                    'department_id' => $user->department_id,
-                    'employee_id'   => $user->employee_id,
-                ],
-            ]);
-        }
-
-        // ── 2. NON-SUPER-ADMIN USERS (REQUIRE EMAIL OTP) ──
-        // Generate secure login verification OTP session
-        $authOtp = AuthenticationOtp::createForUser($user, 'login_verification', 10);
-
-        // Send OTP email asynchronously / safely
-        try {
-            Mail::send('emails.login_otp', ['otp' => $authOtp->otp_code, 'user' => $user], function ($mail) use ($user) {
-                $mail->to($user->email)
-                     ->subject('ARTMS — Login Verification Code');
-            });
-        } catch (\Throwable $e) {
-            \Log::error("Failed to dispatch login OTP email to {$user->email}: " . $e->getMessage());
-        }
-
-        AuditLog::record('login_otp_sent', 'auth', "Login OTP dispatched to {$user->email}");
-
-        return response()->json([
-            'requires_otp'    => true,
-            'message'         => 'A 6-digit verification code has been sent to your registered email address.',
-            'verification_id' => $authOtp->verification_id,
-            'email_hint'      => $this->maskEmail($user->email),
-            'expires_in'      => 600, // 10 minutes in seconds
-            'resend_cooldown' => 60,  // 60 seconds resend cooldown
-        ]);
-    }
-
-    /**
-     * POST /api/auth/verify-login-otp
-     * Validates 6-digit OTP and issues Sanctum token for non-super-admin users.
-     */
-    public function verifyLoginOtp(Request $request): JsonResponse
-    {
-        $request->validate([
-            'verification_id' => ['required', 'string'],
-            'otp'             => ['required', 'string'],
-        ]);
-
-        $authOtp = AuthenticationOtp::where('verification_id', $request->verification_id)
-            ->where('purpose', 'login_verification')
-            ->first();
-
-        if (! $authOtp) {
-            return response()->json(['message' => 'Invalid or expired verification session.'], 404);
-        }
-
-        if ($authOtp->used_at !== null) {
-            return response()->json(['message' => 'This verification session has already been used. Please log in again.'], 422);
-        }
-
-        if ($authOtp->isExpired()) {
-            return response()->json(['message' => 'Verification code has expired. Please request a new code.'], 422);
-        }
-
-        if ($authOtp->attempts >= 5) {
-            return response()->json(['message' => 'Maximum verification attempts exceeded. Please restart your login.'], 429);
-        }
-
-        $inputOtp = preg_replace('/\D/', '', (string) $request->otp);
-
-        if (! $authOtp->isValid($inputOtp)) {
-            $attempts = $authOtp->recordFailedAttempt();
-            $remaining = max(0, 5 - $attempts);
-
-            AuditLog::record('login_otp_failed', 'auth', "Failed login OTP attempt for user ID {$authOtp->user_id}. Remaining: {$remaining}");
-
-            if ($remaining === 0) {
-                return response()->json(['message' => 'Maximum attempts exceeded. Verification session locked.'], 422);
-            }
-
-            return response()->json([
-                'message'            => "Invalid verification code. {$remaining} attempt(s) remaining.",
-                'attempts_remaining' => $remaining,
-            ], 422);
-        }
-
-        // Mark OTP used
-        $authOtp->markUsed();
-
-        $user = $authOtp->user;
-
-        if (! $user || ! $user->is_active) {
-            return response()->json(['message' => 'Account is inactive or not found.'], 403);
-        }
-
-        // Update login metadata
+        // Update last login info
         $user->update([
             'last_login_at' => now(),
             'last_login_ip' => $request->ip(),
         ]);
 
-        // Revoke prior tokens and issue fresh Sanctum token
+        // Revoke old tokens, issue new one
         $user->tokens()->delete();
         $token = $user->createToken('artms-token')->plainTextToken;
 
-        AuditLog::record('login', 'auth', "User {$user->email} successfully verified login OTP.");
+        AuditLog::record('login', 'auth', "User {$user->email} logged in.");
 
         return response()->json([
             'message' => 'Login successful.',
@@ -204,68 +58,6 @@ class AuthController extends Controller
                 'department_id' => $user->department_id,
                 'employee_id'   => $user->employee_id,
             ],
-        ]);
-    }
-
-    /**
-     * POST /api/auth/resend-login-otp
-     */
-    public function resendLoginOtp(Request $request): JsonResponse
-    {
-        $request->validate([
-            'verification_id' => ['required', 'string'],
-        ]);
-
-        $authOtp = AuthenticationOtp::where('verification_id', $request->verification_id)
-            ->where('purpose', 'login_verification')
-            ->first();
-
-        if (! $authOtp) {
-            return response()->json(['message' => 'Invalid or expired verification session.'], 404);
-        }
-
-        if ($authOtp->used_at !== null) {
-            return response()->json(['message' => 'This verification code has already been used. Please log in again.'], 422);
-        }
-
-        if (! $authOtp->canResend()) {
-            $waitSeconds = max(1, (int) now()->diffInSeconds($authOtp->resend_available_at, false));
-            return response()->json([
-                'message'         => "Please wait {$waitSeconds} seconds before requesting a new code.",
-                'seconds_to_wait' => $waitSeconds,
-            ], 429);
-        }
-
-        if ($authOtp->resend_count >= 5) {
-            return response()->json(['message' => 'Maximum resend limit reached. Please restart your login.'], 429);
-        }
-
-        $user = $authOtp->user;
-        if (! $user || ! $user->is_active) {
-            return response()->json(['message' => 'Account is inactive or not found.'], 403);
-        }
-
-        // Invalidate the old OTP session and generate a new one
-        $authOtp->update(['used_at' => now()]);
-        $newOtp = AuthenticationOtp::createForUser($user, 'login_verification', 10);
-        $newOtp->update(['resend_count' => $authOtp->resend_count + 1]);
-
-        try {
-            Mail::send('emails.login_otp', ['otp' => $newOtp->otp_code, 'user' => $user], function ($mail) use ($user) {
-                $mail->to($user->email)
-                     ->subject('ARTMS — Login Verification Code');
-            });
-        } catch (\Throwable $e) {
-            \Log::error("Failed to resend login OTP email to {$user->email}: " . $e->getMessage());
-        }
-
-        AuditLog::record('login_otp_resend', 'auth', "Login OTP resent to {$user->email}");
-
-        return response()->json([
-            'message'         => 'A new verification code has been sent to your email.',
-            'verification_id' => $newOtp->verification_id,
-            'expires_in'      => 600,
-            'resend_cooldown' => 60,
         ]);
     }
 
@@ -292,30 +84,23 @@ class AuthController extends Controller
 
     /**
      * POST /api/forgot-password
-     * Sends an OTP to the user's email for password reset.
+     * Sends an OTP to the user's email.
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         $user = User::where('email', $request->email)->firstOrFail();
 
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $user->update([
             'otp_code'       => $otp,
             'otp_expires_at' => now()->addMinutes((int) config('auth.otp_expires_minutes', 10)),
         ]);
 
-        // Also track in authentication_otps table for auditing
-        AuthenticationOtp::createForUser($user, 'password_reset', (int) config('auth.otp_expires_minutes', 10));
-
         // Send OTP email
-        try {
-            Mail::send('emails.otp', ['otp' => $otp, 'user' => $user], function ($mail) use ($user) {
-                $mail->to($user->email)
-                     ->subject('ARTMS — Your Password Reset OTP');
-            });
-        } catch (\Throwable $e) {
-            \Log::error("Failed to send password reset OTP email to {$user->email}: " . $e->getMessage());
-        }
+        Mail::send('emails.otp', ['otp' => $otp, 'user' => $user], function ($mail) use ($user) {
+            $mail->to($user->email)
+                 ->subject('ARTMS — Your Password Reset OTP');
+        });
 
         return response()->json(['message' => 'OTP sent to your email.']);
     }
