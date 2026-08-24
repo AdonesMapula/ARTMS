@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\JobLibrary;
+use App\Services\NotificationRecipientResolver;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -75,13 +76,16 @@ class JobLibraryController extends Controller
         $job = JobLibrary::create($data);
         AuditLog::record('create', 'job_library', "Created job: {$job->job_title}");
 
-        // Dispatch notifications to COO & SuperAdmin
-        NotificationService::notifyRoles(
-            ['coo', 'super_admin'],
+        // Dispatch targeted notifications to COO
+        $recipients = NotificationRecipientResolver::resolve('job_library.submitted', $job, $request->user());
+        NotificationService::notifyRecipients(
+            $recipients,
             'Job Template Approval Needed',
             "New job template '{$job->job_title}' is pending approval.",
             '/coo/job-library-approvals',
-            'request'
+            'request',
+            'job_library',
+            $job->id
         );
 
         return response()->json(['message' => 'Job created. Awaiting COO approval.', 'job' => $job], 201);
@@ -121,12 +125,15 @@ class JobLibraryController extends Controller
         $jobLibrary->update($data);
 
         if ($wasNeedsRevision) {
-            NotificationService::notifyRoles(
-                ['coo', 'super_admin'],
+            $recipients = NotificationRecipientResolver::resolve('job_library.resubmitted', $jobLibrary, $request->user());
+            NotificationService::notifyRecipients(
+                $recipients,
                 'Revised Job Template Resubmitted',
                 "Job template '{$jobLibrary->job_title}' was revised by HR and resubmitted for COO approval.",
                 '/coo/job-library-approvals',
-                'request'
+                'request',
+                'job_library',
+                $jobLibrary->id
             );
         }
 
@@ -217,10 +224,21 @@ class JobLibraryController extends Controller
             ? "Job template '{$jobLibrary->job_title}' requires REVISION per COO comments.{$remarksMsg}"
             : "Job template '{$jobLibrary->job_title}' was {$statusText} by COO.";
 
-        if ($jobLibrary->creator) {
-            NotificationService::notifyUser($jobLibrary->creator, $title, $msg, '/admin/job-library', 'alert');
-        }
-        NotificationService::notifyRoles(['hr_admin', 'super_admin'], $title, $msg, '/admin/job-library', 'alert');
+        $event = match ($finalStatus) {
+            'approved' => 'job_library.approved',
+            'rejected' => 'job_library.rejected',
+            default    => 'job_library.revised',
+        };
+        $recipients = NotificationRecipientResolver::resolve($event, $jobLibrary, $request->user());
+        NotificationService::notifyRecipients(
+            $recipients,
+            $title,
+            $msg,
+            '/admin/job-library',
+            'alert',
+            'job_library',
+            $jobLibrary->id
+        );
 
         return response()->json(['message' => "Job entry marked as {$finalStatus}.", 'job' => $jobLibrary->fresh()]);
     }

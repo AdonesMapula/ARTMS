@@ -17,6 +17,7 @@ import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
 import Skeleton from "../../components/ui/Skeleton";
 import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
+import JobPostingEditPanel from "../../components/job/JobPostingEditPanel";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import api from "../../services/api";

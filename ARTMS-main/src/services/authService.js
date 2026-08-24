@@ -2,19 +2,48 @@ import api from './api';
 
 const authService = {
   /**
-   * Login — returns { token, user }
+   * Login — returns { token, user } if direct login (Super Admin)
+   * or { requires_otp: true, verification_id, email_hint, ... } if non-super-admin
    */
   login: async (email, password) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;
     const cleanPassword = typeof password === 'string' ? password.trim() : password;
     const response = await api.post('/auth/login', { email: cleanEmail, password: cleanPassword });
+    const data = response.data;
+
+    // If direct login (Super Admin), persist token immediately
+    if (data.token && data.user) {
+      localStorage.setItem('artms_token', data.token);
+      localStorage.setItem('artms_user', JSON.stringify(data.user));
+    }
+
+    return data;
+  },
+
+  /**
+   * Verify login OTP for non-super-admin users
+   */
+  verifyLoginOtp: async (verification_id, otp) => {
+    const cleanOtp = typeof otp === 'string' ? otp.trim() : otp;
+    const response = await api.post('/auth/verify-login-otp', {
+      verification_id,
+      otp: cleanOtp,
+    });
     const { token, user } = response.data;
 
-    // Persist token and user info
+    // Persist token and user upon successful OTP verification
     localStorage.setItem('artms_token', token);
     localStorage.setItem('artms_user', JSON.stringify(user));
 
     return { token, user };
+  },
+
+  /**
+   * Resend login OTP
+   */
+  resendLoginOtp: async (verification_id) => {
+    const response = await api.post('/auth/resend-login-otp', { verification_id });
+    return response.data;
   },
 
   /**
@@ -47,7 +76,7 @@ const authService = {
   },
 
   /**
-   * Verify OTP code
+   * Verify OTP code (password reset)
    */
   verifyOtp: async (email, otp) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;

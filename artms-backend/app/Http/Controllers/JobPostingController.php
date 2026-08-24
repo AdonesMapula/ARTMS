@@ -7,6 +7,8 @@ use App\Models\JobPosting;
 use App\Services\Cache\BootCacheService;
 use App\Services\Cache\CacheKeyService;
 use App\Services\Cache\CacheService;
+use App\Services\NotificationRecipientResolver;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -292,21 +294,26 @@ class JobPostingController extends Controller
         $position = $jobPosting->job_title;
         $remarksMsg = $remarks ? " Remarks: {$remarks}" : "";
 
+        $recipients = NotificationRecipientResolver::resolve('job_posting.published', $jobPosting, $request->user());
         if ($finalStatus === 'revised') {
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            NotificationService::notifyRecipients(
+                $recipients,
                 "Job Posting Marked for Revision",
                 "Job posting for '{$position}' requires REVISION per COO comments.{$remarksMsg} Please edit and resubmit.",
                 '/admin/job-posting',
-                'alert'
+                'alert',
+                'job_posting',
+                $jobPosting->id
             );
         } elseif ($finalStatus === 'approved') {
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            NotificationService::notifyRecipients(
+                $recipients,
                 "Job Posting Approved by COO",
                 "Job posting for '{$position}' was APPROVED by COO and is now live.",
                 '/admin/job-posting',
-                'alert'
+                'alert',
+                'job_posting',
+                $jobPosting->id
             );
         }
 

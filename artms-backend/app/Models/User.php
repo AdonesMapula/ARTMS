@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class);
     }
 
+    public function authenticationOtps()
+    {
+        return $this->hasMany(AuthenticationOtp::class);
+    }
+
     // ── Role Helpers ───────────────────────────────
 
     public function isSuperAdmin(): bool
