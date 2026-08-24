@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -12,3 +13,7 @@ Route::get('/interview/{id}/room', function ($id) {
     return redirect()->away("{$frontendUrl}/interview/{$id}/room");
 });
 
+// Direct Web Diagnostic SMTP Test Endpoints
+Route::match(['get', 'post'], '/test-email', [NotificationController::class, 'testEmail']);
+Route::match(['get', 'post'], '/api/test-email', [NotificationController::class, 'testEmail']);
+Route::match(['get', 'post'], '/api/public/test-email', [NotificationController::class, 'testEmail']);

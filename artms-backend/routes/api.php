@@ -64,6 +64,7 @@ Route::prefix('public')->group(function () {
     Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
     Route::post('interviews/{interview}/end-session', [InterviewController::class, 'endSession']); // applicant end session
     Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [InterviewController::class, 'confirm']); // applicant confirm interview
+    Route::match(['get', 'post'], 'test-email', [NotificationController::class, 'testEmail']); // diagnostic SMTP tester
 });
 
 // ── LiveKit Webhook (no Sanctum auth — signature validated inside controller) ──

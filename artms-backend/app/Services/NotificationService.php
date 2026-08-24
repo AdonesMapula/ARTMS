@@ -12,18 +12,18 @@ use Illuminate\Support\Str;
 class NotificationService
 {
     /**
-     * Dispatch email execution asynchronously after HTTP response is sent.
+     * Dispatch email execution safely across all environments (Serverless, Cloud, Containers).
+     * Executes inside a guarded try-catch to guarantee socket completion before response termination.
      */
     protected static function dispatchAsyncMail(callable $mailCallback): void
     {
-        if (function_exists('defer')) {
-            defer($mailCallback);
-        } else {
-            try {
-                $mailCallback();
-            } catch (\Throwable $e) {
-                \Log::error("Async mail execution failed: " . $e->getMessage());
-            }
+        try {
+            $mailCallback();
+        } catch (\Throwable $e) {
+            \Log::error("Email dispatch failed: " . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
     }
 

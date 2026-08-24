@@ -288,4 +288,127 @@ class NotificationController extends Controller
 
         return response()->json(['unread_count' => $count]);
     }
+
+    /**
+     * GET/POST /test-email or /api/public/test-email
+     * Diagnostic endpoint to verify SMTP delivery and configuration.
+     */
+    public function testEmail(Request $request)
+    {
+        $targetEmail = $request->input('email', $request->user()?->email ?? config('mail.from.address'));
+        $errorMsg = null;
+        $successMsg = null;
+
+        if ($request->isMethod('post') || $request->has('email') || $request->has('send')) {
+            if (! $targetEmail) {
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => 'Please provide a recipient email address.'], 422);
+                }
+                $errorMsg = 'Please provide a valid recipient email address.';
+            } else {
+                try {
+                    \Illuminate\Support\Facades\Mail::raw("ARTMS SMTP Diagnostic Test\nSent at: " . now()->toDateTimeString() . "\nMailer: " . config('mail.default') . "\nHost: " . config('mail.mailers.smtp.host') . ":" . config('mail.mailers.smtp.port'), function ($message) use ($targetEmail) {
+                        $message->to($targetEmail)
+                                ->subject('ARTMS Email Diagnostic Test — Delivery Confirmed');
+                    });
+
+                    $successMsg = "Test email successfully delivered to {$targetEmail} via SMTP!";
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => $successMsg,
+                            'mailer'  => config('mail.default'),
+                            'host'    => config('mail.mailers.smtp.host'),
+                            'port'    => config('mail.mailers.smtp.port'),
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    $errorMsg = 'SMTP Delivery Failed: ' . $e->getMessage();
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $errorMsg,
+                            'error'   => $e->getMessage(),
+                        ], 500);
+                    }
+                }
+            }
+        }
+
+        if ($request->wantsJson() && ! $request->has('html')) {
+            return response()->json([
+                'status'     => 'ready',
+                'mailer'     => config('mail.default'),
+                'host'       => config('mail.mailers.smtp.host'),
+                'port'       => config('mail.mailers.smtp.port'),
+                'encryption' => config('mail.mailers.smtp.encryption'),
+                'from'       => config('mail.from.address'),
+                'from_name'  => config('mail.from.name'),
+                'username'   => config('mail.mailers.smtp.username') ? substr(config('mail.mailers.smtp.username'), 0, 3) . '***@...' : 'Not configured',
+                'instructions' => 'Pass ?email=your_email@gmail.com to trigger a live test email.',
+            ]);
+        }
+
+        $mailer = config('mail.default');
+        $host = config('mail.mailers.smtp.host');
+        $port = config('mail.mailers.smtp.port');
+        $enc = config('mail.mailers.smtp.encryption');
+        $from = config('mail.from.address');
+        $name = config('mail.from.name');
+        $user = config('mail.mailers.smtp.username');
+
+        $statusHtml = '';
+        if ($successMsg) {
+            $statusHtml = "<div style='background:#dcfce7;border:1px solid #86efac;color:#166534;padding:16px;border-radius:12px;margin-bottom:24px;font-weight:600;'>✓ {$successMsg}</div>";
+        } elseif ($errorMsg) {
+            $statusHtml = "<div style='background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:16px;border-radius:12px;margin-bottom:24px;font-weight:600;'>✗ {$errorMsg}</div>";
+        }
+
+        return response("
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>ARTMS SMTP Diagnostic Tool</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }
+        .card { max-width: 640px; margin: 0 auto; background: #1e293b; border-radius: 20px; padding: 36px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h1 { font-size: 24px; font-weight: 800; color: #60a5fa; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+        td { padding: 10px 12px; border-bottom: 1px solid #334155; }
+        .label { color: #94a3b8; font-weight: 600; width: 35%; }
+        .val { color: #f8fafc; font-family: monospace; }
+        input[type='email'] { width: calc(100% - 24px); padding: 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: #fff; margin-bottom: 16px; font-size: 15px; }
+        button { width: 100%; background: #2563eb; color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <div class='card'>
+        <h1>✉️ ARTMS SMTP Diagnostic Dashboard</h1>
+        <p style='color:#94a3b8;font-size:14px;margin-bottom:24px;'>Test and verify outbound SMTP mail delivery in production.</p>
+        
+        {$statusHtml}
+
+        <table>
+            <tr><td class='label'>Mailer Driver</td><td class='val'>{$mailer}</td></tr>
+            <tr><td class='label'>SMTP Host</td><td class='val'>{$host}</td></tr>
+            <tr><td class='label'>SMTP Port</td><td class='val'>{$port}</td></tr>
+            <tr><td class='label'>Encryption</td><td class='val'>{$enc}</td></tr>
+            <tr><td class='label'>Sender Address</td><td class='val'>{$from} ({$name})</td></tr>
+            <tr><td class='label'>SMTP Username</td><td class='val'>{$user}</td></tr>
+        </table>
+
+        <form method='GET' action=''>
+            <label style='display:block;margin-bottom:8px;font-size:14px;font-weight:600;color:#cbd5e1;'>Send Test Email To:</label>
+            <input type='email' name='email' value='{$targetEmail}' required placeholder='your_email@gmail.com' />
+            <input type='hidden' name='send' value='1' />
+            <button type='submit'>🚀 Send Live Test Email</button>
+        </form>
+    </div>
+</body>
+</html>
+        ", 200, ['Content-Type' => 'text/html']);
+    }
 }
