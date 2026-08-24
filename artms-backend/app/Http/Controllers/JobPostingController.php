@@ -293,20 +293,16 @@ class JobPostingController extends Controller
         $remarksMsg = $remarks ? " Remarks: {$remarks}" : "";
 
         if ($finalStatus === 'revised') {
-            NotificationService::notifyEvent(
-                'job_posting.approved',
-                $jobPosting,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
                 "Job Posting Marked for Revision",
                 "Job posting for '{$position}' requires REVISION per COO comments.{$remarksMsg} Please edit and resubmit.",
                 '/admin/job-posting',
                 'alert'
             );
         } elseif ($finalStatus === 'approved') {
-            NotificationService::notifyEvent(
-                'job_posting.approved',
-                $jobPosting,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
                 "Job Posting Approved by COO",
                 "Job posting for '{$position}' was APPROVED by COO and is now live.",
                 '/admin/job-posting',

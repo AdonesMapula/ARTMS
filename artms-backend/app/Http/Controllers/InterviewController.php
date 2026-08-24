@@ -85,16 +85,24 @@ class InterviewController extends Controller
             $interview->update(['invitation_sent' => true]);
         }
 
-        // Notify targeted assigned interviewer and recruiter
-        NotificationService::notifyEvent(
-            'interview.scheduled',
-            $interview,
-            $request->user(),
+        // Notify HR & Interviewers
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
             'New Interview Scheduled',
             "{$stageLabel} session scheduled for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
             '/admin/interviews',
             'interview'
         );
+
+        if ($interview->interviewer) {
+            NotificationService::notifyUser(
+                $interview->interviewer,
+                'Assigned Interview Session',
+                "You are assigned to conduct an interview for {$applicant?->first_name} {$applicant?->last_name} on {$formattedTime}.",
+                '/admin/interviews',
+                'interview'
+            );
+        }
 
         // Update applicant status
         $stageStatus = [
@@ -160,10 +168,8 @@ class InterviewController extends Controller
         ]);
 
         $applicantName = $interview->applicant ? "{$interview->applicant->first_name} {$interview->applicant->last_name}" : "Applicant";
-        NotificationService::notifyEvent(
-            'interview.scheduled',
-            $interview,
-            null,
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin', 'department_head'],
             'Interview Confirmed by Candidate',
             "Candidate {$applicantName} confirmed attendance for their interview session.",
             '/admin/interviews',

@@ -75,11 +75,9 @@ class JobLibraryController extends Controller
         $job = JobLibrary::create($data);
         AuditLog::record('create', 'job_library', "Created job: {$job->job_title}");
 
-        // Dispatch targeted notifications to COO & Creator
-        NotificationService::notifyEvent(
-            'job_library.created',
-            $job,
-            $request->user(),
+        // Dispatch notifications to COO & SuperAdmin
+        NotificationService::notifyRoles(
+            ['coo', 'super_admin'],
             'Job Template Approval Needed',
             "New job template '{$job->job_title}' is pending approval.",
             '/coo/job-library-approvals',
@@ -123,10 +121,8 @@ class JobLibraryController extends Controller
         $jobLibrary->update($data);
 
         if ($wasNeedsRevision) {
-            NotificationService::notifyEvent(
-                'job_library.created',
-                $jobLibrary,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['coo', 'super_admin'],
                 'Revised Job Template Resubmitted',
                 "Job template '{$jobLibrary->job_title}' was revised by HR and resubmitted for COO approval.",
                 '/coo/job-library-approvals',
@@ -221,7 +217,10 @@ class JobLibraryController extends Controller
             ? "Job template '{$jobLibrary->job_title}' requires REVISION per COO comments.{$remarksMsg}"
             : "Job template '{$jobLibrary->job_title}' was {$statusText} by COO.";
 
-        NotificationService::notifyEvent('job_library.' . $finalStatus, $jobLibrary, $request->user(), $title, $msg, '/admin/job-library', 'alert');
+        if ($jobLibrary->creator) {
+            NotificationService::notifyUser($jobLibrary->creator, $title, $msg, '/admin/job-library', 'alert');
+        }
+        NotificationService::notifyRoles(['hr_admin', 'super_admin'], $title, $msg, '/admin/job-library', 'alert');
 
         return response()->json(['message' => "Job entry marked as {$finalStatus}.", 'job' => $jobLibrary->fresh()]);
     }

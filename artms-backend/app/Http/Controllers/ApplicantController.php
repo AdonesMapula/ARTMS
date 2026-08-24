@@ -95,11 +95,9 @@ class ApplicantController extends Controller
 
         $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'Job Position';
 
-        // Notify targeted Recruiter / Hiring Manager (In-App + Email)
-        NotificationService::notifyEvent(
-            'applicant.applied',
-            $applicant,
-            null,
+        // Notify HR Admins & SuperAdmin (In-App + Email)
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
             'New Job Application Received',
             "{$applicant->first_name} {$applicant->last_name} applied for '{$jobTitle}' (Ref: {$appId}).",
             '/admin/applicants',
@@ -203,10 +201,8 @@ class ApplicantController extends Controller
                 );
             }
 
-            NotificationService::notifyEvent(
-                'applicant.status_updated',
-                $applicant,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
                 "Applicant Status Updated — {$readableStatus}",
                 "Applicant {$applicant->first_name} {$applicant->last_name} status was updated to {$readableStatus}.",
                 '/admin/applicants',
@@ -224,10 +220,8 @@ class ApplicantController extends Controller
                 'application'
             );
 
-            NotificationService::notifyEvent(
-                'applicant.shortlisted',
-                $applicant,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
                 "Applicant Shortlisted",
                 "Applicant {$applicant->first_name} {$applicant->last_name} has been shortlisted for '{$jobTitle}'.",
                 '/admin/applicants',
@@ -254,11 +248,9 @@ class ApplicantController extends Controller
         // Send email to applicant
         NotificationService::notifyEmail($applicant->email, 'Interview Invitation — ARTMS Recruitment', $msg, null, 'interview');
 
-        // Notify targeted recruiter
-        NotificationService::notifyEvent(
-            'applicant.status_updated',
-            $applicant,
-            $request->user(),
+        // Notify HR Admins
+        NotificationService::notifyRoles(
+            ['hr_admin', 'super_admin'],
             'Applicant Ready for Interview',
             "Applicant {$applicant->first_name} {$applicant->last_name} marked ready for interview ({$jobTitle}).",
             '/admin/applicants',
@@ -484,10 +476,8 @@ class ApplicantController extends Controller
                 'application'
             );
 
-            NotificationService::notifyEvent(
-                'applicant.hired',
-                $applicant,
-                $request->user(),
+            NotificationService::notifyRoles(
+                ['hr_admin', 'super_admin'],
                 "New Employee Hired — 201 File Created",
                 "{$applicant->first_name} {$applicant->last_name} was hired as {$jobTitle}. Employee Number: {$empId}.",
                 '/admin/employees',

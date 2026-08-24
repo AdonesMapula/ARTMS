@@ -2,52 +2,19 @@ import api from './api';
 
 const authService = {
   /**
-   * Login — returns { token, user } for Super Admin OR { requires_otp, verification_id, email_hint, expires_in } for other users
+   * Login — returns { token, user }
    */
   login: async (email, password) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;
     const cleanPassword = typeof password === 'string' ? password.trim() : password;
     const response = await api.post('/auth/login', { email: cleanEmail, password: cleanPassword });
-    const data = response.data;
-
-    // If direct login (e.g., Super Admin), persist token and user info immediately
-    if (data.token && data.user) {
-      localStorage.setItem('artms_token', data.token);
-      localStorage.setItem('artms_user', JSON.stringify(data.user));
-    }
-
-    return data;
-  },
-
-  /**
-   * Verify login OTP — returns { token, user } upon successful verification
-   */
-  verifyLoginOtp: async (verificationId, otp) => {
-    const cleanId = typeof verificationId === 'string' ? verificationId.trim() : verificationId;
-    const cleanOtp = typeof otp === 'string' ? otp.trim() : otp;
-    const response = await api.post('/auth/verify-login-otp', {
-      verification_id: cleanId,
-      otp: cleanOtp,
-    });
     const { token, user } = response.data;
 
-    if (token && user) {
-      localStorage.setItem('artms_token', token);
-      localStorage.setItem('artms_user', JSON.stringify(user));
-    }
+    // Persist token and user info
+    localStorage.setItem('artms_token', token);
+    localStorage.setItem('artms_user', JSON.stringify(user));
 
     return { token, user };
-  },
-
-  /**
-   * Resend login OTP code (subject to 60s cooldown)
-   */
-  resendLoginOtp: async (verificationId) => {
-    const cleanId = typeof verificationId === 'string' ? verificationId.trim() : verificationId;
-    const response = await api.post('/auth/resend-login-otp', {
-      verification_id: cleanId,
-    });
-    return response.data;
   },
 
   /**
@@ -80,7 +47,7 @@ const authService = {
   },
 
   /**
-   * Verify OTP code for password reset
+   * Verify OTP code
    */
   verifyOtp: async (email, otp) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;

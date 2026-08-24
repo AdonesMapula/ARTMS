@@ -12,99 +12,80 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import PermissionProtectedRoute from "../components/PermissionProtectedRoute";
 import GuestRoute from "../components/GuestRoute";
 
-// Safe lazy loader that automatically reloads the page if a stale chunk 404s after a deployment
-function safeLazy(importFn) {
-  return lazy(async () => {
-    try {
-      return await importFn();
-    } catch (error) {
-      const pageKey = "chunk_reload_" + window.location.pathname;
-      const isReloaded = sessionStorage.getItem(pageKey);
-      if (!isReloaded) {
-        sessionStorage.setItem(pageKey, "true");
-        window.location.reload();
-        return new Promise(() => {});
-      }
-      sessionStorage.removeItem(pageKey);
-      throw error;
-    }
-  });
-}
-
 // ── Lazy-Loaded Public Pages ────────────────────────────────────────────────
-const Home = safeLazy(() => import("../pages/Public/Home"));
-const About = safeLazy(() => import("../pages/Public/About"));
-const Jobs = safeLazy(() => import("../pages/Public/Jobs"));
-const JobDetails = safeLazy(() => import("../pages/Public/JobDetails"));
-const Apply = safeLazy(() => import("../pages/Public/Apply"));
-const Contact = safeLazy(() => import("../pages/Public/Contact"));
-const ApplicationGuide = safeLazy(() => import("../pages/Public/ApplicationGuide"));
-const NotFound = safeLazy(() => import("../pages/Public/NotFound"));
-const AccessDenied = safeLazy(() => import("../pages/Public/AccessDenied"));
+const Home = lazy(() => import("../pages/Public/Home"));
+const About = lazy(() => import("../pages/Public/About"));
+const Jobs = lazy(() => import("../pages/Public/Jobs"));
+const JobDetails = lazy(() => import("../pages/Public/JobDetails"));
+const Apply = lazy(() => import("../pages/Public/Apply"));
+const Contact = lazy(() => import("../pages/Public/Contact"));
+const ApplicationGuide = lazy(() => import("../pages/Public/ApplicationGuide"));
+const NotFound = lazy(() => import("../pages/Public/NotFound"));
+const AccessDenied = lazy(() => import("../pages/Public/AccessDenied"));
 
 // ── Lazy-Loaded Auth Pages ──────────────────────────────────────────────────
-const Login = safeLazy(() => import("../pages/Auth/Login"));
-const ForgotPassword = safeLazy(() => import("../pages/Auth/ForgotPassword"));
-const OtpVerification = safeLazy(() => import("../pages/Auth/OtpVerification"));
-const SetupAccount = safeLazy(() => import("../pages/Auth/SetupAccount"));
+const Login = lazy(() => import("../pages/Auth/Login"));
+const ForgotPassword = lazy(() => import("../pages/Auth/ForgotPassword"));
+const OtpVerification = lazy(() => import("../pages/Auth/OtpVerification"));
+const SetupAccount = lazy(() => import("../pages/Auth/SetupAccount"));
 
 // ── Lazy-Loaded Department Head Pages ───────────────────────────────────────
-const DepartmentHeadDashboard = safeLazy(() => import("../pages/DepartmentHead/Dashboard"));
-const ManpowerRequest = safeLazy(() => import("../pages/DepartmentHead/ManpowerRequest"));
-const RequestHistory = safeLazy(() => import("../pages/DepartmentHead/RequestHistory"));
-const DepartmentHeadNotifications = safeLazy(() => import("../pages/DepartmentHead/Notifications"));
-const DepartmentHeadProfile = safeLazy(() => import("../pages/DepartmentHead/Profile"));
+const DepartmentHeadDashboard = lazy(() => import("../pages/DepartmentHead/Dashboard"));
+const ManpowerRequest = lazy(() => import("../pages/DepartmentHead/ManpowerRequest"));
+const RequestHistory = lazy(() => import("../pages/DepartmentHead/RequestHistory"));
+const DepartmentHeadNotifications = lazy(() => import("../pages/DepartmentHead/Notifications"));
+const DepartmentHeadProfile = lazy(() => import("../pages/DepartmentHead/Profile"));
 
 // ── Lazy-Loaded HR Admin Pages ──────────────────────────────────────────────
-const AdminDashboard = safeLazy(() => import("../pages/Admin/Dashboard"));
-const AdminManpowerRequests = safeLazy(() => import("../pages/Admin/ManpowerRequests"));
-const JobLibrary = safeLazy(() => import("../pages/Admin/JobLibrary"));
-const JobPosting = safeLazy(() => import("../pages/Admin/JobPosting"));
-const Applicants = safeLazy(() => import("../pages/Admin/Applicants"));
-const AiScreening = safeLazy(() => import("../pages/Admin/AiScreening"));
-const Interviews = safeLazy(() => import("../pages/Admin/Interviews"));
-const InterviewCalendar = safeLazy(() => import("../pages/Admin/InterviewCalendar"));
-const Pipeline = safeLazy(() => import("../pages/Admin/Pipeline"));
-const Employees = safeLazy(() => import("../pages/Admin/Employees"));
-const Reports = safeLazy(() => import("../pages/Admin/Reports"));
-const Attendance = safeLazy(() => import("../pages/Admin/Attendance"));
-const AdminNotifications = safeLazy(() => import("../pages/Admin/Notifications"));
-const AdminProfile = safeLazy(() => import("../pages/Admin/Profile"));
-const Settings = safeLazy(() => import("../pages/Admin/Settings"));
+const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
+const AdminManpowerRequests = lazy(() => import("../pages/Admin/ManpowerRequests"));
+const JobLibrary = lazy(() => import("../pages/Admin/JobLibrary"));
+const JobPosting = lazy(() => import("../pages/Admin/JobPosting"));
+const Applicants = lazy(() => import("../pages/Admin/Applicants"));
+const AiScreening = lazy(() => import("../pages/Admin/AiScreening"));
+const Interviews = lazy(() => import("../pages/Admin/Interviews"));
+const InterviewCalendar = lazy(() => import("../pages/Admin/InterviewCalendar"));
+const Pipeline = lazy(() => import("../pages/Admin/Pipeline"));
+const Employees = lazy(() => import("../pages/Admin/Employees"));
+const Reports = lazy(() => import("../pages/Admin/Reports"));
+const Attendance = lazy(() => import("../pages/Admin/Attendance"));
+const AdminNotifications = lazy(() => import("../pages/Admin/Notifications"));
+const AdminProfile = lazy(() => import("../pages/Admin/Profile"));
+const Settings = lazy(() => import("../pages/Admin/Settings"));
 
 // ── Lazy-Loaded Video Interview Pages ───────────────────────────────────────
-const ActiveInterviewRoom = safeLazy(() => import("../pages/Interview/ActiveInterviewRoom"));
-const InterviewReport = safeLazy(() => import("../pages/Interview/InterviewReport"));
+const ActiveInterviewRoom = lazy(() => import("../pages/Interview/ActiveInterviewRoom"));
+const InterviewReport = lazy(() => import("../pages/Interview/InterviewReport"));
 
 // ── Lazy-Loaded COO Pages ───────────────────────────────────────────────────
-const CooDashboard = safeLazy(() => import("../pages/Coo/Dashboard"));
-const ManpowerApprovals = safeLazy(() => import("../pages/Coo/ManpowerApprovals"));
-const JobLibraryApprovals = safeLazy(() => import("../pages/Coo/JobLibraryApprovals"));
-const CooNotifications = safeLazy(() => import("../pages/Coo/Notifications"));
-const CooProfile = safeLazy(() => import("../pages/Coo/Profile"));
+const CooDashboard = lazy(() => import("../pages/Coo/Dashboard"));
+const ManpowerApprovals = lazy(() => import("../pages/Coo/ManpowerApprovals"));
+const JobLibraryApprovals = lazy(() => import("../pages/Coo/JobLibraryApprovals"));
+const CooNotifications = lazy(() => import("../pages/Coo/Notifications"));
+const CooProfile = lazy(() => import("../pages/Coo/Profile"));
 
 // ── Lazy-Loaded Super Admin Pages ───────────────────────────────────────────
-const SuperAdminDashboard = safeLazy(() => import("../pages/SuperAdmin/Dashboard"));
-const Users = safeLazy(() => import("../pages/SuperAdmin/Users"));
-const ArchivedUsers = safeLazy(() => import("../pages/SuperAdmin/ArchivedUsers"));
-const Departments = safeLazy(() => import("../pages/SuperAdmin/Departments"));
-const Roles = safeLazy(() => import("../pages/SuperAdmin/Roles"));
-const SuperAdminSettings = safeLazy(() => import("../pages/SuperAdmin/Settings"));
-const AuditLogs = safeLazy(() => import("../pages/SuperAdmin/AuditLogs"));
-const SuperAdminProfile = safeLazy(() => import("../pages/SuperAdmin/Profile"));
-const HrManpowerRequests = safeLazy(() => import("../pages/SuperAdmin/HrManpowerRequests"));
-const HrJobLibrary = safeLazy(() => import("../pages/SuperAdmin/HrJobLibrary"));
-const HrJobPosting = safeLazy(() => import("../pages/SuperAdmin/HrJobPosting"));
-const HrApplicants = safeLazy(() => import("../pages/SuperAdmin/HrApplicants"));
-const HrAiScreening = safeLazy(() => import("../pages/SuperAdmin/HrAiScreening"));
-const HrInterviews = safeLazy(() => import("../pages/SuperAdmin/HrInterviews"));
-const HrPipeline = safeLazy(() => import("../pages/SuperAdmin/HrPipeline"));
-const HrEmployees = safeLazy(() => import("../pages/SuperAdmin/HrEmployees"));
-const HrReports = safeLazy(() => import("../pages/SuperAdmin/HrReports"));
-const HrAttendance = safeLazy(() => import("../pages/SuperAdmin/HrAttendance"));
+const SuperAdminDashboard = lazy(() => import("../pages/SuperAdmin/Dashboard"));
+const Users = lazy(() => import("../pages/SuperAdmin/Users"));
+const ArchivedUsers = lazy(() => import("../pages/SuperAdmin/ArchivedUsers"));
+const Departments = lazy(() => import("../pages/SuperAdmin/Departments"));
+const Roles = lazy(() => import("../pages/SuperAdmin/Roles"));
+const SuperAdminSettings = lazy(() => import("../pages/SuperAdmin/Settings"));
+const AuditLogs = lazy(() => import("../pages/SuperAdmin/AuditLogs"));
+const SuperAdminProfile = lazy(() => import("../pages/SuperAdmin/Profile"));
+const HrManpowerRequests = lazy(() => import("../pages/SuperAdmin/HrManpowerRequests"));
+const HrJobLibrary = lazy(() => import("../pages/SuperAdmin/HrJobLibrary"));
+const HrJobPosting = lazy(() => import("../pages/SuperAdmin/HrJobPosting"));
+const HrApplicants = lazy(() => import("../pages/SuperAdmin/HrApplicants"));
+const HrAiScreening = lazy(() => import("../pages/SuperAdmin/HrAiScreening"));
+const HrInterviews = lazy(() => import("../pages/SuperAdmin/HrInterviews"));
+const HrPipeline = lazy(() => import("../pages/SuperAdmin/HrPipeline"));
+const HrEmployees = lazy(() => import("../pages/SuperAdmin/HrEmployees"));
+const HrReports = lazy(() => import("../pages/SuperAdmin/HrReports"));
+const HrAttendance = lazy(() => import("../pages/SuperAdmin/HrAttendance"));
 
 // Debug (temporary)
-const DebugPermissions = safeLazy(() => import("../pages/DebugPermissions"));
+const DebugPermissions = lazy(() => import("../pages/DebugPermissions"));
 
 export default function AppRoutes() {
   const { loading } = useAuth();
