@@ -273,4 +273,19 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'All notifications marked as read.']);
     }
+
+    /**
+     * GET /api/notifications/unread-count
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $count = DB::table('notifications')
+            ->where('notifiable_id', $user->id)
+            ->where('notifiable_type', User::class)
+            ->whereNull('read_at')
+            ->count();
+
+        return response()->json(['unread_count' => $count]);
+    }
 }

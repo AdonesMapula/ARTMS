@@ -64,10 +64,12 @@ class ManpowerRequestController extends Controller
         $req = ManpowerRequest::create($data);
         AuditLog::record('create', 'manpower_request', "Manpower request created for {$data['position_needed']}");
 
-        // Dispatch real-time in-app + email notifications to COO & SuperAdmin
+        // Dispatch real-time in-app + email notifications to targeted approvers and requester
         $deptName = $req->department?->department_name ?? 'Department';
-        NotificationService::notifyRoles(
-            ['coo', 'super_admin'],
+        NotificationService::notifyEvent(
+            'mdr.created',
+            $req,
+            $request->user(),
             'New PRF Request Pending Approval',
             "{$deptName} requested {$req->headcount}x {$req->position_needed} (Urgency: " . ucfirst($req->urgency) . ").",
             '/coo/prf-approvals',
@@ -174,50 +176,36 @@ class ManpowerRequestController extends Controller
 
         $position = $manpowerRequest->position_needed;
 
-        // Send notifications based on the new status
+        // Send targeted notifications based on the new status
         if ($data['status'] === 'approved') {
-            if ($manpowerRequest->requester) {
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "PRF Request Approved by COO",
-                    "Your manpower request for '{$position}' was APPROVED by COO. Ready for job posting.",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
-                "PRF Approved by COO",
-                "Requisition for '{$position}' was APPROVED by COO. You can now create a job posting.",
-                '/admin/job-posting',
+            NotificationService::notifyEvent(
+                'mdr.approved',
+                $manpowerRequest,
+                $request->user(),
+                "PRF Request Approved by COO",
+                "Requisition for '{$position}' was APPROVED by COO. Ready for job posting.",
+                '/department-head/request-history',
                 'alert'
             );
         } elseif ($data['status'] === 'rejected') {
-            if ($manpowerRequest->requester) {
-                $rem = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "PRF Request Rejected by COO",
-                    "Your manpower request for '{$position}' was REJECTED by COO.{$rem}",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
+            $rem = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
+            NotificationService::notifyEvent(
+                'mdr.rejected',
+                $manpowerRequest,
+                $request->user(),
+                "PRF Request Rejected by COO",
+                "Your manpower request for '{$position}' was REJECTED by COO.{$rem}",
+                '/department-head/request-history',
+                'alert'
+            );
         } elseif ($data['status'] === 'revised') {
-            if ($manpowerRequest->requester) {
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "Action Required: PRF Needs Revision",
-                    "The COO requested a revision for the '{$position}' PRF.",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            NotificationService::notifyEvent(
+                'mdr.revised',
+                $manpowerRequest,
+                $request->user(),
                 "Action Required: PRF Needs Revision",
                 "The COO requested a revision for the '{$position}' PRF.",
-                '/admin/manpower-requests',
+                '/department-head/request-history',
                 'alert'
             );
         }

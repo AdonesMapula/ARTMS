@@ -36,6 +36,17 @@ class LeaveController extends Controller
 
         $leave = LeaveRequest::create($data);
 
+        // Targeted notification to Department Head / Approver
+        \App\Services\NotificationService::notifyEvent(
+            'leave.created',
+            $leave,
+            $request->user(),
+            'New Leave Request Submitted',
+            "Leave request ({$leave->leave_type}) submitted for {$leave->start_date} to {$leave->end_date}.",
+            '/admin/attendance',
+            'request'
+        );
+
         return response()->json(['message' => 'Leave request submitted.', 'leave' => $leave], 201);
     }
 
@@ -76,6 +87,18 @@ class LeaveController extends Controller
         ]);
 
         AuditLog::record('approve', 'leave', "Leave {$data['status']} for employee ID {$leaveRequest->employee_id}");
+
+        // Targeted notification to Employee
+        $statusText = ucfirst($data['status']);
+        \App\Services\NotificationService::notifyEvent(
+            'leave.' . $data['status'],
+            $leaveRequest,
+            $request->user(),
+            "Leave Request {$statusText}",
+            "Your leave request for {$leaveRequest->start_date} to {$leaveRequest->end_date} has been {$data['status']}.",
+            '/admin/attendance',
+            'alert'
+        );
 
         return response()->json(['message' => "Leave {$data['status']}.", 'leave' => $leaveRequest->fresh()]);
     }

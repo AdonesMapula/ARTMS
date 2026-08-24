@@ -77,6 +77,8 @@ Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [Interv
 */
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp']);
+    Route::post('resend-login-otp', [AuthController::class, 'resendLoginOtp']);
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
@@ -85,6 +87,8 @@ Route::prefix('auth')->group(function () {
 
 // Alias for direct login route
 Route::match(['get', 'post'], 'login', [AuthController::class, 'login'])->name('login');
+Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp']);
+Route::post('resend-login-otp', [AuthController::class, 'resendLoginOtp']);
 
 /*
 |--------------------------------------------------------------------------
@@ -105,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Notifications ────────────────────────────────────────────────────────
     Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\CandidateNotificationMail;
 use App\Mail\SystemNotificationMail;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -27,10 +28,63 @@ class NotificationService
     }
 
     /**
+     * Notify targeted recipients resolved for a specific domain event.
+     * Derives exact recipients from entity relationships rather than broad roles.
+     */
+    public static function notifyEvent(
+        string $event,
+        mixed $entity = null,
+        ?User $actor = null,
+        string $title = 'System Notification',
+        string $message = '',
+        string $link = '/',
+        string $category = 'alert'
+    ): void {
+        $recipients = NotificationRecipientResolver::resolve($event, $entity, $actor);
+
+        self::notifyRecipients($recipients, $title, $message, $link, $category);
+    }
+
+    /**
+     * Notify an explicit collection or array of User instances (In-App DB + Email).
+     */
+    public static function notifyRecipients(
+        iterable $recipients,
+        string $title,
+        string $message,
+        string $link = '/',
+        string $category = 'alert'
+    ): void {
+        foreach ($recipients as $user) {
+            if ($user instanceof User && $user->is_active) {
+                self::notifyUser($user, $title, $message, $link, $category);
+            }
+        }
+    }
+
+    /**
      * Notify a specific User (In-App Database Notification + Email).
+     * Includes duplicate suppression to prevent spamming within an active window.
      */
     public static function notifyUser(User $user, string $title, string $message, string $link = '/', string $category = 'alert'): void
     {
+        if (! $user || ! $user->is_active) {
+            return;
+        }
+
+        // Idempotency check: prevent exact duplicate notification within 10 seconds
+        $recentDuplicate = DB::table('notifications')
+            ->where('notifiable_id', $user->id)
+            ->where('notifiable_type', User::class)
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->where('data', 'like', '%"title":"' . addslashes($title) . '"%')
+            ->where('data', 'like', '%"link":"' . addslashes($link) . '"%')
+            ->exists();
+
+        if ($recentDuplicate) {
+            return;
+        }
+
         $uuid = (string) Str::uuid();
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $fullActionUrl = str_starts_with($link, 'http') ? $link : rtrim($frontendUrl, '/') . '/' . ltrim($link, '/');
@@ -67,12 +121,13 @@ class NotificationService
     }
 
     /**
-     * Notify all users with specified role(s) (In-App + Email).
+     * Targeted role notification fallback for system administration events.
+     * Note: Prefer notifyEvent() for business workflow records.
      */
     public static function notifyRoles(array|string $roles, string $title, string $message, string $link = '/', string $category = 'alert'): void
     {
         $roleList = (array) $roles;
-        $users = User::whereIn('role', $roleList)->get();
+        $users = User::whereIn('role', $roleList)->where('is_active', true)->get();
 
         foreach ($users as $user) {
             self::notifyUser($user, $title, $message, $link, $category);
@@ -80,18 +135,19 @@ class NotificationService
     }
 
     /**
-     * Send email directly to an email address (e.g. candidates/applicants) asynchronously.
+     * Send email directly to an external applicant/candidate asynchronously.
+     * Candidate emails never include internal portal/login redirect buttons.
      */
-    public static function notifyEmail(string $email, string $title, string $message, ?string $link = null, string $category = 'alert'): void
+    public static function notifyEmail(string $email, string $title, string $message, ?string $link = null, string $category = 'application'): void
     {
         if (! $email) return;
 
-        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
-        $fullActionUrl = $link ? (str_starts_with($link, 'http') ? $link : rtrim($frontendUrl, '/') . '/' . ltrim($link, '/')) : null;
+        // External applicants only view public pages; no internal login buttons are sent
+        $publicUrl = ($link && str_starts_with($link, 'http')) ? $link : null;
 
-        self::dispatchAsyncMail(function () use ($email, $title, $message, $fullActionUrl, $category) {
+        self::dispatchAsyncMail(function () use ($email, $title, $message, $publicUrl, $category) {
             try {
-                Mail::to($email)->send(new SystemNotificationMail($title, $message, $fullActionUrl, $category));
+                Mail::to($email)->send(new CandidateNotificationMail($title, $message, $publicUrl, $category));
             } catch (\Throwable $e) {
                 \Log::error("Failed to send candidate email to {$email}: " . $e->getMessage());
             }
