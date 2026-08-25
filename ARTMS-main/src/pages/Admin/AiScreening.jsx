@@ -3,7 +3,8 @@ import {
   FiAlertCircle, FiCheckCircle, FiCpu, FiInbox,
   FiLoader, FiRefreshCw, FiSearch, FiXCircle,
 } from "react-icons/fi";
-import { SlidersHorizontal, RefreshCw, Clock, CheckCircle, Activity, AlertCircle, Loader } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, Clock, CheckCircle, Activity, AlertCircle, Loader, Search } from "lucide-react";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -251,9 +252,8 @@ export default function AiScreening() {
 
           <CardContent>
             {loading ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">
-                <Loader size={18} className="animate-spin text-[#111A62]" />
-                <span className="text-sm font-semibold text-slate-600">Loading applicants...</span>
+              <div className="p-4">
+                <TableSkeleton rows={10} />
               </div>
             ) : rows.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">

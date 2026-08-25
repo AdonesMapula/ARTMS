@@ -14,6 +14,7 @@ import {
 } from "react-icons/fi";
 
 import Button from "../../components/ui/Button";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
 import interviewService from "../../services/interviewService";
 import { useToast } from "../../context/ToastContext";
@@ -388,8 +389,8 @@ export default function InterviewCalendar({ onClose, embedded = false }) {
 
             {/* Timeline List */}
             {loading ? (
-              <div className="flex h-40 items-center justify-center text-xs text-slate-400">
-                Loading agenda…
+              <div className="py-4">
+                <CardSkeleton count={3} className="!grid-cols-1" />
               </div>
             ) : selectedDayInterviews.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center bg-white">

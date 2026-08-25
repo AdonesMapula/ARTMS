@@ -20,6 +20,7 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import Select from "../../components/ui/Select";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import SearchBar from "../../components/ui/SearchBar";
 import { cn } from "../../utils/cn";
 import ScheduleInterviewModal from "../../components/interview/ScheduleInterviewModal";
@@ -484,11 +485,8 @@ export default function Pipeline() {
 
       {/* Kanban Board Container (All 8 Stages fit in 1 line) */}
       {loading ? (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
-          <div className="flex flex-col items-center gap-2 text-slate-400">
-            <Loader size={18} className="animate-spin text-[#111A62]" />
-            <span className="text-sm font-semibold">Loading candidate pipeline...</span>
-          </div>
+        <div className="py-4">
+          <CardSkeleton count={8} className="!grid-cols-2 md:!grid-cols-4 lg:!grid-cols-8" />
         </div>
       ) : (
         <div className="w-full overflow-x-auto pb-4 pt-1 scrollbar-thin">

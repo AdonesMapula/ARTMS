@@ -4,6 +4,7 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
 const ROLES = [
   { value: "hr_admin", label: "HR Admin" },
@@ -502,6 +503,13 @@ export default function UserModal({
           </div>
         </div>
       </div>
+
+      <ActionLoadingModal
+        open={saving}
+        type={editUser ? "edit" : "create"}
+        title={editUser ? "Updating User..." : "Creating User..."}
+        message="Please wait while we save the user information. Do not refresh the page."
+      />
     </Modal>
   );
 }

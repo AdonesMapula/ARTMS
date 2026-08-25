@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FiBell, FiUser, FiCalendar, FiClipboard, FiAlertCircle, FiCheck, FiCheckCircle } from "react-icons/fi";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import notificationService from "../../services/notificationService";
@@ -101,9 +102,8 @@ export default function AdminNotifications() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
-              <span className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
-              <p className="text-xs font-semibold">Fetching system notifications...</p>
+            <div className="py-4">
+              <CardSkeleton count={4} className="!grid-cols-1" />
             </div>
           ) : visible.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">

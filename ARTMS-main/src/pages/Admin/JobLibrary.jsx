@@ -5,6 +5,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
@@ -658,11 +659,8 @@ export default function JobLibrary() {
                 </CardHeader>
                 <CardContent>
                   {loading ? (
-                    <div className="py-20 text-center text-slate-400">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader size={18} className="animate-spin text-[#111A62]" />
-                        <span>Loading job templates...</span>
-                      </div>
+                    <div className="py-6">
+                      <CardSkeleton count={6} className="!grid-cols-1 sm:!grid-cols-2 lg:!grid-cols-3" />
                     </div>
                   ) : paginated.length === 0 ? (
                     <div className="py-12 text-center">

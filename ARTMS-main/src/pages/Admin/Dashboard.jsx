@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import Skeleton from "../../components/ui/Skeleton";
+import { Skeleton } from "../../components/ui/skeleton";
 import Button from "../../components/ui/Button";
 import dashboardService from "../../services/dashboardService";
 import attendanceService from "../../services/attendanceService";
@@ -16,6 +16,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "../../components/ui/chart";
 
 // ── COLOR PALETTE TOKENS ───────────────────────────────────────────────────────
 const COLORS = {
@@ -111,14 +118,14 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#E15B1D]">Human Resources</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Real-time operational summary, live attendance logs, and recruitment pipeline status.</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] dark:text-white sm:text-3xl transition-colors">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Real-time operational summary, live attendance logs, and recruitment pipeline status.</p>
         </div>
         <Button
           variant="outline"
           onClick={loadData}
           disabled={refreshing}
-          className="gap-2 bg-white self-start sm:self-center shrink-0"
+          className="gap-2 bg-white dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800 self-start sm:self-center shrink-0"
         >
           <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           <span>{refreshing ? "Updating..." : "Refresh Data"}</span>
@@ -183,13 +190,13 @@ export default function AdminDashboard() {
 
         {/* MIDDLE RIGHT: QUICK SYSTEM LINKS */}
         <div className="lg:col-span-4 flex flex-col">
-          <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
-            <CardHeader className="border-b border-slate-100 bg-slate-50/60 pb-4 pt-5 px-6">
+          <Card className="flex-1 shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 pb-4 pt-5 px-6">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-[#E15B1D]/10 text-[#E15B1D]">
                   <Cpu size={18} />
                 </div>
-                <CardTitle className="text-base font-black text-[#111A62]">System Access</CardTitle>
+                <CardTitle className="text-base font-black text-[#111A62] dark:text-white">System Access</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-5 space-y-2.5 flex-1 flex flex-col justify-center">
@@ -261,15 +268,15 @@ export default function AdminDashboard() {
 
 function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
   const colorMap = {
-    navy: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
-    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
-    purple: { bg: "bg-purple-100", text: "text-purple-600", hover: "hover:border-purple-400" },
-    orange: { bg: "bg-orange-100", text: "text-orange-600", hover: "hover:border-orange-400" },
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400", hover: "hover:border-blue-400 dark:hover:border-blue-700" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "hover:border-emerald-400 dark:hover:border-emerald-700" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "hover:border-purple-400 dark:hover:border-purple-700" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400", hover: "hover:border-orange-400 dark:hover:border-orange-700" },
   };
   const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className={`transition-all h-full ${theme.hover} hover:shadow-md bg-white`}>
+    <Card className={`transition-all h-full ${theme.hover} hover:shadow-md bg-white dark:bg-[#0F163D] dark:border-slate-800`}>
       <CardContent className="flex items-center gap-4 pt-6">
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
           <div className={theme.text}>
@@ -277,11 +284,11 @@ function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColo
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-500 truncate">{title}</p>
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
           <div className="flex items-center gap-2">
-            <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{value}</p>
             {trend && (
-              <span className={`text-[10px] font-bold ${trendPositive ? "text-emerald-600" : "text-rose-600"}`}>
+              <span className={`text-[10px] font-bold ${trendPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                 {trend}
               </span>
             )}
@@ -297,42 +304,53 @@ function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColo
    ─────────────────────────────────────────────────────────────────────────── */
 function QuickLink({ to, icon, label, value, tone }) {
   return (
-    <Link to={to} className="group flex items-center justify-between rounded-2xl border border-transparent bg-slate-50 px-4 py-3 hover:border-slate-200 hover:bg-slate-100 transition-all shadow-2xs cursor-pointer">
+    <Link to={to} className="group flex items-center justify-between rounded-2xl border border-transparent dark:border-slate-800/60 bg-slate-50 dark:bg-[#0B0F2E] px-4 py-3 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-850 transition-all shadow-2xs cursor-pointer">
       <div className="flex items-center gap-3">
-        <div className="text-slate-400 group-hover:text-[#111A62] transition-colors [&>svg]:w-4 [&>svg]:h-4">
+        <div className="text-slate-400 dark:text-slate-500 group-hover:text-[#111A62] dark:group-hover:text-[#F97316] transition-colors [&>svg]:w-4 [&>svg]:h-4">
           {icon}
         </div>
-        <span className="text-xs font-extrabold text-slate-700 group-hover:text-[#111A62] transition-colors">{label}</span>
+        <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200 group-hover:text-[#111A62] dark:group-hover:text-[#F97316] transition-colors">{label}</span>
       </div>
       {value ? (
         <Badge tone={tone ?? "default"} className="font-bold text-[10px] uppercase tracking-wider">{value}</Badge>
       ) : (
-        <ChevronRight size={14} className="text-slate-300 group-hover:text-[#111A62] transition-colors" />
+        <ChevronRight size={14} className="text-slate-300 dark:text-slate-600 group-hover:text-[#111A62] dark:group-hover:text-[#F97316] transition-colors" />
       )}
     </Link>
   );
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   3. PIPELINE BAR CHART
+   3. PIPELINE BAR CHART — shadcn/ui chart (Navy → Orange theme)
    ─────────────────────────────────────────────────────────────────────────── */
+const pipelineChartConfig = {
+  applied:          { label: "Applied",       color: "#111A62" },
+  ai_screening:     { label: "AI Screened",   color: "#1E2A7A" },
+  screening_passed: { label: "Passed",        color: "#3B4BA0" },
+  interview_1:      { label: "Interview 1",   color: "#C44E1A" },
+  interview_2:      { label: "Interview 2",   color: "#E15B1D" },
+  hired:            { label: "Hired",         color: "#10B981" },
+};
+
 function PipelineChart({ pipeline }) {
   const chartData = [
-    { name: "Applied", value: pipeline.applied || 0, fill: COLORS.blue },
-    { name: "AI Screened", value: pipeline.ai_screening || 0, fill: COLORS.indigo },
-    { name: "Passed", value: pipeline.screening_passed || 0, fill: COLORS.purple },
-    { name: "Interview 1", value: pipeline.interview_1 || 0, fill: COLORS.amber },
-    { name: "Interview 2", value: pipeline.interview_2 || 0, fill: COLORS.orange },
-    { name: "Hired", value: pipeline.hired || 0, fill: COLORS.emerald },
+    { stage: "Applied",      value: pipeline.applied || 0,          fill: "var(--color-applied)" },
+    { stage: "AI Screened",  value: pipeline.ai_screening || 0,     fill: "var(--color-ai_screening)" },
+    { stage: "Passed",       value: pipeline.screening_passed || 0, fill: "var(--color-screening_passed)" },
+    { stage: "Interview 1",  value: pipeline.interview_1 || 0,      fill: "var(--color-interview_1)" },
+    { stage: "Interview 2",  value: pipeline.interview_2 || 0,      fill: "var(--color-interview_2)" },
+    { stage: "Hired",        value: pipeline.hired || 0,            fill: "var(--color-hired)" },
   ];
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
-      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart3 size={18} className="text-[#111A62]" />
-            <CardTitle className="text-base font-black text-[#111A62]">Recruitment Pipeline</CardTitle>
+            <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
+              <BarChart3 size={16} />
+            </div>
+            <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Recruitment Pipeline</CardTitle>
           </div>
           <Link to="/admin/pipeline" className="text-[11px] font-bold text-[#E15B1D] hover:underline flex items-center gap-1 uppercase tracking-wider">
             Full Pipeline <ArrowRight size={12} />
@@ -340,28 +358,40 @@ function PipelineChart({ pipeline }) {
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-6 min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={32}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} />
-            <RechartsTooltip
-              cursor={{ fill: '#F1F5F9' }}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-              itemStyle={{ fontWeight: 800, color: '#0F172A' }}
-              labelStyle={{ fontWeight: 800, color: '#64748B', marginBottom: '4px' }}
+        <ChartContainer config={pipelineChartConfig} className="h-full w-full">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={36}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
+            <XAxis
+              dataKey="stage"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }}
+              dy={10}
             />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }}
+            />
+            <ChartTooltip
+              cursor={{ fill: 'currentColor', className: 'text-slate-100 dark:text-slate-800/40', radius: 4 }}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="value" radius={[8, 8, 0, 0]} />
           </BarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   4. MONTHLY HIRING AREA CHART
+   4. MONTHLY HIRING AREA CHART — shadcn/ui chart
    ─────────────────────────────────────────────────────────────────────────── */
+const hiringChartConfig = {
+  Hires: { label: "Hires", color: COLORS.navy },
+};
+
 function MonthlyHiringChart({ hires }) {
   const chartData = useMemo(() => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -378,44 +408,48 @@ function MonthlyHiringChart({ hires }) {
   }, [hires]);
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
-      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <LineChartIcon size={18} className="text-[#111A62]" />
-            <CardTitle className="text-base font-black text-[#111A62]">Hiring Velocity Trends</CardTitle>
+            <LineChartIcon size={18} className="text-[#111A62] dark:text-blue-300" />
+            <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Hiring Velocity Trends</CardTitle>
           </div>
           <Badge tone="info">Live Backend Records</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-6 min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ChartContainer config={hiringChartConfig} className="h-full w-full">
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorHires" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={COLORS.navy} stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-Hires)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-Hires)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} />
-            <RechartsTooltip
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-              itemStyle={{ fontWeight: 800, color: COLORS.navy }}
-              labelStyle={{ fontWeight: 800, color: '#64748B', marginBottom: '4px' }}
+            <ChartTooltip
+              content={<ChartTooltipContent indicator="line" />}
             />
-            <Area type="monotone" dataKey="Hires" stroke={COLORS.navy} strokeWidth={3} fillOpacity={1} fill="url(#colorHires)" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
+            <Area type="monotone" dataKey="Hires" stroke="var(--color-Hires)" strokeWidth={3} fillOpacity={1} fill="url(#colorHires)" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   5. ATTENDANCE OVERVIEW PIE CHART
+   5. ATTENDANCE OVERVIEW PIE CHART — shadcn/ui chart
    ─────────────────────────────────────────────────────────────────────────── */
+const attendanceChartConfig = {
+  Perfect: { label: "Perfect", color: "#111A62" },
+  Tardy:   { label: "Tardy",   color: "#E15B1D" },
+  Absent:  { label: "Absent",  color: "#E11D48" },
+};
+
 function AttendanceOverviewChart({ summary }) {
   // Compute totals based on backend structure
   let perfect = 0;
@@ -438,21 +472,21 @@ function AttendanceOverviewChart({ summary }) {
   }
 
   const data = [
-    { name: "Perfect", value: perfect, color: COLORS.emerald },
-    { name: "Tardy", value: tardy, color: COLORS.amber },
-    { name: "Absent", value: absent, color: COLORS.rose },
+    { name: "Perfect", value: perfect, fill: "var(--color-Perfect)" },
+    { name: "Tardy", value: tardy, fill: "var(--color-Tardy)" },
+    { name: "Absent", value: absent, fill: "var(--color-Absent)" },
   ].filter(d => d.value > 0);
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 rounded-3xl border-slate-200 flex flex-col bg-white overflow-hidden">
-      <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4 pt-5 px-6">
+    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
         <div className="flex items-center gap-2">
-          <PieChartIcon size={18} className="text-[#111A62]" />
-          <CardTitle className="text-base font-black text-[#111A62]">Attendance Overview</CardTitle>
+          <PieChartIcon size={18} className="text-[#111A62] dark:text-blue-300" />
+          <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Attendance Overview</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-6 min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ChartContainer config={attendanceChartConfig} className="h-full w-full mx-auto aspect-square max-h-[260px]">
           <PieChart>
             <Pie
               data={data}
@@ -463,19 +497,17 @@ function AttendanceOverviewChart({ summary }) {
               paddingAngle={5}
               dataKey="value"
               stroke="none"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <RechartsTooltip
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-              itemStyle={{ fontWeight: 800, color: '#0F172A' }}
             />
-            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 700 }} />
+            <ChartTooltip
+              content={<ChartTooltipContent nameKey="name" hideLabel />}
+            />
+            <ChartLegend
+              content={<ChartLegendContent nameKey="name" />}
+            />
           </PieChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
 }
+
