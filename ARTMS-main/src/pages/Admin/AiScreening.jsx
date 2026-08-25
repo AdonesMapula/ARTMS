@@ -40,7 +40,7 @@ function fitRingColor(label) {
 // ── main component ────────────────────────────────────────────────────────────
 export default function AiScreening() {
   const toast = useToast();
-  const [tab, setTab] = useState("pending");   // "pending" | "screened"
+  const [tab, setTab] = useState("screened");   // default to screened
   const [pending, setPending] = useState([]);
   const [screened, setScreened] = useState([]);
   const [loadingP, setLoadingP] = useState(true);
@@ -205,14 +205,11 @@ export default function AiScreening() {
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-              {/* Tabs */}
-              <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                <TabBtn active={tab === "pending"} onClick={() => { setTab("pending"); setSelected(null); }}>
-                  <FiInbox size={13} /> Pending <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">{pending.length}</span>
-                </TabBtn>
-                <TabBtn active={tab === "screened"} onClick={() => { setTab("screened"); setSelected(null); }}>
-                  <FiCpu size={13} /> Screened <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{screened.length}</span>
-                </TabBtn>
+              {/* Screened Header Badge */}
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-slate-800">
+                <FiCpu size={14} className="text-[#111A62]" />
+                <span>Screened Applicants</span>
+                <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{screened.length}</span>
               </div>
 
               {/* Controls */}
@@ -225,22 +222,20 @@ export default function AiScreening() {
                     className="h-9 text-xs"
                   />
                 </div>
-                {tab === "screened" && (
-                  <div className="w-36 sm:w-40">
-                    <Select
-                      icon={SlidersHorizontal}
-                      size="sm"
-                      value={filterFit}
-                      onChange={e => handleFilter(e.target.value)}
-                      buttonClassName="bg-slate-50 hover:bg-white"
-                    >
-                      <option value="">All Fits</option>
-                      <option value="high">High Fit</option>
-                      <option value="medium">Medium Fit</option>
-                      <option value="low">Low Fit</option>
-                    </Select>
-                  </div>
-                )}
+                <div className="w-36 sm:w-40">
+                  <Select
+                    icon={SlidersHorizontal}
+                    size="sm"
+                    value={filterFit}
+                    onChange={e => handleFilter(e.target.value)}
+                    buttonClassName="bg-slate-50 hover:bg-white"
+                  >
+                    <option value="">All Fits</option>
+                    <option value="high">High Fit</option>
+                    <option value="medium">Medium Fit</option>
+                    <option value="low">Low Fit</option>
+                  </Select>
+                </div>
                 <button onClick={() => { loadPending(search); loadScreened(search, filterFit); }} title="Refresh"
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition shrink-0">
                   <RefreshCw size={14} className={(loadingP || loadingS) ? "animate-spin" : ""} />

@@ -61,7 +61,6 @@ export default function AdminManpowerRequests() {
 
   // Selected Request ID for Split View Detail Panel
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   const [editRequest, setEditRequest] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -76,19 +75,6 @@ export default function AdminManpowerRequests() {
   };
 
   const pageSize = 10;
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -284,8 +270,8 @@ export default function AdminManpowerRequests() {
 
   return (
     <div className="space-y-6">
-      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* ── Title & Stats Container ─────────────────────── */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
