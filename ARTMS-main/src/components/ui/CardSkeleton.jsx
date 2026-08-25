@@ -1,5 +1,5 @@
 import React from "react";
-import Skeleton from "./skeleton";
+import Skeleton from "./Skeleton";
 
 export function CardSkeleton({ count = 4, className = "" }) {
   return (

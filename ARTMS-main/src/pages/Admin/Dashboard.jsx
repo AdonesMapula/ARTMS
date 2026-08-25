@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import { Skeleton } from "../../components/ui/skeleton";
+import { Skeleton } from "../../components/ui/Skeleton";
 import Button from "../../components/ui/Button";
 import dashboardService from "../../services/dashboardService";
 import attendanceService from "../../services/attendanceService";
