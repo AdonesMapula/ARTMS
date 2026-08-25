@@ -49,7 +49,6 @@ export default function Applicants() {
 
   // Selected Applicant ID for Split View Detail Panel
   const [selectedApplicantId, setSelectedApplicantId] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   const [actionLoading, setActionLoading] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -58,19 +57,6 @@ export default function Applicants() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const pageSize = 50;
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Fetch Job Postings for Position Filter Dropdown
   useEffect(() => {
@@ -321,8 +307,8 @@ export default function Applicants() {
 
   return (
     <div className="space-y-6">
-      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[600px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* ── Title & Stats Container ─────────────────────── */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -524,15 +510,6 @@ export default function Applicants() {
                   <p className="text-[11px] text-slate-400">Click candidate to view 360 profile</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isScrolled && (
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
-                      title="Scroll to top"
-                    >
-                      ↑ Stats
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedApplicantId(null)}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
@@ -660,7 +637,7 @@ export default function Applicants() {
             </div>
           ) : (
             /* ── FULL TABLE DIRECTORY (When no candidate is open) ───── */
-            <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedApplicantId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+            <Card className="animate-fade-in transition-all duration-300">
               <CardHeader className="py-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                   <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2 shrink-0">
@@ -760,16 +737,6 @@ export default function Applicants() {
                         title="Reset Filters"
                       >
                         <X size={14} /> Reset
-                      </button>
-                    )}
-
-                    {isScrolled && !selectedApplicantId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Scroll to top"
-                      >
-                        ↑ Stats
                       </button>
                     )}
                   </div>

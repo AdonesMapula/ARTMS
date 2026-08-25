@@ -150,25 +150,11 @@ export default function Attendance() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [deptFilter, setDeptFilter]     = useState("all");
   const [page, setPage]                 = useState(1);
-  const [isScrolled, setIsScrolled]     = useState(false);
   const PAGE_SIZE = 10;
 
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter, deptFilter, selectedDate, activeTab]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Modals
   const [isLogModalOpen, setIsLogModalOpen]     = useState(false);
@@ -358,8 +344,8 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6">
-      {/* Top Title & Header + KPI Cards Collapsible Container */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* Top Title & Header + KPI Cards Container */}
+      <div className="space-y-6">
         {/* Top Title & Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -460,8 +446,8 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* Main View Tabs & Search Filter Container (Sticky Sheet when scrolled) */}
-      <Card className={`sticky top-4 z-20 transition-all duration-300 ${isScrolled ? "shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+      {/* Main View Tabs & Search Filter Container */}
+      <Card>
         <CardHeader className="border-b border-slate-100 pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             {/* View Switcher Tabs */}
@@ -492,15 +478,6 @@ export default function Attendance() {
 
             {/* Date selector & Expand Header trigger */}
             <div className="flex items-center gap-2 flex-wrap">
-              {isScrolled && (
-                <button
-                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer"
-                  title="Scroll to top to view Stats & Header"
-                >
-                  ↑ Show Header & Stats
-                </button>
-              )}
               <span className="text-xs font-bold text-slate-500">Select Date:</span>
               <input
                 type="date"

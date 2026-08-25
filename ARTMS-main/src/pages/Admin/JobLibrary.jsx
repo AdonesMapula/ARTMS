@@ -79,7 +79,6 @@ export default function JobLibrary() {
 
   // Selected Job Template ID for Split View Detail Panel
   const [selectedJobId, setSelectedJobId] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   // Modals
   const [formModal, setFormModal] = useState({
@@ -112,19 +111,6 @@ export default function JobLibrary() {
   const showAlert = (variant, title, message) => {
     setAlertModalState({ open: true, variant, title, message });
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     fetchJobs();
@@ -320,8 +306,8 @@ export default function JobLibrary() {
 
   return (
     <div className="space-y-6">
-      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* ── Title & Stats Container ─────────────────────── */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -479,15 +465,6 @@ export default function JobLibrary() {
                   <p className="text-[11px] text-slate-400">Click template to view specifications</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isScrolled && (
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
-                      title="Scroll to top"
-                    >
-                      ↑ Stats
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedJobId(null)}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
@@ -614,7 +591,7 @@ export default function JobLibrary() {
               </Card>
 
               {/* Cards Grid */}
-              <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedJobId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+              <Card className="animate-fade-in transition-all duration-300">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
@@ -645,15 +622,6 @@ export default function JobLibrary() {
                         </Button>
                       )}
                     </div>
-                    {isScrolled && !selectedJobId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2.5 py-1 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1 cursor-pointer"
-                        title="Scroll to top"
-                      >
-                        ↑ Show Header & Stats
-                      </button>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent>

@@ -61,7 +61,6 @@ export default function JobPosting() {
   // Selected Posting ID for Split View Detail & Edit Panel
   const [openDetailId, setOpenDetailId] = useState(null);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -89,19 +88,6 @@ export default function JobPosting() {
       toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
     }
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     fetchData();
@@ -297,8 +283,8 @@ export default function JobPosting() {
 
   return (
     <div className="space-y-6">
-      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[800px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* ── Title & Stats Container ─────────────────────── */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -500,15 +486,6 @@ export default function JobPosting() {
                   <p className="text-[11px] text-slate-400">Click job to view specification & edit</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isScrolled && (
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
-                      title="Scroll to top"
-                    >
-                      ↑ Stats
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedPostingId(null)}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
@@ -602,7 +579,7 @@ export default function JobPosting() {
             </div>
           ) : (
             /* ── FULL TABLE DIRECTORY (When no job is open) ─────────── */
-            <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedPostingId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+            <Card className="animate-fade-in transition-all duration-300">
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2.5">
@@ -645,16 +622,6 @@ export default function JobPosting() {
                         ))}
                       </Select>
                     </div>
-
-                    {isScrolled && !selectedPostingId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Scroll to top"
-                      >
-                        ↑ Stats
-                      </button>
-                    )}
                   </div>
                 </div>
               </CardHeader>

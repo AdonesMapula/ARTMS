@@ -47,7 +47,6 @@ export default function Employees() {
 
   // Selected Employee 201 File state for Split View
   const [selectedEmpId, setSelectedEmpId] = useState(null);
-  const [isScrolled, setIsScrolled]       = useState(false);
 
   // Create Employee Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -58,19 +57,6 @@ export default function Employees() {
   });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 150;
-      if (isScrollable && window.scrollY > 100) {
-        setIsScrolled(true);
-      } else if (window.scrollY < 20) {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
@@ -180,8 +166,8 @@ export default function Employees() {
 
   return (
     <div className="space-y-5">
-      {/* ── Page Title Header & Summary Stats Collapsible Container ── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[600px] opacity-100 translate-y-0 space-y-5"}`}>
+      {/* ── Page Title Header & Summary Stats Container ── */}
+      <div className="space-y-5">
         {/* Page Title Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -236,15 +222,6 @@ export default function Employees() {
                   <p className="text-[11px] text-slate-400">Click any employee to view 201 file</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isScrolled && (
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
-                      title="Scroll to top to view Stats & Header"
-                    >
-                      ↑ Stats
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedEmpId(null)}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
@@ -337,7 +314,7 @@ export default function Employees() {
             </div>
           ) : (
             /* ── FULL TABLE DIRECTORY (When no 201 File is open) ───── */
-            <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedEmpId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+            <Card className="animate-fade-in transition-all duration-300">
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2.5">
@@ -401,16 +378,6 @@ export default function Employees() {
                         <option value="terminated">Terminated</option>
                       </Select>
                     </div>
-
-                    {isScrolled && !selectedEmpId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Scroll to top to view Stats & Header"
-                      >
-                        ↑ Stats
-                      </button>
-                    )}
                   </div>
                 </div>
               </CardHeader>
