@@ -48,25 +48,43 @@ class UserController extends Controller
         // Auto-generate a temporary password if not explicitly supplied
         $plainPassword = $request->filled('password') ? trim($request->password) : Str::random(10);
 
-        $user = User::create([
-            'first_name'    => $request->first_name,
-            'middle_name'   => $request->middle_name,
-            'last_name'     => $request->last_name,
-            'name'          => $fullName,
-            'email'         => $request->email,
-            'password'      => Hash::make($plainPassword),
-            'role'          => $request->role,
-            'department_id' => $request->department_id,
-            'avatar'        => $request->avatar,
-        ]);
+        try {
+            $user = User::create([
+                'first_name'    => $request->first_name,
+                'middle_name'   => $request->middle_name,
+                'last_name'     => $request->last_name,
+                'name'          => $fullName,
+                'email'         => $request->email,
+                'password'      => Hash::make($plainPassword),
+                'role'          => $request->role,
+                'department_id' => $request->department_id,
+                'avatar'        => $request->avatar,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) {
+                return response()->json([
+                    'message' => 'The email address is already associated with an existing or archived user account.',
+                    'errors'  => ['email' => ['The email address has already been taken.']]
+                ], 422);
+            }
+            throw $e;
+        }
 
-        AuditLog::record('create', 'user', "Created user: {$user->email}", null, $user->toArray(), User::class, $user->id);
+        try {
+            AuditLog::record('create', 'user', "Created user: {$user->email}", null, $user->toArray(), User::class, $user->id);
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to record audit log for user creation: " . $e->getMessage());
+        }
 
         $token = Str::random(60);
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $user->email],
-            ['token' => $token, 'created_at' => now()]
-        );
+        try {
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                ['token' => $token, 'created_at' => now()]
+            );
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to create password reset token: " . $e->getMessage());
+        }
 
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $setupUrl = $frontendUrl . '/setup-account?token=' . $token . '&email=' . urlencode($user->email);
@@ -118,9 +136,23 @@ class UserController extends Controller
             $data['password'] = Hash::make(trim($data['password']));
         }
 
-        $user->update($data);
+        try {
+            $user->update($data);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062) {
+                return response()->json([
+                    'message' => 'The email address is already associated with an existing or archived user account.',
+                    'errors'  => ['email' => ['The email address has already been taken.']]
+                ], 422);
+            }
+            throw $e;
+        }
 
-        AuditLog::record('update', 'user', "Updated user: {$user->email}", $old, $user->fresh()->toArray(), User::class, $user->id);
+        try {
+            AuditLog::record('update', 'user', "Updated user: {$user->email}", $old, $user->fresh()->toArray(), User::class, $user->id);
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to record audit log for user update: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'User updated successfully.',

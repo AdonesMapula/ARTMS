@@ -48,13 +48,14 @@ class UpdateUserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user');
+        $user = $this->route('user');
+        $userId = $user instanceof \App\Models\User ? $user->id : $user;
 
         return [
             'first_name'    => ['sometimes', 'string', 'max:255'],
             'middle_name'   => ['nullable', 'string', 'max:255'],
             'last_name'     => ['sometimes', 'string', 'max:255'],
-            'email'         => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId)->whereNull('deleted_at')],
+            'email'         => ['sometimes', 'email', 'max:255'],
             'password'      => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
             'role'          => ['sometimes', 'string', function ($attribute, $value, $fail) {
                 $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
@@ -75,33 +76,45 @@ class UpdateUserRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $userId = $this->route('user');
             $user = $this->route('user');
+            $userId = $user instanceof \App\Models\User ? $user->id : (int) $user;
+
+            // 1. Check email uniqueness against other users (active or archived)
+            if ($this->filled('email')) {
+                $email = strtolower(trim($this->email));
+                $existingUser = DB::table('users')
+                    ->where('email', $email)
+                    ->where('id', '!=', $userId)
+                    ->first();
+                if ($existingUser) {
+                    if ($existingUser->deleted_at !== null) {
+                        $validator->errors()->add('email', 'This email address belongs to an archived account. Please restore the user or choose a different email.');
+                    } else {
+                        $validator->errors()->add('email', 'The email address has already been taken.');
+                    }
+                }
+            }
             
-            // Only check if name fields are actually being changed (not just present)
+            // 2. Only check if name fields are actually being changed
             $nameChanged = false;
-            if ($this->filled('first_name') && $this->first_name !== ($user->first_name ?? null)) {
+            if ($this->filled('first_name') && $this->first_name !== ($user?->first_name ?? null)) {
                 $nameChanged = true;
             }
-            if ($this->filled('middle_name') && $this->middle_name !== ($user->middle_name ?? null)) {
+            if ($this->filled('middle_name') && $this->middle_name !== ($user?->middle_name ?? null)) {
                 $nameChanged = true;
             }
-            if ($this->filled('last_name') && $this->last_name !== ($user->last_name ?? null)) {
+            if ($this->filled('last_name') && $this->last_name !== ($user?->last_name ?? null)) {
                 $nameChanged = true;
             }
             
-            // Only check for duplicates if name fields are actually being changed
             if ($nameChanged) {
-                $firstName = $this->filled('first_name') ? trim($this->first_name) : ($user->first_name ?? '');
-                $middleName = $this->filled('middle_name') ? trim($this->middle_name) : ($user->middle_name ?? '');
-                $lastName = $this->filled('last_name') ? trim($this->last_name) : ($user->last_name ?? '');
+                $firstName = $this->filled('first_name') ? trim($this->first_name) : ($user?->first_name ?? '');
+                $middleName = $this->filled('middle_name') ? trim($this->middle_name) : ($user?->middle_name ?? '');
+                $lastName = $this->filled('last_name') ? trim($this->last_name) : ($user?->last_name ?? '');
                 
-                // Only check for duplicates if we have name data
                 if ($firstName || $lastName) {
-                    // Construct full name
-                    $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
+                    $fullName = trim(preg_replace('/\s+/', ' ', "{$firstName} {$middleName} {$lastName}"));
                     
-                    // Check if another active user with the same full name already exists
                     $exists = DB::table('users')
                         ->where('name', $fullName)
                         ->where('id', '!=', $userId)
@@ -110,6 +123,7 @@ class UpdateUserRequest extends FormRequest
                     
                     if ($exists) {
                         $validator->errors()->add('name', 'An active user with this name already exists.');
+                        $validator->errors()->add('first_name', 'An active user with this full name already exists.');
                     }
                 }
             }

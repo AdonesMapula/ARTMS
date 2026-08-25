@@ -36,7 +36,7 @@ class StoreUserRequest extends FormRequest
             'first_name'    => ['required', 'string', 'max:255'],
             'middle_name'   => ['nullable', 'string', 'max:255'],
             'last_name'     => ['required', 'string', 'max:255'],
-            'email'         => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'email'         => ['required', 'email', 'max:255'],
             'password'      => $this->filled('password') ? ['string', 'min:8'] : ['nullable'],
             'role'          => ['required', 'string', function ($attribute, $value, $fail) {
                 $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
@@ -56,7 +56,20 @@ class StoreUserRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            // Only check if all name fields are present
+            // 1. Check email uniqueness against active and archived users
+            if ($this->filled('email')) {
+                $email = strtolower(trim($this->email));
+                $existingUser = DB::table('users')->where('email', $email)->first();
+                if ($existingUser) {
+                    if ($existingUser->deleted_at !== null) {
+                        $validator->errors()->add('email', 'This email address belongs to an archived account. Please restore the user from Archived Users or use a different email.');
+                    } else {
+                        $validator->errors()->add('email', 'The email address has already been taken.');
+                    }
+                }
+            }
+
+            // 2. Check if an active user with the same full name already exists
             if ($this->filled('first_name') && $this->filled('last_name')) {
                 $firstName = trim($this->first_name);
                 $middleName = trim($this->middle_name ?? '');
@@ -65,7 +78,6 @@ class StoreUserRequest extends FormRequest
                 // Construct full name
                 $fullName = trim(preg_replace('/\s+/', ' ', "{$firstName} {$middleName} {$lastName}"));
                 
-                // Check if an active user with the same full name already exists
                 $exists = DB::table('users')
                     ->where('name', $fullName)
                     ->whereNull('deleted_at')
@@ -73,6 +85,7 @@ class StoreUserRequest extends FormRequest
                 
                 if ($exists) {
                     $validator->errors()->add('name', 'An active user with this name already exists.');
+                    $validator->errors()->add('first_name', 'An active user with this full name already exists.');
                 }
             }
         });
