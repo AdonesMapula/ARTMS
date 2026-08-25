@@ -17,7 +17,6 @@ import Input from "../../components/ui/Input";
 import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
-import Skeleton from "../../components/ui/Skeleton";
 import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
@@ -539,11 +538,10 @@ export default function JobPosting() {
                       <div
                         key={p.id}
                         onClick={() => setSelectedPostingId(p.id)}
-                        className={`p-3 rounded-2xl transition cursor-pointer border ${
-                          isSelected
+                        className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
                             ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
                             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">

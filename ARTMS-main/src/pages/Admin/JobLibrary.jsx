@@ -9,7 +9,6 @@ import CardSkeleton from "../../components/ui/CardSkeleton";
 import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";

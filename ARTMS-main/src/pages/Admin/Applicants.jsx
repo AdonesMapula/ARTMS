@@ -10,7 +10,6 @@ import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ApplicantViewPanel from "../../components/applicant/ApplicantViewPanel";
 import applicantService from "../../services/applicantService";
@@ -67,7 +66,7 @@ export default function Applicants() {
         const list = res.data?.data || res.data || [];
         setJobPostings(list);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const loadApplicants = useCallback(async () => {
@@ -427,11 +426,11 @@ export default function Applicants() {
                       const name = `${a.first_name || ""} ${a.last_name || ""}`;
                       const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
                       const rankText = index === 0 ? "🥇 #1 Top" : index === 1 ? "🥈 #2 High" : "🥉 #3 Rank";
-                      const rankStyle = index === 0 
-                        ? "bg-amber-400/20 text-amber-300 border-amber-400/30" 
-                        : index === 1 
-                        ? "bg-slate-200/20 text-slate-200 border-slate-300/30" 
-                        : "bg-amber-700/20 text-amber-400 border-amber-600/30";
+                      const rankStyle = index === 0
+                        ? "bg-amber-400/20 text-amber-300 border-amber-400/30"
+                        : index === 1
+                          ? "bg-slate-200/20 text-slate-200 border-slate-300/30"
+                          : "bg-amber-700/20 text-amber-400 border-amber-600/30";
 
                       return (
                         <div
@@ -565,11 +564,10 @@ export default function Applicants() {
                     <button
                       key={s.value}
                       onClick={() => handleStatusChange(s.value)}
-                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${
-                        status === s.value
+                      className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${status === s.value
                           ? "bg-[#111A62] text-white border-[#111A62]"
                           : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
+                        }`}
                     >
                       {s.label}
                     </button>
@@ -596,11 +594,10 @@ export default function Applicants() {
                       <div
                         key={a.id}
                         onClick={() => setSelectedApplicantId(a.id)}
-                        className={`p-3 rounded-2xl transition cursor-pointer border ${
-                          isSelected
+                        className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
                             ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
                             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -611,9 +608,8 @@ export default function Applicants() {
                               onClick={(e) => e.stopPropagation()}
                               className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
                             />
-                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                              isSelected ? "bg-[#111A62] text-white" : "bg-slate-100 text-[#111A62]"
-                            }`}>
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${isSelected ? "bg-[#111A62] text-white" : "bg-slate-100 text-[#111A62]"
+                              }`}>
                               {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
                             </span>
                             <div className="min-w-0">
