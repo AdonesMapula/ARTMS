@@ -413,15 +413,6 @@ export default function AdminManpowerRequests() {
                   <p className="text-[11px] text-slate-400">Click any request to view specifications</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isScrolled && (
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-2 py-1 text-[10px] font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-0.5 cursor-pointer"
-                      title="Scroll to top"
-                    >
-                      ↑ Stats
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedRequestId(null)}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
@@ -570,7 +561,7 @@ export default function AdminManpowerRequests() {
             </div>
           ) : (
             /* ── FULL TABLE DIRECTORY (When no request is open) ───── */
-            <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedRequestId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
+            <Card className="animate-fade-in transition-all duration-300">
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2.5">
@@ -628,15 +619,6 @@ export default function AdminManpowerRequests() {
                       </Select>
                     </div>
 
-                    {isScrolled && !selectedRequestId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Scroll to top"
-                      >
-                        ↑ Stats
-                      </button>
-                    )}
                   </div>
                 </div>
               </CardHeader>
