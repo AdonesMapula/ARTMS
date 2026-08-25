@@ -7,8 +7,8 @@ import {
 import axios from "axios";
 import applicantService from "../services/applicantService";
 import BirthDatePicker from "../components/ui/BirthDatePicker";
-import Select from "../components/ui/Select";
 import { API_BASE_URL as API_URL } from "../services/api";
+import { motion, AnimatePresence } from "framer-motion";
 
 const EMPTY_FORM = {
   firstName: "", lastName: "", middleName: "",
@@ -174,7 +174,7 @@ export default function ApplyModal({ open, job, onClose }) {
     : null;
 
   return (
-    <div ref={formRef} className="mt-0 overflow-hidden rounded-b-2xl border-t-0">
+    <div ref={formRef} className="relative mt-0 overflow-hidden rounded-b-2xl border-t-0">
       {/* ── Job Confirmation Banner ─────────────────────────────── */}
       <div className="bg-gradient-to-r from-[#111A62] to-[#1e2d8a] px-6 py-5">
         <div className="flex items-start justify-between gap-4">
@@ -503,6 +503,33 @@ export default function ApplyModal({ open, job, onClose }) {
           </form>
         )}
       </div>
+
+      {/* Inline Loading Overlay (ApplyModal is not a full-screen modal) */}
+      <AnimatePresence>
+        {(submitting || parsing) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[32px] bg-white/70 backdrop-blur-md dark:bg-[#0F163D]/70"
+          >
+            <div className="relative flex h-20 w-20 items-center justify-center mb-4">
+              <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/20 dark:bg-indigo-500/20" />
+              <div className="absolute inset-2 animate-[spin_3s_linear_infinite] rounded-full border-2 border-dashed border-blue-500/40 dark:border-indigo-400/40" />
+              <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md dark:bg-slate-800">
+                <Loader2 className="h-6 w-6 animate-spin text-[#111A62] dark:text-indigo-400" />
+              </div>
+            </div>
+            <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+              {parsing ? "Analyzing Resume" : "Submitting Application"}
+            </h3>
+            <p className="mt-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {parsing ? "Extracting details using AI..." : "Please wait while we process your request..."}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

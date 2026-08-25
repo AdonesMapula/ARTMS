@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ARTMS Design Tokens (Tailwind v4-friendly) */
 :root {
   --artms-bg: #ffffff;
@@ -17,6 +19,44 @@
   --artms-soft: #f8fafc; /* slate-50 */
   --artms-ring: rgba(17, 26, 98, 0.35);
   color-scheme: light;
+}
+
+.dark {
+  --artms-bg: #0B0F2E;
+  --artms-fg: #f1f5f9; /* slate-100 */
+  --artms-muted: #94a3b8; /* slate-400 */
+  --artms-border: rgba(255, 255, 255, 0.08);
+
+  --artms-primary: #3B4BA0;
+  --artms-primary-hover: #4D5DB8;
+  --artms-primary-2: #242E6B;
+  --artms-accent: #F97316;
+  --artms-accent-hover: #ea6a0a;
+
+  --artms-card: #0F163D;
+  --artms-soft: #080B22;
+  --artms-ring: rgba(99, 102, 241, 0.35);
+  color-scheme: dark;
+}
+
+/* MagicUI Animated Theme Toggler View Transitions Rules */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 1;
+}
+.dark::view-transition-new(root) {
+  z-index: 9999;
+}
+::view-transition-old(root) {
+  z-index: 9999;
+}
+::view-transition-new(root) {
+  z-index: 1;
 }
 
 html,

@@ -4,6 +4,7 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import ActionLoadingModal from "../components/ui/ActionLoadingModal";
 
 export default function DepartmentModal({ open, editDept, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -152,6 +153,13 @@ export default function DepartmentModal({ open, editDept, onClose, onSave }) {
           </div>
         </div>
       </div>
+
+      <ActionLoadingModal
+        open={saving}
+        type={editDept ? "edit" : "create"}
+        title={editDept ? "Updating Department..." : "Creating Department..."}
+        message="Please wait while we save the department details. Do not refresh the page."
+      />
     </Modal>
   );
 }

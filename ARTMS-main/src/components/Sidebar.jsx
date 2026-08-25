@@ -36,13 +36,13 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
     if (isCollapsed) {
       return (
         <li className="pt-6 first:pt-2 flex justify-center">
-          <div className="w-8 h-[1px] bg-slate-200" />
+          <div className="w-8 h-[1px] bg-slate-200 dark:bg-slate-800" />
         </li>
       );
     }
     return (
       <li className="pt-6 first:pt-2 overflow-hidden transition-all duration-300">
-        <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+        <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
           {it.label}
         </p>
       </li>
@@ -71,8 +71,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
           "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
           isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
           anyChildActive
-            ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
-            : "border-l-[3px] border-l-transparent text-slate-700 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
+            ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+            : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
         )}
       >
         {it.icon && (
@@ -134,8 +134,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
                         cn(
                           "flex items-center rounded-lg px-2 py-2 gap-2 text-sm font-semibold transition-all duration-200 focus:outline-none group",
                           isActive
-                            ? "bg-[#111A62]/10 text-[#111A62]"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-[#111A62]"
+                            ? "bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white"
+                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white"
                         )
                       }
                     >
@@ -182,8 +182,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
                     cn(
                       "flex items-center rounded-xl font-semibold transition-all duration-200 group focus:outline-none px-3 py-2 gap-2 text-sm",
                       isActive
-                        ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
-                        : "border-l-[3px] border-l-transparent text-slate-600 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
+                        ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+                        : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
                     )
                   }
                 >
@@ -220,8 +220,8 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
           "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
           isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
           isActive
-            ? "border-l-[3px] border-l-[#111A62] bg-[#111A62]/10 text-[#111A62] [&_.nav-icon]:text-[#111A62]"
-            : "border-l-[3px] border-l-transparent text-slate-700 hover:bg-[#111A62]/5 hover:text-[#111A62] [&_.nav-icon]:text-[#4D569E] hover:[&_.nav-icon]:text-[#111A62]"
+            ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+            : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
         )
       }
     >
@@ -375,20 +375,19 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
   return (
     <TooltipProvider delayDuration={0}>
       <aside className={cn(
-        "sticky top-0 hidden h-screen flex-col border-r border-[var(--artms-border)] bg-[#F3F0F1] lg:flex transition-all duration-300 ease-in-out relative z-40",
+        "hidden border-r border-[var(--artms-border)] bg-[#F3F0F1] dark:bg-[#0B0F2E] lg:block transition-all duration-300 ease-in-out z-40 shrink-0",
         isCollapsed ? "w-[72px]" : "w-72"
       )}>
-        
-        {/* Shadcn-style Toggle Button */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-7 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--artms-border)] bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-[#111A62] z-50 focus:outline-none"
-          aria-label="Toggle Sidebar"
-        >
-          {isCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
-        </button>
+        <div className="sticky top-0 h-screen flex flex-col relative w-full overflow-hidden">
+          {/* Shadcn-style Toggle Button */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-7 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--artms-border)] bg-white dark:bg-[#0F163D] text-slate-500 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white z-50 focus:outline-none"
+            aria-label="Toggle Sidebar"
+          >
+            {isCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
+          </button>
 
-        <div className="flex h-full flex-col overflow-hidden">
           {/* Brand */}
           <div className={cn(
             "border-b border-[var(--artms-border)] py-5 flex items-center transition-all duration-300",
@@ -401,10 +400,10 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
                 className={cn("shrink-0 rounded-lg object-contain transition-all duration-300", isCollapsed ? "h-8 w-8" : "h-10 w-10")}
               />
               <div className={cn("flex flex-col leading-tight overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0" : "w-[160px] opacity-100")}>
-                <span className="font-logo text-[1.35rem] font-extrabold tracking-[-0.03em] leading-none text-[#111A62] whitespace-nowrap">
+                <span className="font-logo text-[1.35rem] font-extrabold tracking-[-0.03em] leading-none text-[#111A62] dark:text-white whitespace-nowrap transition-colors">
                   {brand}
                 </span>
-                <span className="font-sans text-[10px] font-normal tracking-wide text-slate-500 whitespace-nowrap mt-0.5">
+                <span className="font-sans text-[10px] font-normal tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5">
                   AI Recruitment System
                 </span>
               </div>
@@ -426,18 +425,18 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
           </nav>
 
           {/* User info + logout */}
-          <div className="border-t border-[var(--artms-border)] px-4 py-4">
+          <div className="border-t border-[var(--artms-border)] px-4 py-4 mt-auto">
             <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "flex-col gap-3 justify-center" : "gap-3")}>
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200" />
+                <img src={user.avatar} alt="Avatar" className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
               ) : (
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--artms-primary)] text-sm font-bold text-white">
                   {initials}
                 </span>
               )}
               <div className={cn("flex flex-col overflow-hidden transition-all duration-300", isCollapsed ? "w-0 h-0 opacity-0" : "flex-1 opacity-100")}>
-                <p className="truncate text-sm font-extrabold text-[#111A62]">{user?.name ?? "User"}</p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="truncate text-sm font-extrabold text-[#111A62] dark:text-white transition-colors">{user?.name ?? "User"}</p>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                   {getRoleLabel(user?.role)}
                 </p>
               </div>
@@ -457,18 +456,17 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
             </div>
           </div>
 
+          <ConfirmDialog
+            open={showLogoutConfirm}
+            title="Confirm Logout"
+            description="Are you sure you want to log out of your account?"
+            confirmLabel="Yes, Log out"
+            cancelLabel="No, Cancel"
+            tone="danger"
+            onConfirm={handleConfirmLogout}
+            onClose={() => setShowLogoutConfirm(false)}
+          />
         </div>
-
-        <ConfirmDialog
-          open={showLogoutConfirm}
-          title="Confirm Logout"
-          description="Are you sure you want to log out of your account?"
-          confirmLabel="Yes, Log out"
-          cancelLabel="No, Cancel"
-          tone="danger"
-          onConfirm={handleConfirmLogout}
-          onClose={() => setShowLogoutConfirm(false)}
-        />
       </aside>
     </TooltipProvider>
   );

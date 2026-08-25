@@ -5,6 +5,8 @@ import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
+import TableSkeleton from "../../components/ui/TableSkeleton";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
@@ -490,7 +492,9 @@ export default function AdminManpowerRequests() {
               {/* Sidebar Cards */}
               <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
                 {loading ? (
-                  <div className="py-10 text-center text-xs text-slate-400">Loading requests...</div>
+                  <div className="flex flex-col gap-2">
+                    <CardSkeleton count={4} className="!grid-cols-1" />
+                  </div>
                 ) : sorted.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400">No requests match filters.</div>
                 ) : (
@@ -636,7 +640,7 @@ export default function AdminManpowerRequests() {
                         />
                       </TH>
                       <TH>Request ID</TH>
-                      <TH>Position</TH>
+                    <TH>Position</TH>
                       <TH>Department</TH>
                       <TH>Requested By</TH>
                       <TH>Headcount</TH>
@@ -648,11 +652,8 @@ export default function AdminManpowerRequests() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <TD colSpan={9} className="py-12 text-center text-slate-400">
-                          <div className="flex items-center justify-center gap-2">
-                            <Loader size={18} className="animate-spin text-[#111A62]" />
-                            <span>Loading manpower requests...</span>
-                          </div>
+                        <TD colSpan={9} className="p-4">
+                          <TableSkeleton rows={10} />
                         </TD>
                       </tr>
                     ) : paginated.length === 0 ? (

@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SplashScreen from "../components/ui/SplashScreen";
-import PageLoader from "../components/ui/PageLoader";
 import PublicLayout from "../layouts/PublicLayout";
 import DepartmentHeadLayout from "../layouts/DepartmentHeadLayout";
 import AdminLayout from "../layouts/AdminLayout";
@@ -96,7 +95,7 @@ export default function AppRoutes() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={null}>
         <Routes>
           {/* ── Public site (no auth required) ───────────────────────────── */}
           <Route element={<PublicLayout />}>

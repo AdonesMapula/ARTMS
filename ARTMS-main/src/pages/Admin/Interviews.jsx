@@ -24,6 +24,7 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
 import StarRating from "../../components/interview/StarRating";
@@ -362,8 +363,8 @@ export default function Interviews() {
           {/* ── Table ───────────────────────────────────────────────── */}
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-                <FiRefreshCw className="mr-2 animate-spin" /> Loading interviews…
+              <div className="p-4">
+                <TableSkeleton rows={8} />
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
