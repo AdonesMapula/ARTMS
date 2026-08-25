@@ -14,9 +14,7 @@ import Reveal from "../../components/ui/Reavel";
 import GeometricBackground from "../../components/ui/GeometricBackground";
 import axios from "axios";
 import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
-
-const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
-const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
+import { API_BASE_URL as API_URL } from "../../services/api";
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);

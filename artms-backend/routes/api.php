@@ -77,6 +77,8 @@ Route::match(['get', 'post', 'patch'], 'interviews/{interview}/confirm', [Interv
 */
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('verify-login-otp', [AuthController::class, 'verifyLoginOtp'])->middleware('throttle:6,1');
+    Route::post('resend-login-otp', [AuthController::class, 'resendLoginOtp'])->middleware('throttle:6,1');
     Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);

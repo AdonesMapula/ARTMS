@@ -8,9 +8,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import AlertModal from "../../components/ui/AlertModal";
 import axios from "axios";
-
-const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
-const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
+import { API_BASE_URL as API_URL } from "../../services/api";
 
 export default function JobDetails() {
   const { id } = useParams();

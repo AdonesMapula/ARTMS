@@ -2,19 +2,61 @@ import api from './api';
 
 const authService = {
   /**
-   * Login — returns { token, user }
+   * Login — returns { token, user } if direct login, or { requires_otp: true, verification_id, email_hint, expires_in, resend_cooldown }
    */
   login: async (email, password) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;
     const cleanPassword = typeof password === 'string' ? password.trim() : password;
     const response = await api.post('/auth/login', { email: cleanEmail, password: cleanPassword });
-    const { token, user } = response.data;
+    const data = response.data;
 
-    // Persist token and user info
-    localStorage.setItem('artms_token', token);
-    localStorage.setItem('artms_user', JSON.stringify(user));
+    // If OTP is required (non-Super-Admin), return pre-auth data without setting auth token
+    if (data.requires_otp) {
+      return data;
+    }
+
+    // Direct login (Super Admin)
+    const { token, user } = data;
+    if (token) {
+      localStorage.setItem('artms_token', token);
+      localStorage.setItem('artms_user', JSON.stringify(user));
+    }
 
     return { token, user };
+  },
+
+  /**
+   * Verify Login OTP — verifies 6-digit code and issues the final Sanctum authentication token
+   */
+  verifyLoginOtp: async (verification_id, otp) => {
+    const cleanVerificationId = typeof verification_id === 'string' ? verification_id.trim() : verification_id;
+    const cleanOtp = typeof otp === 'string' ? otp.trim() : otp;
+
+    const response = await api.post('/auth/verify-login-otp', {
+      verification_id: cleanVerificationId,
+      otp: cleanOtp,
+    });
+
+    const { token, user } = response.data;
+
+    if (token) {
+      localStorage.setItem('artms_token', token);
+      localStorage.setItem('artms_user', JSON.stringify(user));
+    }
+
+    return { token, user };
+  },
+
+  /**
+   * Resend Login OTP
+   */
+  resendLoginOtp: async (verification_id) => {
+    const cleanVerificationId = typeof verification_id === 'string' ? verification_id.trim() : verification_id;
+    const response = await api.post('/auth/resend-login-otp', {
+      verification_id: cleanVerificationId,
+    });
+
+    return response.data;
   },
 
   /**
@@ -47,7 +89,7 @@ const authService = {
   },
 
   /**
-   * Verify OTP code
+   * Verify OTP code for password reset
    */
   verifyOtp: async (email, otp) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;

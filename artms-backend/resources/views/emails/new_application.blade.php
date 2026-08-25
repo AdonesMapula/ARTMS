@@ -45,7 +45,7 @@
       <tr>
         <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;">Date Applied</td>
         <td style="padding:12px 16px;font-size:14px;color:#111827;">
-          {{ $applicant->created_at->format('M d, Y h:i A') }}
+          {{ \Carbon\Carbon::parse($applicant->created_at ?? now())->format('M d, Y h:i A') }}
         </td>
       </tr>
     </table>
@@ -65,7 +65,7 @@
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
     <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:0.05em;">
       ARTMS — AI Recruitment and Talent Management System<br>
-      &copy; { date('Y') } All rights reserved.
+      &copy; {{ date('Y') }} All rights reserved.
     </p>
   </div>
 

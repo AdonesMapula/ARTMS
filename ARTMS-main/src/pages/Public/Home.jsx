@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../../services/api";
 import GeometricBackground from "../../components/ui/GeometricBackground";
 import {
   ArrowRight,
@@ -368,10 +369,8 @@ export default function JobBoardLanding() {
   }, []);
 
   useEffect(() => {
-    const rawApiUrl = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/+$/, "");
-    const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
     axios
-      .get(`${API_URL}/public/job-postings`)
+      .get(`${API_BASE_URL}/public/job-postings`)
       .then((res) => {
         const all = Array.isArray(res.data)
           ? res.data

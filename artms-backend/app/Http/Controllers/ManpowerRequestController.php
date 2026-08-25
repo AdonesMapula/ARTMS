@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\ManpowerRequest;
+use App\Services\NotificationRecipientResolver;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,14 +65,17 @@ class ManpowerRequestController extends Controller
         $req = ManpowerRequest::create($data);
         AuditLog::record('create', 'manpower_request', "Manpower request created for {$data['position_needed']}");
 
-        // Dispatch real-time in-app + email notifications to COO & SuperAdmin
+        // Dispatch real-time in-app + email notifications to targeted approvers (COO & SuperAdmin)
         $deptName = $req->department?->department_name ?? 'Department';
-        NotificationService::notifyRoles(
-            ['coo', 'super_admin'],
+        $recipients = NotificationRecipientResolver::resolve('manpower_request.created', $req, $request->user());
+        NotificationService::notifyRecipients(
+            $recipients,
             'New PRF Request Pending Approval',
             "{$deptName} requested {$req->headcount}x {$req->position_needed} (Urgency: " . ucfirst($req->urgency) . ").",
             '/coo/prf-approvals',
-            'request'
+            'request',
+            'manpower_request',
+            $req->id
         );
 
         return response()->json(['message' => 'Manpower request submitted.', 'request' => $req], 201);
@@ -174,51 +178,40 @@ class ManpowerRequestController extends Controller
 
         $position = $manpowerRequest->position_needed;
 
-        // Send notifications based on the new status
+        // Send targeted notifications based on the new status
         if ($data['status'] === 'approved') {
-            if ($manpowerRequest->requester) {
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "PRF Request Approved by COO",
-                    "Your manpower request for '{$position}' was APPROVED by COO. Ready for job posting.",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
-                "PRF Approved by COO",
-                "Requisition for '{$position}' was APPROVED by COO. You can now create a job posting.",
-                '/admin/job-posting',
-                'alert'
+            $recipients = NotificationRecipientResolver::resolve('manpower_request.approved', $manpowerRequest, auth()->user());
+            NotificationService::notifyRecipients(
+                $recipients,
+                "PRF Request Approved by COO",
+                "Manpower request for '{$position}' was APPROVED by COO. Ready for job posting.",
+                '/department-head/request-history',
+                'alert',
+                'manpower_request',
+                $manpowerRequest->id
             );
         } elseif ($data['status'] === 'rejected') {
-            if ($manpowerRequest->requester) {
-                $rem = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "PRF Request Rejected by COO",
-                    "Your manpower request for '{$position}' was REJECTED by COO.{$rem}",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
+            $recipients = NotificationRecipientResolver::resolve('manpower_request.rejected', $manpowerRequest, auth()->user());
+            $rem = $data['remarks'] ? " Remarks: {$data['remarks']}" : "";
+            NotificationService::notifyRecipients(
+                $recipients,
+                "PRF Request Rejected by COO",
+                "Your manpower request for '{$position}' was REJECTED by COO.{$rem}",
+                '/department-head/request-history',
+                'alert',
+                'manpower_request',
+                $manpowerRequest->id
+            );
         } elseif ($data['status'] === 'revised') {
-            if ($manpowerRequest->requester) {
-                NotificationService::notifyUser(
-                    $manpowerRequest->requester,
-                    "Action Required: PRF Needs Revision",
-                    "The COO requested a revision for the '{$position}' PRF.",
-                    '/department-head/request-history',
-                    'alert'
-                );
-            }
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            $recipients = NotificationRecipientResolver::resolve('manpower_request.revised', $manpowerRequest, auth()->user());
+            NotificationService::notifyRecipients(
+                $recipients,
                 "Action Required: PRF Needs Revision",
                 "The COO requested a revision for the '{$position}' PRF.",
-                '/admin/manpower-requests',
-                'alert'
+                '/department-head/request-history',
+                'alert',
+                'manpower_request',
+                $manpowerRequest->id
             );
         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreApplicantRequest;
 use App\Models\AuditLog;
 use App\Models\Applicant;
+use App\Services\NotificationRecipientResolver;
 use App\Services\NotificationService;
 use App\Models\ApplicantDocument;
 use App\Models\ApplicantNote;
@@ -95,13 +96,16 @@ class ApplicantController extends Controller
 
         $jobTitle = $applicant->jobPosting?->jobLibrary?->job_title ?? 'Job Position';
 
-        // Notify HR Admins & SuperAdmin (In-App + Email)
-        NotificationService::notifyRoles(
-            ['hr_admin', 'super_admin'],
+        // Notify targeted HR Recruiters (In-App + Email)
+        $recipients = NotificationRecipientResolver::resolve('applicant.applied', $applicant);
+        NotificationService::notifyRecipients(
+            $recipients,
             'New Job Application Received',
             "{$applicant->first_name} {$applicant->last_name} applied for '{$jobTitle}' (Ref: {$appId}).",
             '/admin/applicants',
-            'application'
+            'application',
+            'applicant',
+            $applicant->id
         );
 
         // Confirmation Email to Applicant
@@ -201,12 +205,15 @@ class ApplicantController extends Controller
                 );
             }
 
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            $recipients = NotificationRecipientResolver::resolve('applicant.status_updated', $applicant, auth()->user());
+            NotificationService::notifyRecipients(
+                $recipients,
                 "Applicant Status Updated — {$readableStatus}",
                 "Applicant {$applicant->first_name} {$applicant->last_name} status was updated to {$readableStatus}.",
                 '/admin/applicants',
-                'application'
+                'application',
+                'applicant',
+                $applicant->id
             );
         }
 
@@ -220,12 +227,15 @@ class ApplicantController extends Controller
                 'application'
             );
 
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            $recipients = NotificationRecipientResolver::resolve('applicant.status_updated', $applicant, auth()->user());
+            NotificationService::notifyRecipients(
+                $recipients,
                 "Applicant Shortlisted",
                 "Applicant {$applicant->first_name} {$applicant->last_name} has been shortlisted for '{$jobTitle}'.",
                 '/admin/applicants',
-                'application'
+                'application',
+                'applicant',
+                $applicant->id
             );
         }
 
@@ -248,13 +258,16 @@ class ApplicantController extends Controller
         // Send email to applicant
         NotificationService::notifyEmail($applicant->email, 'Interview Invitation — ARTMS Recruitment', $msg, null, 'interview');
 
-        // Notify HR Admins
-        NotificationService::notifyRoles(
-            ['hr_admin', 'super_admin'],
+        // Notify responsible recruiter
+        $recipients = NotificationRecipientResolver::resolve('applicant.ready_for_interview', $applicant, auth()->user());
+        NotificationService::notifyRecipients(
+            $recipients,
             'Applicant Ready for Interview',
             "Applicant {$applicant->first_name} {$applicant->last_name} marked ready for interview ({$jobTitle}).",
             '/admin/applicants',
-            'interview'
+            'interview',
+            'applicant',
+            $applicant->id
         );
 
         AuditLog::record('ready_for_interview', 'applicant', "Applicant marked ready for interview: {$applicant->application_id}");
@@ -476,12 +489,15 @@ class ApplicantController extends Controller
                 'application'
             );
 
-            NotificationService::notifyRoles(
-                ['hr_admin', 'super_admin'],
+            $recipients = NotificationRecipientResolver::resolve('applicant.hired', $applicant, auth()->user());
+            NotificationService::notifyRecipients(
+                $recipients,
                 "New Employee Hired — 201 File Created",
                 "{$applicant->first_name} {$applicant->last_name} was hired as {$jobTitle}. Employee Number: {$empId}.",
                 '/admin/employees',
-                'application'
+                'application',
+                'applicant',
+                $applicant->id
             );
         } catch (\Throwable $e) {
             \Log::warning("Failed to dispatch hiring notifications: " . $e->getMessage());

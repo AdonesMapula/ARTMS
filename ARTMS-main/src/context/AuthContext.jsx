@@ -40,9 +40,28 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const cleanEmail = typeof email === 'string' ? email.trim() : email;
     const cleanPassword = typeof password === 'string' ? password.trim() : password;
-    const { user: loggedInUser } = await authService.login(cleanEmail, cleanPassword);
+    const result = await authService.login(cleanEmail, cleanPassword);
+
+    if (result.requires_otp) {
+      return result;
+    }
+
+    if (result.user) {
+      setUser(result.user);
+      return result.user;
+    }
+
+    return result;
+  }, []);
+
+  const verifyLoginOtp = useCallback(async (verification_id, otp) => {
+    const { user: loggedInUser } = await authService.verifyLoginOtp(verification_id, otp);
     setUser(loggedInUser);
     return loggedInUser;
+  }, []);
+
+  const resendLoginOtp = useCallback(async (verification_id) => {
+    return await authService.resendLoginOtp(verification_id);
   }, []);
 
   const logout = useCallback(async () => {
@@ -72,7 +91,7 @@ export function AuthProvider({ children }) {
   const role = user?.role || null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isAuthenticated, role }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyLoginOtp, resendLoginOtp, logout, updateUser, isAuthenticated, role }}>
       {children}
     </AuthContext.Provider>
   );

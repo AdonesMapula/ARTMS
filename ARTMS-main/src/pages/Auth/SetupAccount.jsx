@@ -4,9 +4,7 @@ import { KeyRound, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import artmsLogo from "../../assets/Logo/ARTMS_LOGO_white.png";
 import loginBg from "../../assets/Backgrounds/login-bg.jpg";
 import axios from "axios";
-
-const rawApiUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").trim().replace(/\/+$/, "");
-const API_URL = rawApiUrl.replace(/\/api\/api$/, "/api");
+import { API_BASE_URL as API_URL } from "../../services/api";
 
 export default function SetupAccount() {
   const [showPassword, setShowPassword] = useState(false);

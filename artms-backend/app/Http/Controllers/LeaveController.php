@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\LeaveRequest;
+use App\Services\NotificationRecipientResolver;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,6 +37,21 @@ class LeaveController extends Controller
             ->diffInWeekdays(\Carbon\Carbon::parse($data['end_date'])) + 1;
 
         $leave = LeaveRequest::create($data);
+
+        // Targeted notification to Department Head / Approver
+        $recipients = NotificationRecipientResolver::resolve('leave.created', $leave, auth()->user());
+        if ($recipients->isNotEmpty()) {
+            $empName = $leave->employee ? "{$leave->employee->first_name} {$leave->employee->last_name}" : "An employee";
+            NotificationService::notifyRecipients(
+                $recipients,
+                'New Leave Request Submitted',
+                "{$empName} requested {$leave->days_count} day(s) of {$leave->leave_type} leave.",
+                '/department-head/leaves',
+                'request',
+                'leave_request',
+                $leave->id
+            );
+        }
 
         return response()->json(['message' => 'Leave request submitted.', 'leave' => $leave], 201);
     }
@@ -76,6 +93,21 @@ class LeaveController extends Controller
         ]);
 
         AuditLog::record('approve', 'leave', "Leave {$data['status']} for employee ID {$leaveRequest->employee_id}");
+
+        // Targeted notification to requesting employee
+        $recipients = NotificationRecipientResolver::resolve('leave.' . $data['status'], $leaveRequest, auth()->user());
+        if ($recipients->isNotEmpty()) {
+            $statusText = strtoupper($data['status']);
+            NotificationService::notifyRecipients(
+                $recipients,
+                "Leave Request {$statusText}",
+                "Your {$leaveRequest->leave_type} leave request ({$leaveRequest->start_date} to {$leaveRequest->end_date}) was {$statusText}.",
+                '/profile',
+                'alert',
+                'leave_request',
+                $leaveRequest->id
+            );
+        }
 
         return response()->json(['message' => "Leave {$data['status']}.", 'leave' => $leaveRequest->fresh()]);
     }

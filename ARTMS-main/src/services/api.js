@@ -4,7 +4,10 @@ import axios from 'axios';
  * Base Axios instance for all ARTMS API calls.
  * Reads the backend URL from .env — set VITE_API_URL in your .env file.
  */
-const rawApiUrl = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
+const defaultApiUrl = typeof import.meta !== 'undefined' && import.meta.env?.PROD
+  ? 'https://artms-backend.onrender.com/api'
+  : '/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL || defaultApiUrl).trim().replace(/\/+$/, '');
 export const API_BASE_URL = rawApiUrl.replace(/\/api\/api$/, '/api');
 
 const api = axios.create({

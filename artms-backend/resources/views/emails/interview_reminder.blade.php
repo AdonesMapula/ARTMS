@@ -28,7 +28,7 @@
       <tr>
         <td style="padding:12px 16px;font-weight:700;font-size:13px;color:#6b7280;width:38%;border-bottom:1px solid #e5e7eb;">Date &amp; Time</td>
         <td style="padding:12px 16px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;">
-          {{ \Carbon\Carbon::parse($interview->scheduled_at)->format('l, F d, Y 	 g:i A') }}
+          {{ \Carbon\Carbon::parse($interview->scheduled_at)->format('l, F d, Y \a\t g:i A') }}
         </td>
       </tr>
       @if($interview->location)
@@ -70,7 +70,7 @@
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
     <p style="margin:0;font-size:11px;color:#9ca3af;letter-spacing:0.05em;">
       ARTMS — AI Recruitment and Talent Management System<br>
-      &copy; { date('Y') } All rights reserved.
+      &copy; {{ date('Y') }} All rights reserved.
     </p>
   </div>
 
