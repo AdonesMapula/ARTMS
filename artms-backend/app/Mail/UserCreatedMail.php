@@ -34,11 +34,7 @@ class UserCreatedMail extends Mailable
      */
     public function build()
     {
-        $fromAddress = config('mail.from.address') ?: 'streetwearupcycled@gmail.com';
-        $fromName = config('mail.from.name') ?: config('app.name', 'ARTMS');
-
-        return $this->from($fromAddress, $fromName)
-                    ->subject('Welcome to ARTMS - Account Setup Required')
+        return $this->subject('Welcome to ARTMS - Account Setup Required')
                     ->view('emails.user-created');
     }
 }
