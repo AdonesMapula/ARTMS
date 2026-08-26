@@ -3,13 +3,12 @@ import { FileText, Clock, CheckCircle, XCircle, Filter, RefreshCw, Eye, Trash2, 
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import CardSkeleton from "../../components/ui/CardSkeleton";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import AlertModal from "../../components/ui/AlertModal";
 import { ManpowerEditModal } from "../../modals";
@@ -337,80 +336,46 @@ export default function AdminManpowerRequests() {
 
         {/* Statistics Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Card
+          <StatFilterCard
+            title="Total Requests"
+            value={stats.total}
+            icon={<FileText size={22} />}
+            accentColor="navy"
+            active={statusFilter === "all"}
             onClick={() => handleStatusChange("all")}
-            className={`cursor-pointer transition-all hover:border-blue-400 ${statusFilter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <FileText size={24} className="text-[#111A62]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Total Requests</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Pending"
+            value={stats.pending}
+            icon={<Clock size={22} />}
+            accentColor="amber"
+            active={statusFilter === "pending"}
             onClick={() => handleStatusChange("pending")}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <Clock size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Pending</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.pending}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Approved"
+            value={stats.approved}
+            icon={<CheckCircle size={22} />}
+            accentColor="emerald"
+            active={statusFilter === "approved"}
             onClick={() => handleStatusChange("approved")}
-            className={`cursor-pointer transition-all hover:border-emerald-400 ${statusFilter === "approved" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-                <CheckCircle size={24} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Approved</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.approved}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Needs Revision"
+            value={stats.revised}
+            icon={<RefreshCw size={22} />}
+            accentColor="orange"
+            active={statusFilter === "revised"}
             onClick={() => handleStatusChange("revised")}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${statusFilter === "revised" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <RefreshCw size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
-                <p className="text-2xl font-extrabold text-amber-600">{stats.revised}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Rejected"
+            value={stats.rejected}
+            icon={<XCircle size={22} />}
+            accentColor="rose"
+            active={statusFilter === "rejected"}
             onClick={() => handleStatusChange("rejected")}
-            className={`cursor-pointer transition-all hover:border-red-400 ${statusFilter === "rejected" ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
-                <XCircle size={24} className="text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Rejected</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.rejected}</p>
-              </div>
-            </CardContent>
-          </Card>
+          />
         </div>
       </div>
 
@@ -530,23 +495,22 @@ export default function AdminManpowerRequests() {
 
                     const urgencyBg =
                       r.urgency === "critical" ? "bg-red-500" :
-                      r.urgency === "high" ? "bg-orange-500" :
-                      r.urgency === "medium" ? "bg-blue-500" : "bg-slate-400";
+                        r.urgency === "high" ? "bg-orange-500" :
+                          r.urgency === "medium" ? "bg-blue-500" : "bg-slate-400";
 
                     const statusBg =
                       r.status === "approved" ? "bg-emerald-500" :
-                      r.status === "pending" ? "bg-amber-500" :
-                      r.status === "revised" || r.status === "needs_revision" ? "bg-orange-500" : "bg-red-500";
+                        r.status === "pending" ? "bg-amber-500" :
+                          r.status === "revised" || r.status === "needs_revision" ? "bg-orange-500" : "bg-red-500";
 
                     return (
                       <div
                         key={r.id}
                         onClick={() => setSelectedRequestId(r.id)}
-                        className={`p-3 rounded-2xl transition cursor-pointer border ${
-                          isSelected
+                        className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
                             ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
                             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-1.5">
                           <div className="flex items-center gap-2">
@@ -559,7 +523,7 @@ export default function AdminManpowerRequests() {
                             />
                             <span className="font-mono text-xs font-black text-slate-800">{prfId}</span>
                           </div>
-                          
+
                           {/* Color Dot Legend Badge Indicators */}
                           <div className="flex items-center gap-1" title={`Urgency: ${r.urgency} | Status: ${r.status}`}>
                             <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 border border-slate-200">
@@ -660,9 +624,9 @@ export default function AdminManpowerRequests() {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <THead>
-                    <tr>
-                      <TH className="w-10 text-center">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.length === paginated.length && paginated.length > 0}
@@ -670,72 +634,72 @@ export default function AdminManpowerRequests() {
                           className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                           title="Select all on this page"
                         />
-                      </TH>
-                      <TH>Request ID</TH>
-                    <TH>Position</TH>
-                      <TH>Department</TH>
-                      <TH>Requested By</TH>
-                      <TH>Headcount</TH>
-                      <TH>Urgency</TH>
-                      <TH>Status</TH>
-                      <TH className="text-right">Actions</TH>
-                    </tr>
-                  </THead>
-                  <tbody>
+                      </TableHead>
+                      <TableHead>Request ID</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Headcount</TableHead>
+                      <TableHead>Urgency</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {loading ? (
-                      <tr>
-                        <TD colSpan={9} className="p-4">
+                      <TableRow>
+                        <TableCell colSpan={9} className="p-4">
                           <TableSkeleton rows={10} />
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : paginated.length === 0 ? (
-                      <tr>
-                        <TD colSpan={9} className="py-12 text-center">
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-12 text-center">
                           <FileText size={48} className="mx-auto mb-3 text-slate-300" />
                           <p className="text-sm font-semibold text-slate-600">No requests found</p>
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       paginated.map((r) => {
                         const isChecked = selectedIds.includes(r.id);
                         return (
-                          <tr
+                          <TableRow
                             key={r.id}
                             onClick={() => setSelectedRequestId(r.id)}
-                            className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                            className={`cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
                           >
-                            <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => handleToggleSelectOne(r.id, e)}
                                 className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                               />
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <div className="font-semibold text-slate-900">
                                 PRF-{String(r.id).padStart(3, "0")}
                               </div>
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <div className="font-bold text-slate-900">
                                 {r.position_needed || "—"}
                               </div>
-                            </TD>
-                            <TD className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TD>
-                            <TD className="text-slate-600">{r.requester?.name || "—"}</TD>
-                            <TD className="font-bold text-slate-900">{r.headcount}</TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell className="text-slate-600">{r.department?.department_name || r.department?.name || "—"}</TableCell>
+                            <TableCell className="text-slate-600">{r.requester?.name || "—"}</TableCell>
+                            <TableCell className="font-bold text-slate-900">{r.headcount}</TableCell>
+                            <TableCell>
                               <Badge tone={URGENCY_TONE[r.urgency] ?? "default"} className="capitalize">
                                 {r.urgency}
                               </Badge>
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <Badge tone={STATUS_TONE[r.status] ?? "default"} className="capitalize">
                                 {r.status === "revised" || r.status === "needs_revision" ? "Needs Revision" : r.status}
                               </Badge>
-                            </TD>
-                            <TD className="text-right">
+                            </TableCell>
+                            <TableCell className="text-right">
                               <div className="inline-flex items-center justify-end gap-1.5">
                                 <button
                                   type="button"
@@ -748,12 +712,12 @@ export default function AdminManpowerRequests() {
                                   <Eye size={14} /> View Details <ChevronRight size={14} />
                                 </button>
                               </div>
-                            </TD>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })
                     )}
-                  </tbody>
+                  </TableBody>
                 </Table>
 
                 {!loading && paginatedTotal > 10 && (
@@ -839,3 +803,42 @@ export default function AdminManpowerRequests() {
     </div>
   );
 }
+
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+  };
+  const theme = colorMap[accentColor] || colorMap.navy;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+        }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+

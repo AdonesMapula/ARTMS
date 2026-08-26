@@ -9,7 +9,6 @@ import CardSkeleton from "../../components/ui/CardSkeleton";
 import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import AlertModal from "../../components/ui/AlertModal";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -394,74 +393,47 @@ export default function JobLibrary() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card
-            onClick={() => { setFilter("approved"); setPage(1); }}
-            className={`cursor-pointer transition-all hover:border-emerald-400 ${filter === "approved" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-                <CheckCircle size={24} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Approved</p>
-                <p className="text-2xl font-extrabold text-slate-900">
-                  {stats.approved}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            onClick={() => { setFilter("pending"); setPage(1); }}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "pending" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <Clock size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Pending</p>
-                <p className="text-2xl font-extrabold text-slate-900">
-                  {stats.pending}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            onClick={() => { setFilter("revised"); setPage(1); }}
-            className={`cursor-pointer transition-all hover:border-amber-400 ${filter === "revised" ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <AlertTriangle size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Needs Revision</p>
-                <p className="text-2xl font-extrabold text-amber-600">
-                  {stats.revised}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <StatFilterCard
+            title="Total Templates"
+            value={stats.total}
+            icon={<BookOpen size={22} />}
+            accentColor="navy"
+            active={filter === "all"}
             onClick={() => { setFilter("all"); setPage(1); }}
-            className={`cursor-pointer transition-all hover:border-blue-400 ${filter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <BookOpen size={24} className="text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Total Templates</p>
-                <p className="text-2xl font-extrabold text-slate-900">
-                  {stats.total}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          />
+          <StatFilterCard
+            title="Approved"
+            value={stats.approved}
+            icon={<CheckCircle size={22} />}
+            accentColor="emerald"
+            active={filter === "approved"}
+            onClick={() => { setFilter("approved"); setPage(1); }}
+          />
+          <StatFilterCard
+            title="Pending"
+            value={stats.pending}
+            icon={<Clock size={22} />}
+            accentColor="amber"
+            active={filter === "pending"}
+            onClick={() => { setFilter("pending"); setPage(1); }}
+          />
+          <StatFilterCard
+            title="Needs Revision"
+            value={stats.revised}
+            icon={<AlertTriangle size={22} />}
+            accentColor="orange"
+            active={filter === "revised"}
+            onClick={() => { setFilter("revised"); setPage(1); }}
+          />
+          <StatFilterCard
+            title="Rejected"
+            value={stats.rejected}
+            icon={<XCircle size={22} />}
+            accentColor="rose"
+            active={filter === "rejected"}
+            onClick={() => { setFilter("rejected"); setPage(1); }}
+          />
         </div>
       </div>
 
@@ -858,6 +830,45 @@ export default function JobLibrary() {
         title={approveModal.status === "approved" ? "Approving Job Entry..." : "Rejecting Job Entry..."}
         message="Updating approval status and publishing to library. Please wait..."
       />
+    </div>
+  );
+}
+
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+  };
+  const theme = colorMap[accentColor] || colorMap.navy;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+        active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+      }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

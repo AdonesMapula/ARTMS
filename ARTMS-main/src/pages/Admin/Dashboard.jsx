@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Users, Clock, Clipboard, Activity, Calendar, Layers, CheckCircle2,
   Briefcase, ArrowRight, RefreshCw, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon, TrendingUp,
-  Cpu, FileText, ChevronRight
+  Cpu, FileText, ChevronRight, FolderOpen, Send, UserCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -69,11 +69,18 @@ export default function AdminDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
         </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={`s2-${i}`} className="h-32 rounded-3xl" />)}
+        </div>
         <div className="grid gap-6 lg:grid-cols-12">
-          <Skeleton className="h-96 lg:col-span-8 rounded-3xl" />
+          <Skeleton className="h-96 lg:col-span-7 rounded-3xl" />
+          <Skeleton className="h-96 lg:col-span-5 rounded-3xl" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-12">
+          <Skeleton className="h-96 lg:col-span-4 rounded-3xl" />
+          <Skeleton className="h-96 lg:col-span-4 rounded-3xl" />
           <Skeleton className="h-96 lg:col-span-4 rounded-3xl" />
         </div>
-        <Skeleton className="h-96 rounded-3xl mt-6" />
       </div>
     );
   }
@@ -89,6 +96,7 @@ export default function AdminDashboard() {
     interviews_this_month: 28,
     hired_this_month: 14,
     manpower_requests: 8,
+    total_job_templates: 24,
     applicant_pipeline: {
       applied: 348,
       ai_screening: 215,
@@ -132,63 +140,95 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* ── TOP KPI GRID (4 CARDS) ────────────────────────────────────────────── */}
+      {/* ── TOP KPI GRID (4 CARDS) — EXISTING OPERATIONAL STATS ────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/admin/employees" className="block outline-none">
           <KPIBox
             title="Active Employees"
             value={data.total_employees}
-            trend="+12 New this quarter"
-            trendPositive={true}
             icon={<Users size={22} />}
             accentColor="navy"
-            subtitle="Registered staff"
           />
         </Link>
         <Link to="/admin/attendance" className="block outline-none">
           <KPIBox
             title="Attendance Logged"
             value={attendanceSummary ? attendanceSummary.length : data.total_employees}
-            trend="Live synchronization"
-            trendPositive={true}
             icon={<Clock size={22} />}
             accentColor="emerald"
-            subtitle="Today's attendance records"
           />
         </Link>
         <Link to="/admin/job-posting" className="block outline-none">
           <KPIBox
             title="Open Job Postings"
             value={data.open_job_postings}
-            trend={`${data.manpower_requests} Pending Requests`}
-            trendPositive={true}
             icon={<Layers size={22} />}
             accentColor="purple"
-            subtitle="Active recruitment slots"
           />
         </Link>
         <Link to="/admin/applicants" className="block outline-none">
           <KPIBox
             title="Pipeline Applicants"
             value={data.total_applicants}
-            trend="+15% vs last month"
-            trendPositive={true}
             icon={<Activity size={22} />}
             accentColor="orange"
-            subtitle="Total candidates tracked"
           />
         </Link>
       </div>
 
-      {/* ── MIDDLE TIER: CHARTS ───────────────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
+      {/* ── SECOND KPI ROW (4 NEW CARDS) — RECRUITMENT TOTALS ──────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/admin/manpower-requests" className="block outline-none">
+          <KPIBox
+            title="Total Manpower Requests"
+            value={data.manpower_requests}
+            icon={<Send size={22} />}
+            accentColor="indigo"
+          />
+        </Link>
+        <Link to="/admin/job-library" className="block outline-none">
+          <KPIBox
+            title="Total Job Library"
+            value={data.total_job_templates || 0}
+            icon={<FolderOpen size={22} />}
+            accentColor="teal"
+          />
+        </Link>
+        <Link to="/admin/job-posting" className="block outline-none">
+          <KPIBox
+            title="Total Job Postings"
+            value={data.open_job_postings}
+            icon={<Briefcase size={22} />}
+            accentColor="amber"
+          />
+        </Link>
+        <Link to="/admin/applicants" className="block outline-none">
+          <KPIBox
+            title="Total Applicants"
+            value={data.total_applicants}
+            trendPositive={true}
+            icon={<UserCheck size={22} />}
+            accentColor="rose"
+            subtitle="All-time candidates"
+          />
+        </Link>
+      </div>
 
-        {/* MIDDLE LEFT: BAR CHART -> APPLICANT RECRUITMENT PIPELINE */}
-        <div className="lg:col-span-8 flex flex-col">
+      {/* ── CHARTS ROW 1: Pipeline + Monthly Hiring (side by side) ─────────────── */}
+      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
+        <div className="lg:col-span-7 flex flex-col">
           <PipelineChart pipeline={pipeline} />
         </div>
+        <div className="lg:col-span-5 flex flex-col">
+          <MonthlyHiringChart hires={hires} />
+        </div>
+      </div>
 
-        {/* MIDDLE RIGHT: QUICK SYSTEM LINKS */}
+      {/* ── CHARTS ROW 2: Attendance + System Access + HR Performance ──────────── */}
+      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
+        <div className="lg:col-span-4 flex flex-col">
+          <AttendanceOverviewChart summary={attendanceSummary} />
+        </div>
         <div className="lg:col-span-4 flex flex-col">
           <Card className="flex-1 shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 pb-4 pt-5 px-6">
@@ -208,23 +248,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* ── BOTTOM TIER: ANALYTICS ─────────────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-12 items-stretch">
-
-        {/* BOTTOM LEFT: AREA CHART -> MONTHLY HIRING TREND */}
-        <div className="lg:col-span-5 flex flex-col">
-          <MonthlyHiringChart hires={hires} />
-        </div>
-
-        {/* BOTTOM MIDDLE: PIE CHART -> ATTENDANCE OVERVIEW */}
         <div className="lg:col-span-4 flex flex-col">
-          <AttendanceOverviewChart summary={attendanceSummary} />
-        </div>
-
-        {/* BOTTOM RIGHT: METRICS SUMMARY */}
-        <div className="lg:col-span-3 flex flex-col">
           <Card className="flex-1 shadow-lg shadow-slate-200/50 rounded-3xl border-slate-100 bg-[#111A62] text-white overflow-hidden relative">
             {/* Background design elements */}
             <div className="absolute top-0 right-0 -mr-16 -mt-16 h-48 w-48 rounded-full bg-white/5 blur-2xl pointer-events-none" />
@@ -266,36 +290,35 @@ export default function AdminDashboard() {
   );
 }
 
-function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
+function KPIBox({ title, value, icon, accentColor }) {
   const colorMap = {
-    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400", hover: "hover:border-blue-400 dark:hover:border-blue-700" },
-    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400", hover: "hover:border-emerald-400 dark:hover:border-emerald-700" },
-    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400", hover: "hover:border-purple-400 dark:hover:border-purple-700" },
-    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400", hover: "hover:border-orange-400 dark:hover:border-orange-700" },
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
   };
   const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className={`transition-all h-full ${theme.hover} hover:shadow-md bg-white dark:bg-[#0F163D] dark:border-slate-800`}>
-      <CardContent className="flex items-center gap-4 pt-6">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-          <div className={theme.text}>
-            {icon}
+    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
           </div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
-          <div className="flex items-center gap-2">
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{value}</p>
-            {trend && (
-              <span className={`text-[10px] font-bold ${trendPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                {trend}
-              </span>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -322,24 +345,26 @@ function QuickLink({ to, icon, label, value, tone }) {
 
 /* ───────────────────────────────────────────────────────────────────────────
    3. PIPELINE BAR CHART — shadcn/ui chart (Navy → Orange theme)
+   FIXED: Tooltip now shows stage name instead of "value"
    ─────────────────────────────────────────────────────────────────────────── */
 const pipelineChartConfig = {
-  applied:          { label: "Applied",       color: "#111A62" },
-  ai_screening:     { label: "AI Screened",   color: "#1E2A7A" },
-  screening_passed: { label: "Passed",        color: "#3B4BA0" },
-  interview_1:      { label: "Interview 1",   color: "#C44E1A" },
-  interview_2:      { label: "Interview 2",   color: "#E15B1D" },
-  hired:            { label: "Hired",         color: "#10B981" },
+  count: { label: "Candidates" },
+  Applied:        { label: "Applied",       color: "#111A62" },
+  "AI Screened":  { label: "AI Screened",   color: "#1E2A7A" },
+  Passed:         { label: "Passed",        color: "#3B4BA0" },
+  "Interview 1":  { label: "Interview 1",   color: "#C44E1A" },
+  "Interview 2":  { label: "Interview 2",   color: "#E15B1D" },
+  Hired:          { label: "Hired",         color: "#10B981" },
 };
 
 function PipelineChart({ pipeline }) {
   const chartData = [
-    { stage: "Applied",      value: pipeline.applied || 0,          fill: "var(--color-applied)" },
-    { stage: "AI Screened",  value: pipeline.ai_screening || 0,     fill: "var(--color-ai_screening)" },
-    { stage: "Passed",       value: pipeline.screening_passed || 0, fill: "var(--color-screening_passed)" },
-    { stage: "Interview 1",  value: pipeline.interview_1 || 0,      fill: "var(--color-interview_1)" },
-    { stage: "Interview 2",  value: pipeline.interview_2 || 0,      fill: "var(--color-interview_2)" },
-    { stage: "Hired",        value: pipeline.hired || 0,            fill: "var(--color-hired)" },
+    { stage: "Applied",      count: pipeline.applied || 0,          fill: "#111A62" },
+    { stage: "AI Screened",  count: pipeline.ai_screening || 0,     fill: "#1E2A7A" },
+    { stage: "Passed",       count: pipeline.screening_passed || 0, fill: "#3B4BA0" },
+    { stage: "Interview 1",  count: pipeline.interview_1 || 0,      fill: "#C44E1A" },
+    { stage: "Interview 2",  count: pipeline.interview_2 || 0,      fill: "#E15B1D" },
+    { stage: "Hired",        count: pipeline.hired || 0,            fill: "#10B981" },
   ];
 
   return (
@@ -360,6 +385,16 @@ function PipelineChart({ pipeline }) {
       <CardContent className="flex-1 p-6 min-h-[300px]">
         <ChartContainer config={pipelineChartConfig} className="h-full w-full">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={36}>
+            <defs>
+              <linearGradient id="barGradientNavy" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#111A62" stopOpacity={1} />
+                <stop offset="100%" stopColor="#111A62" stopOpacity={0.7} />
+              </linearGradient>
+              <linearGradient id="barGradientOrange" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E15B1D" stopOpacity={1} />
+                <stop offset="100%" stopColor="#E15B1D" stopOpacity={0.7} />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
             <XAxis
               dataKey="stage"
@@ -375,9 +410,9 @@ function PipelineChart({ pipeline }) {
             />
             <ChartTooltip
               cursor={{ fill: 'currentColor', className: 'text-slate-100 dark:text-slate-800/40', radius: 4 }}
-              content={<ChartTooltipContent hideLabel />}
+              content={<ChartTooltipContent nameKey="stage" />}
             />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="count" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ChartContainer>
       </CardContent>
@@ -412,10 +447,12 @@ function MonthlyHiringChart({ hires }) {
       <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <LineChartIcon size={18} className="text-[#111A62] dark:text-blue-300" />
-            <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Hiring Velocity Trends</CardTitle>
+            <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
+              <LineChartIcon size={16} />
+            </div>
+            <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Hiring Velocity</CardTitle>
           </div>
-          <Badge tone="info">Live Backend Records</Badge>
+          <Badge tone="info">Live Records</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1 p-6 min-h-[300px]">
@@ -423,8 +460,8 @@ function MonthlyHiringChart({ hires }) {
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorHires" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-Hires)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--color-Hires)" stopOpacity={0} />
+                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={COLORS.navy} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
@@ -433,7 +470,7 @@ function MonthlyHiringChart({ hires }) {
             <ChartTooltip
               content={<ChartTooltipContent indicator="line" />}
             />
-            <Area type="monotone" dataKey="Hires" stroke="var(--color-Hires)" strokeWidth={3} fillOpacity={1} fill="url(#colorHires)" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
+            <Area type="monotone" dataKey="Hires" stroke={COLORS.navy} strokeWidth={3} fillOpacity={1} fill="url(#colorHires)" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
           </AreaChart>
         </ChartContainer>
       </CardContent>
@@ -481,7 +518,9 @@ function AttendanceOverviewChart({ summary }) {
     <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
       <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
         <div className="flex items-center gap-2">
-          <PieChartIcon size={18} className="text-[#111A62] dark:text-blue-300" />
+          <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
+            <PieChartIcon size={16} />
+          </div>
           <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Attendance Overview</CardTitle>
         </div>
       </CardHeader>
@@ -510,4 +549,3 @@ function AttendanceOverviewChart({ summary }) {
     </Card>
   );
 }
-

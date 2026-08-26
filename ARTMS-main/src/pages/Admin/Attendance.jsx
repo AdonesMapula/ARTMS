@@ -22,7 +22,9 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
 import Modal from "../../components/ui/Modal";
-import { Table, THead, TH, TD } from "../../components/ui/Table";
+import { Table, TD, TH, THead } from "../../components/ui/Table";
+import TableSkeleton from "../../components/ui/TableSkeleton";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Pagination from "../../components/ui/Pagination";
 import attendanceService from "../../services/attendanceService";
 import employeeService from "../../services/employeeService";
@@ -574,7 +576,9 @@ export default function Attendance() {
                   </tr>
                 </THead>
                 <tbody>
-                  {filteredLogs.length === 0 ? (
+                  {loading ? (
+                    <TableSkeleton rows={6} />
+                  ) : filteredLogs.length === 0 ? (
                     <tr>
                       <TD colSpan={8} className="py-8 text-center text-slate-400 text-xs">
                         No attendance records found matching filters for {selectedDate}.

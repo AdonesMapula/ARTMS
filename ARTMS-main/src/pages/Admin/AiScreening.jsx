@@ -3,14 +3,15 @@ import {
   FiAlertCircle, FiCheckCircle, FiCpu, FiInbox,
   FiLoader, FiRefreshCw, FiSearch, FiXCircle,
 } from "react-icons/fi";
-import { SlidersHorizontal, RefreshCw, Clock, CheckCircle, Activity, AlertCircle, Loader, Search } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, Clock, CheckCircle, Activity, AlertCircle, Loader, Search, UserCheck, UserX, Filter } from "lucide-react";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import aiService from "../../services/aiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/Table";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
+import Button from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
 import ScreeningLoadingModal from "../../components/ui/ScreeningLoadingModal";
 
@@ -52,6 +53,7 @@ export default function AiScreening() {
   const [screenError, setScreenError] = useState(null);
   const [search, setSearch] = useState("");
   const [filterFit, setFilterFit] = useState("");
+  const [filterDecision, setFilterDecision] = useState("");
   const [hrForm, setHrForm] = useState({ interpretation: "", decision: "" });
   const [savingHr, setSavingHr] = useState(false);
   const [hrSaved, setHrSaved] = useState(false);
@@ -146,7 +148,10 @@ export default function AiScreening() {
   };
 
   // ── derived ────────────────────────────────────────────────────────────────
-  const rows = tab === "pending" ? pending : screened;
+  const displayScreened = filterDecision
+    ? screened.filter(r => (r.ai_evaluation?.hr_decision ?? "pending") === filterDecision)
+    : screened;
+  const rows = tab === "pending" ? pending : displayScreened;
   const active = selected ? screened.find(r => r.id === selected) ?? pending.find(r => r.id === selected) : null;
   const eval_ = active?.ai_evaluation ?? null;
 
@@ -157,6 +162,8 @@ export default function AiScreening() {
   const high = screened.filter(r => r.ai_evaluation?.fit_label === "high").length;
   const medium = screened.filter(r => r.ai_evaluation?.fit_label === "medium").length;
   const low = screened.filter(r => r.ai_evaluation?.fit_label === "low").length;
+  const qualified = screened.filter(r => r.ai_evaluation?.hr_decision === "qualified").length;
+  const notQualified = screened.filter(r => r.ai_evaluation?.hr_decision === "not_qualified").length;
   const loading = tab === "pending" ? loadingP : loadingS;
 
   // derive the applicant name being screened for the loading modal
@@ -174,10 +181,23 @@ export default function AiScreening() {
       )}
 
       {/* Page heading */}
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">AI Screening</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">AI Resume Screening</h1>
-        <p className="mt-1 text-sm text-slate-500">Parse uploaded resumes and score them against job requirements automatically.</p>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">AI Screening</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">AI Resume Screening</h1>
+          <p className="mt-1 text-sm text-slate-500">Parse uploaded resumes and score them against job requirements automatically.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => { loadPending(search); loadScreened(search, filterFit); }}
+            disabled={loadingP || loadingS}
+            className="gap-2 bg-white cursor-pointer"
+          >
+            <RefreshCw size={14} className={(loadingP || loadingS) ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
       </div>
 
       {/* Error / screen-error banners */}
@@ -191,18 +211,93 @@ export default function AiScreening() {
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="grid gap-3 sm:grid-cols-4">
-        <SummaryCard label="Pending" value={pending.length} color="amber" icon={Clock} />
-        <SummaryCard label="High Fit" value={high} color="emerald" icon={CheckCircle} />
-        <SummaryCard label="Medium Fit" value={medium} color="blue" icon={Activity} />
-        <SummaryCard label="Low Fit" value={low} color="red" icon={AlertCircle} />
+      {/* Summary / Stats filter cards (3x2 grid) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatFilterCard
+          title="Pending Queue"
+          value={pending.length}
+          icon={<Clock size={22} />}
+          accentColor="amber"
+          active={tab === "pending"}
+          onClick={() => {
+            setTab("pending");
+            setSelected(null);
+            setFilterDecision("");
+          }}
+        />
+        <StatFilterCard
+          title="High Fit"
+          value={high}
+          icon={<CheckCircle size={22} />}
+          accentColor="emerald"
+          active={tab === "screened" && filterFit === "high" && !filterDecision}
+          onClick={() => {
+            setTab("screened");
+            setFilterDecision("");
+            const next = (tab === "screened" && filterFit === "high" && !filterDecision) ? "" : "high";
+            setFilterFit(next);
+            loadScreened(search, next);
+          }}
+        />
+        <StatFilterCard
+          title="Medium Fit"
+          value={medium}
+          icon={<Activity size={22} />}
+          accentColor="indigo"
+          active={tab === "screened" && filterFit === "medium" && !filterDecision}
+          onClick={() => {
+            setTab("screened");
+            setFilterDecision("");
+            const next = (tab === "screened" && filterFit === "medium" && !filterDecision) ? "" : "medium";
+            setFilterFit(next);
+            loadScreened(search, next);
+          }}
+        />
+        <StatFilterCard
+          title="Low Fit"
+          value={low}
+          icon={<AlertCircle size={22} />}
+          accentColor="orange"
+          active={tab === "screened" && filterFit === "low" && !filterDecision}
+          onClick={() => {
+            setTab("screened");
+            setFilterDecision("");
+            const next = (tab === "screened" && filterFit === "low" && !filterDecision) ? "" : "low";
+            setFilterFit(next);
+            loadScreened(search, next);
+          }}
+        />
+        <StatFilterCard
+          title="Qualified"
+          value={qualified}
+          icon={<UserCheck size={22} />}
+          accentColor="teal"
+          active={tab === "screened" && filterDecision === "qualified"}
+          onClick={() => {
+            setTab("screened");
+            setFilterFit("");
+            const next = (tab === "screened" && filterDecision === "qualified") ? "" : "qualified";
+            setFilterDecision(next);
+          }}
+        />
+        <StatFilterCard
+          title="Not Qualified"
+          value={notQualified}
+          icon={<UserX size={22} />}
+          accentColor="red"
+          active={tab === "screened" && filterDecision === "not_qualified"}
+          onClick={() => {
+            setTab("screened");
+            setFilterFit("");
+            const next = (tab === "screened" && filterDecision === "not_qualified") ? "" : "not_qualified";
+            setFilterDecision(next);
+          }}
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-
+      <div className="flex flex-col lg:flex-row gap-4 overflow-hidden">
         {/* ── Left: table with tabs ────────────────────────────────────────── */}
-        <Card className="lg:col-span-2">
+        <Card className={`transition-all duration-500 ease-in-out border-slate-200 shrink-0 ${selected ? 'w-full lg:w-[50%]' : 'w-full'}`}>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
@@ -242,10 +337,6 @@ export default function AiScreening() {
                     </Select>
                   </div>
                 )}
-                <button onClick={() => { loadPending(search); loadScreened(search, filterFit); }} title="Refresh"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition shrink-0">
-                  <RefreshCw size={14} className={(loadingP || loadingS) ? "animate-spin" : ""} />
-                </button>
               </div>
             </div>
           </CardHeader>
@@ -264,83 +355,88 @@ export default function AiScreening() {
             ) : tab === "pending" ? (
               /* ── Pending table ── */
               <Table>
-                <THead><tr>
-                  <TH>Applicant</TH><TH>Position</TH><TH>Applied</TH><TH className="text-right">Action</TH>
-                </tr></THead>
-                <tbody>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Applicant</TableHead><TableHead>Position</TableHead><TableHead>Applied</TableHead><TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {rows.map(row => {
                     const isRunning = screening === row.id;
                     return (
-                      <tr key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
-                        className={`cursor-pointer transition hover:bg-slate-50 ${selected === row.id ? "bg-[#111A62]/5" : ""}`}>
-                        <TD>
+                      <TableRow key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
+                        className={`cursor-pointer transition ${selected === row.id ? "bg-blue-50/40" : ""}`}>
+                        <TableCell>
                           <p className="font-semibold text-slate-900">{row.first_name} {row.last_name}</p>
                           <p className="text-xs text-slate-400">{row.application_id}</p>
-                        </TD>
-                        <TD className="max-w-[140px] truncate text-xs text-slate-500">
+                        </TableCell>
+                        <TableCell className="max-w-[140px] truncate text-xs text-slate-500">
                           {row.job_posting?.job_library?.job_title ?? "—"}
-                        </TD>
-                        <TD className="text-xs text-slate-400">
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-400">
                           {row.created_at ? new Date(row.created_at).toLocaleDateString() : "—"}
-                        </TD>
-                        <TD className="text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <button onClick={e => { e.stopPropagation(); runScreening(row.id); }}
                             disabled={isRunning || !!screening}
                             className="inline-flex items-center gap-1 rounded-lg bg-[#111A62] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1a277a] disabled:cursor-not-allowed disabled:opacity-50">
                             {isRunning ? <><FiLoader size={12} className="animate-spin" /> Running…</> : <><FiCpu size={12} /> Screen Now</>}
                           </button>
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
+                </TableBody>
               </Table>
             ) : (
               /* ── Screened table ── */
               <Table>
-                <THead><tr>
-                  <TH>Applicant</TH><TH>Position</TH><TH>Score</TH><TH>Fit</TH><TH>HR Decision</TH><TH className="text-right">Action</TH>
-                </tr></THead>
-                <tbody>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Applicant</TableHead><TableHead>Position</TableHead><TableHead>Score</TableHead><TableHead>Fit</TableHead><TableHead>HR Decision</TableHead><TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {rows.map(row => {
                     const ev = row.ai_evaluation;
                     const isRunning = screening === row.id;
                     return (
-                      <tr key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
-                        className={`cursor-pointer transition hover:bg-slate-50 ${selected === row.id ? "bg-[#111A62]/5" : ""}`}>
-                        <TD>
+                      <TableRow key={row.id} onClick={() => setSelected(row.id === selected ? null : row.id)}
+                        className={`cursor-pointer transition ${selected === row.id ? "bg-blue-50/40" : ""}`}>
+                        <TableCell>
                           <p className="font-semibold text-slate-900">{row.first_name} {row.last_name}</p>
                           <p className="text-xs text-slate-400">{row.application_id}</p>
-                        </TD>
-                        <TD className="max-w-[140px] truncate text-xs text-slate-500">
+                        </TableCell>
+                        <TableCell className="max-w-[140px] truncate text-xs text-slate-500">
                           {row.job_posting?.job_library?.job_title ?? "—"}
-                        </TD>
-                        <TD>
+                        </TableCell>
+                        <TableCell>
                           {ev?.ai_score != null
                             ? <><span className="font-bold text-slate-900">{Math.round(ev.ai_score)}</span><span className="text-[11px] text-slate-400">/100</span></>
                             : <span className="text-xs text-slate-400">—</span>}
-                        </TD>
-                        <TD>{ev?.fit_label ? <Badge tone={FIT_TONE[ev.fit_label]}>{FIT_LABEL[ev.fit_label]} Fit</Badge> : "—"}</TD>
-                        <TD><HrDecisionBadge decision={ev?.hr_decision ?? "pending"} /></TD>
-                        <TD className="text-right">
+                        </TableCell>
+                        <TableCell>{ev?.fit_label ? <Badge tone={FIT_TONE[ev.fit_label]}>{FIT_LABEL[ev.fit_label]} Fit</Badge> : "—"}</TableCell>
+                        <TableCell><HrDecisionBadge decision={ev?.hr_decision ?? "pending"} /></TableCell>
+                        <TableCell className="text-right">
                           <button onClick={e => { e.stopPropagation(); runScreening(row.id); }}
                             disabled={isRunning || !!screening}
                             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             title="Re-run">
                             {isRunning ? <><FiLoader size={12} className="animate-spin" /> Running…</> : <><FiRefreshCw size={12} /> Re-run</>}
                           </button>
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
+                </TableBody>
               </Table>
             )}
           </CardContent>
         </Card>
 
         {/* ── Right: detail panel ─────────────────────────────────────────── */}
-        <Card className="flex h-fit max-h-[800px] flex-col lg:sticky lg:top-4">
+        <div className={`transition-all duration-500 ease-in-out overflow-hidden shrink-0 ${selected ? 'w-full lg:w-[50%] opacity-100' : 'w-full lg:w-0 opacity-0 lg:h-auto h-0'}`}>
+          <Card className="flex h-fit max-h-[800px] flex-col lg:sticky lg:top-4 lg:min-w-[400px]">
           <CardHeader className="shrink-0">
             <CardTitle>
               {active ? `${active.first_name} ${active.last_name}` : "Select an applicant"}
@@ -551,6 +647,7 @@ export default function AiScreening() {
             )}
           </CardContent>
         </Card>
+        </div>
 
       </div>
     </div>
@@ -558,27 +655,43 @@ export default function AiScreening() {
 }
 
 
-function SummaryCard({ label, value, color, icon: Icon }) {
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
   const colorMap = {
-    amber: { bg: "bg-amber-100", text: "text-amber-600", hover: "hover:border-amber-400" },
-    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
-    blue: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
-    red: { bg: "bg-red-100", text: "text-red-600", hover: "hover:border-red-400" },
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+    red: { bg: "bg-red-100 dark:bg-red-950/60", text: "text-red-600 dark:text-red-400" },
   };
-  const theme = colorMap[color] || colorMap.blue;
+  const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className={`transition-all ${theme.hover} hover:shadow-md bg-white`}>
-      <CardContent className="flex items-center gap-4 pt-6">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-          {Icon && <Icon size={24} className={theme.text} />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-500 truncate">{label}</p>
-          <p className="text-2xl font-extrabold text-slate-900">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+        active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+      }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

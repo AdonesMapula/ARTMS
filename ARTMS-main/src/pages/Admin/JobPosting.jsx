@@ -8,16 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Ca
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/Table";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import CardSkeleton from "../../components/ui/CardSkeleton";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import DatePicker from "../../components/ui/DatePicker";
-import Modal from "../../components/ui/Modal";
 import AlertModal from "../../components/ui/AlertModal";
-import Skeleton from "../../components/ui/Skeleton";
 import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
@@ -335,65 +333,38 @@ export default function JobPosting() {
 
         {/* Statistics Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card
+          <StatFilterCard
+            title="Total Job Postings"
+            value={uniquePostings.length || postings.length}
+            icon={<Briefcase size={22} />}
+            accentColor="navy"
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          />
+          <StatFilterCard
+            title="Published"
+            value={stats.published}
+            icon={<CheckCircle size={22} />}
+            accentColor="emerald"
+            active={statusFilter === "published"}
             onClick={() => setStatusFilter("published")}
-            className={`cursor-pointer transition-all hover:border-emerald-400 ${statusFilter === "published" ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-                <CheckCircle size={24} className="text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Published</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.published}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Closed"
+            value={stats.closed}
+            icon={<EyeOff size={22} />}
+            accentColor="amber"
+            active={statusFilter === "closed"}
             onClick={() => setStatusFilter("closed")}
-            className={`cursor-pointer transition-all hover:border-slate-400 ${statusFilter === "closed" ? "border-slate-500 ring-2 ring-slate-500/20 bg-slate-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
-                <EyeOff size={24} className="text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Closed</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.closed}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
+          />
+          <StatFilterCard
+            title="Total Vacancies"
+            value={stats.totalVacancies}
+            icon={<Building2 size={22} />}
+            accentColor="indigo"
+            active={false}
             onClick={() => setStatusFilter("all")}
-            className="cursor-pointer transition-all hover:border-amber-400"
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-                <Briefcase size={24} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Total Vacancies</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.totalVacancies}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            onClick={() => setStatusFilter("all")}
-            className={`cursor-pointer transition-all hover:border-blue-400 ${statusFilter === "all" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20" : ""}`}
-          >
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <Clock size={24} className="text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500">Total Apps</p>
-                <p className="text-2xl font-extrabold text-slate-900">{stats.totalApps}</p>
-              </div>
-            </CardContent>
-          </Card>
+          />
         </div>
       </div>
 
@@ -405,29 +376,29 @@ export default function JobPosting() {
           </CardHeader>
           <CardContent>
             <Table>
-              <THead>
-                <tr>
-                  <TH>Position</TH>
-                  <TH>Job Library</TH>
-                  <TH>Department</TH>
-                  <TH>Headcount</TH>
-                  <TH>Urgency</TH>
-                  <TH>Approved By</TH>
-                  <TH className="text-right">Actions</TH>
-                </tr>
-              </THead>
-              <tbody>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Job Library</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Headcount</TableHead>
+                  <TableHead>Urgency</TableHead>
+                  <TableHead>Approved By</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {approvedPRFs.map((prf) => (
-                  <tr key={prf.id} className="hover:bg-slate-50">
-                    <TD>
+                  <TableRow key={prf.id}>
+                    <TableCell>
                       <div>
                         <p className="font-semibold text-slate-900">{prf.position_needed}</p>
                         <p className="text-xs text-slate-400">
                           PRF-{String(prf.id).padStart(3, "0")}
                         </p>
                       </div>
-                    </TD>
-                    <TD>
+                    </TableCell>
+                    <TableCell>
                       {prf.job_library_id ? (
                         <div className="flex items-center gap-1.5">
                           <FileText size={12} className="text-emerald-600" />
@@ -440,10 +411,10 @@ export default function JobPosting() {
                           <AlertCircle size={11} /> Not linked
                         </span>
                       )}
-                    </TD>
-                    <TD className="text-slate-600">{prf.department?.department_name || prf.department?.name}</TD>
-                    <TD className="font-bold text-slate-900">{prf.headcount}</TD>
-                    <TD>
+                    </TableCell>
+                    <TableCell className="text-slate-600">{prf.department?.department_name || prf.department?.name}</TableCell>
+                    <TableCell className="font-bold text-slate-900">{prf.headcount}</TableCell>
+                    <TableCell>
                       <Badge
                         tone={
                           prf.urgency === "critical"
@@ -455,9 +426,9 @@ export default function JobPosting() {
                       >
                         {prf.urgency}
                       </Badge>
-                    </TD>
-                    <TD className="text-sm text-slate-600">{prf.approver?.name || "N/A"}</TD>
-                    <TD className="text-right">
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600">{prf.approver?.name || "N/A"}</TableCell>
+                    <TableCell className="text-right">
                       <div className="inline-flex gap-1.5">
                         <button
                           onClick={() => openCreateModal(prf)}
@@ -478,10 +449,10 @@ export default function JobPosting() {
                           <Trash2 size={16} />
                         </button>
                       </div>
-                    </TD>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
             </Table>
           </CardContent>
         </Card>
@@ -664,9 +635,9 @@ export default function JobPosting() {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <THead>
-                    <tr>
-                      <TH className="w-10 text-center">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.length === paginated.length && paginated.length > 0}
@@ -674,47 +645,47 @@ export default function JobPosting() {
                           className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                           title="Select all on this page"
                         />
-                      </TH>
-                      <TH>Job Title</TH>
-                      <TH>Department</TH>
-                      <TH>Vacancies</TH>
-                      <TH>Applicants</TH>
-                      <TH>Status</TH>
-                      <TH className="text-right">Actions</TH>
-                    </tr>
-                  </THead>
-                  <tbody>
+                      </TableHead>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Vacancies</TableHead>
+                      <TableHead>Applicants</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {loading ? (
-                      <tr>
-                        <TD colSpan={7} className="p-4">
+                      <TableRow>
+                        <TableCell colSpan={7} className="p-4">
                           <TableSkeleton rows={10} />
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : paginated.length === 0 ? (
-                      <tr>
-                        <TD colSpan={7} className="py-12 text-center">
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-12 text-center">
                           <Briefcase size={48} className="mx-auto mb-3 text-slate-300" />
                           <p className="text-sm font-semibold text-slate-600">No job postings found</p>
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       paginated.map((p) => {
                         const isChecked = selectedIds.includes(p.id);
                         return (
-                          <tr
+                          <TableRow
                             key={p.id}
                             onClick={() => setSelectedPostingId(p.id)}
-                            className={`hover:bg-slate-50 cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
+                            className={`cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
                           >
-                            <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => handleToggleSelectOne(p.id, e)}
                                 className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                               />
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <div className="flex items-center gap-2.5">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
                                   JP
@@ -728,17 +699,17 @@ export default function JobPosting() {
                                   </p>
                                 </div>
                               </div>
-                            </TD>
-                            <TD className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TD>
-                            <TD className="font-bold text-slate-900">{p.vacancies_count}</TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell className="text-slate-600">{p.department?.department_name || p.department?.name || "General"}</TableCell>
+                            <TableCell className="font-bold text-slate-900">{p.vacancies_count}</TableCell>
+                            <TableCell>
                               <span className="font-bold text-slate-900">{p.applicants_count || 0}</span>
                               <span className="text-xs text-slate-400"> apps</span>
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <Badge tone={STATUS_TONE[p.status] ?? "default"}>{p.status?.replace(/_/g, " ")}</Badge>
-                            </TD>
-                            <TD className="text-right">
+                            </TableCell>
+                            <TableCell className="text-right">
                               <div className="inline-flex gap-1.5">
                                 <button
                                   type="button"
@@ -763,12 +734,12 @@ export default function JobPosting() {
                                   <Trash2 size={15} />
                                 </button>
                               </div>
-                            </TD>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })
                     )}
-                  </tbody>
+                  </TableBody>
                 </Table>
 
                 {!loading && filtered.length > 10 && (
@@ -866,6 +837,45 @@ export default function JobPosting() {
         title="Deleting Job Posting..."
         message="Removing job posting and updating listings. Please wait..."
       />
+    </div>
+  );
+}
+
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+  };
+  const theme = colorMap[accentColor] || colorMap.navy;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+        active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+      }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

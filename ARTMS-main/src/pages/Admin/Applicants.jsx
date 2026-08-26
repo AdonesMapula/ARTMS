@@ -6,11 +6,10 @@ import Select from "../../components/ui/Select";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import CardSkeleton from "../../components/ui/CardSkeleton";
 import StatusChip from "../../components/ui/StatusChip";
-import { Table, TD, TH, THead } from "../../components/ui/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ApplicantViewPanel from "../../components/applicant/ApplicantViewPanel";
 import applicantService from "../../services/applicantService";
@@ -45,6 +44,8 @@ export default function Applicants() {
   const [selectedPosition, setSelectedPosition] = useState("all");
   const [selectedFit, setSelectedFit] = useState("all");
   const [sortBy, setSortBy] = useState("score_desc");
+  const [aiTab, setAiTab] = useState("all");
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -91,7 +92,6 @@ export default function Applicants() {
       const params = {
         page,
         per_page: pageSize,
-        exclude_hired: true,
       };
       if (q) params.search = q;
       if (status && status !== "all") params.status = status;
@@ -101,9 +101,8 @@ export default function Applicants() {
 
       const res = await applicantService.getAll(params);
       const rawList = res.data.data || res.data || [];
-      const nonHiredList = rawList.filter((a) => a.status !== "hired");
-      setApplicants(nonHiredList);
-      setTotal(res.data.total ? nonHiredList.length : nonHiredList.length);
+      setApplicants(rawList);
+      setTotal(res.data.total || rawList.length);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load applicants.");
     } finally {
@@ -166,14 +165,14 @@ export default function Applicants() {
     }
   };
 
-  // Statistics (excluding hired applicants transferred to 201 records)
+  // Statistics (all 5 categories including Hired)
   const stats = useMemo(() => {
-    const active = applicants.filter((a) => a.status !== "hired");
     return {
-      total: active.length,
-      screening: active.filter((a) => ["applied", "ai_screening", "screening_passed"].includes(a.status)).length,
-      interview: active.filter((a) => ["ready_for_interview", "interview_1", "interview_2"].includes(a.status)).length,
-      rejected: active.filter((a) => a.status === "rejected").length,
+      total: applicants.length,
+      screening: applicants.filter((a) => ["applied", "ai_screening", "screening_passed"].includes(a.status)).length,
+      interview: applicants.filter((a) => ["ready_for_interview", "interview_1", "interview_2"].includes(a.status)).length,
+      hired: applicants.filter((a) => a.status === "hired").length,
+      rejected: applicants.filter((a) => a.status === "rejected").length,
     };
   }, [applicants]);
 
@@ -194,18 +193,46 @@ export default function Applicants() {
     return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
   }, [jobPostings, applicants]);
 
-  // Screened Candidates Ranked by AI Score & Fit Level (excluding hired)
-  const rankedCandidates = useMemo(() => {
+  // Department/Position Recommendations for SearchBar Autocomplete
+  const aiSearchSuggestions = useMemo(() => {
+    const suggestions = [{ id: "all", label: "All Positions", count: applicants.length }];
+    const countMap = new Map();
+
+    applicants.forEach((a) => {
+      const title = a.job_posting?.job_library?.job_title || a.job_posting?.title;
+      if (title) {
+        countMap.set(title, (countMap.get(title) || 0) + 1);
+      }
+    });
+
+    jobPostings.forEach((p) => {
+      const title = p.job_library?.job_title || p.title;
+      if (title && !countMap.has(title)) {
+        countMap.set(title, 0);
+      }
+    });
+
+    Array.from(countMap.entries()).forEach(([title, count]) => {
+      suggestions.push({ id: title, label: title, count });
+    });
+
+    return suggestions;
+  }, [jobPostings, applicants]);
+
+  // Screened Candidates Ranked by AI Score (Filtered by selected AI Tab / Search recommendation, Top 3)
+  const topCandidates = useMemo(() => {
     return applicants
       .filter((a) => {
-        if (a.status === "hired") return false;
         const score = a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score;
         if (score == null) return false;
 
-        if (selectedPosition !== "all") {
-          const posTitle = a.job_posting?.job_library?.job_title || a.job_posting?.title;
-          const posId = String(a.job_posting_id || a.job_posting?.id);
-          return posId === String(selectedPosition) || posTitle === selectedPosition;
+        const activeFilter = (aiTab !== "all" ? aiTab : aiSearchQuery) || "";
+        if (activeFilter && activeFilter.trim() !== "" && activeFilter !== "all" && activeFilter !== "All Positions") {
+          const queryLower = activeFilter.toLowerCase();
+          const posTitle = (a.job_posting?.job_library?.job_title || a.job_posting?.title || "").toLowerCase();
+          const posId = String(a.job_posting_id || a.job_posting?.id || "");
+          const dept = (a.job_posting?.department?.department_name || a.job_posting?.department?.name || "").toLowerCase();
+          return posId === activeFilter || posTitle.includes(queryLower) || dept.includes(queryLower);
         }
         return true;
       })
@@ -213,8 +240,9 @@ export default function Applicants() {
         const scoreA = Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0);
         const scoreB = Number(b.ai_evaluation?.ai_score ?? b.ai_evaluation?.composite_score ?? 0);
         return scoreB - scoreA;
-      });
-  }, [applicants, selectedPosition]);
+      })
+      .slice(0, 3);
+  }, [applicants, aiTab, aiSearchQuery]);
 
   // Client-side Filtered and Sorted Applicants List (hired applicants excluded)
   const processedApplicants = useMemo(() => {
@@ -323,8 +351,8 @@ export default function Applicants() {
 
   return (
     <div className="space-y-6">
-      {/* ── Collapsible Title & Stats Container ─────────────────────── */}
-      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[600px] opacity-100 translate-y-0 space-y-6"}`}>
+      {/* ── Collapsible Title, Stats & AI Leaderboard Container ───── */}
+      <div className={`transition-all duration-500 ease-in-out ${isScrolled ? "max-h-0 opacity-0 overflow-hidden pointer-events-none -translate-y-4 space-y-0" : "max-h-[1200px] opacity-100 translate-y-0 space-y-6"}`}>
         {/* Header */}
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -362,146 +390,174 @@ export default function Applicants() {
           </div>
         </div>
 
-        {/* ── Side-by-Side Cards Layout (Stats 2x2 + Top AI Leaderboard Card) ── */}
-        <div className="grid gap-4 lg:grid-cols-12 items-stretch">
-          {/* Left Side: 4 Statistics Cards (2x2 Grid) */}
-          <div className="lg:col-span-5 grid gap-3 sm:grid-cols-2">
-            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                <Users size={22} className="text-blue-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-500 truncate">Total Applicants</p>
-                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.total}</p>
-              </div>
-            </Card>
+        {/* ── Row 1: Statistics Cards (5-Column Responsive Grid) ────── */}
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <StatFilterCard
+            title="Total Applicants"
+            value={stats.total}
+            icon={<Users size={22} />}
+            accentColor="navy"
+            active={status === "all"}
+            onClick={() => handleStatusChange("all")}
+          />
 
-            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-                <Clock size={22} className="text-amber-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-500 truncate">In Screening</p>
-                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.screening}</p>
-              </div>
-            </Card>
+          <StatFilterCard
+            title="In Screening"
+            value={stats.screening}
+            icon={<Clock size={22} />}
+            accentColor="amber"
+            active={["applied", "ai_screening", "screening_passed"].includes(status)}
+            onClick={() => handleStatusChange("ai_screening")}
+          />
 
-            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-100">
-                <UserCheck size={22} className="text-purple-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-500 truncate">In Interview</p>
-                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.interview}</p>
-              </div>
-            </Card>
+          <StatFilterCard
+            title="In Interview"
+            value={stats.interview}
+            icon={<UserCheck size={22} />}
+            accentColor="purple"
+            active={["ready_for_interview", "interview_1", "interview_2"].includes(status)}
+            onClick={() => handleStatusChange("ready_for_interview")}
+          />
 
-            <Card className="flex items-center gap-3.5 p-4 shadow-2xs">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                <XCircle size={22} className="text-red-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-500 truncate">Rejected</p>
-                <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stats.rejected}</p>
-              </div>
-            </Card>
+          <StatFilterCard
+            title="Hired"
+            value={stats.hired}
+            icon={<CheckCircle size={22} />}
+            accentColor="emerald"
+            active={status === "hired"}
+            onClick={() => handleStatusChange("hired")}
+          />
+
+          <StatFilterCard
+            title="Rejected"
+            value={stats.rejected}
+            icon={<XCircle size={22} />}
+            accentColor="rose"
+            active={status === "rejected"}
+            onClick={() => handleStatusChange("rejected")}
+          />
+        </div>
+
+        {/* ── Row 2: Top AI-Ranked Candidates (Full-Width White Card Container) ──── */}
+        <Card className="w-full border border-slate-200/90 bg-white dark:bg-[#0F163D] dark:border-slate-800 text-slate-900 dark:text-white shadow-xl shadow-slate-200/50 rounded-3xl relative">
+          {/* Background Layer with Overflow Hidden for Blobs */}
+          <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+            <div className="absolute right-0 top-0 -mr-16 -mt-16 h-72 w-72 rounded-full bg-[#E15B1D]/15 blur-3xl" />
+            <div className="absolute left-1/4 bottom-0 -mb-16 h-48 w-48 rounded-full bg-[#111A62]/40 blur-2xl" />
           </div>
 
-          {/* Right Side: Top AI-Ranked Candidates Leaderboard Card */}
-          <div className="lg:col-span-7 flex">
-            {rankedCandidates.length > 0 ? (
-              <Card className="w-full h-full border-indigo-100 bg-gradient-to-r from-slate-900 via-[#111A62] to-[#1a257c] text-white shadow-xl overflow-hidden relative flex flex-col justify-between">
-                <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-                <CardHeader className="pb-3 border-b border-white/10 shrink-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30">
-                        <Trophy size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-base font-black text-white flex items-center gap-2 truncate">
-                          Top AI-Ranked Candidates <Sparkles size={14} className="text-amber-400 shrink-0" />
-                        </CardTitle>
-                        <p className="text-xs text-slate-300 truncate">
-                          Auto-ranked by AI match score
-                          {selectedPosition !== "all" && ` • ${positionsList.find(p => String(p.id) === String(selectedPosition))?.title || selectedPosition}`}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge tone="accent" className="bg-amber-400/20 text-amber-300 border-amber-400/30 px-2.5 py-1 font-bold text-xs shrink-0 self-start sm:self-center">
-                      {rankedCandidates.length} Screened Matches
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3 pb-4 flex-1 flex flex-col justify-center">
-                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {rankedCandidates.slice(0, 3).map((a, index) => {
-                      const scoreVal = Math.round(Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0));
-                      const fitLabel = a.ai_evaluation?.fit_label || a.fit_category || "high";
-                      const name = `${a.first_name || ""} ${a.last_name || ""}`;
-                      const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
-                      const rankText = index === 0 ? "🥇 #1 Top" : index === 1 ? "🥈 #2 High" : "🥉 #3 Rank";
-                      const rankStyle = index === 0 
-                        ? "bg-amber-400/20 text-amber-300 border-amber-400/30" 
-                        : index === 1 
-                        ? "bg-slate-200/20 text-slate-200 border-slate-300/30" 
-                        : "bg-amber-700/20 text-amber-400 border-amber-600/30";
-
-                      return (
-                        <div
-                          key={a.id}
-                          onClick={() => setSelectedApplicantId(a.id)}
-                          className="group rounded-2xl bg-white/10 p-3 border border-white/10 hover:border-amber-400/50 hover:bg-white/15 transition duration-200 cursor-pointer flex flex-col justify-between space-y-2.5"
-                        >
-                          <div className="flex items-start justify-between gap-1.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-xs font-black text-white ring-1 ring-white/20">
-                                {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-xs font-extrabold text-white truncate group-hover:text-amber-300 transition">
-                                  {name}
-                                </p>
-                                <p className="text-[10px] text-slate-300 truncate">{pos}</p>
-                              </div>
-                            </div>
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border ${rankStyle} shrink-0`}>
-                              {rankText}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-black text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 font-mono">
-                                {scoreVal}%
-                              </span>
-                              <Badge tone={FIT_TONE[fitLabel] || "success"} className="text-[9px] uppercase font-extrabold capitalize px-1.5 py-0.2">
-                                {FIT_LABEL[fitLabel] || fitLabel}
-                              </Badge>
-                            </div>
-                            <span className="text-[11px] font-bold text-white group-hover:translate-x-0.5 transition flex items-center gap-0.5">
-                              View <ChevronRight size={12} />
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="w-full h-full border-slate-200 bg-white p-5 flex flex-col items-center justify-center text-center shadow-2xs">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 mb-2">
+          {/* Header with Title & Position Search with Recommendations */}
+          <CardHeader className="pb-4 pt-5 px-6 border-b border-slate-100 dark:border-slate-800 relative z-30 bg-slate-50/50 dark:bg-slate-900/30 rounded-t-3xl">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E15B1D]/15 text-[#E15B1D] ring-1 ring-[#E15B1D]/30 shadow-xs">
                   <Trophy size={22} />
                 </div>
-                <p className="text-xs font-extrabold text-slate-800">Top AI-Ranked Leaderboard</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                  Run AI Resume Screening to score applicants and view top-ranked candidates here.
-                </p>
-              </Card>
+                <div>
+                  <CardTitle className="text-base font-black text-[#111A62] dark:text-white flex items-center gap-2">
+                    Top AI-Ranked Candidates <Sparkles size={16} className="text-[#E15B1D] shrink-0" />
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Auto-ranked by AI composite score & resume screening
+                  </p>
+                </div>
+              </div>
+
+              {/* Position Recommendation SearchBar */}
+              <div className="w-full xl:w-72">
+                <SearchBar
+                  value={aiSearchQuery}
+                  onChange={(val) => {
+                    setAiSearchQuery(val);
+                    if (!val) setAiTab("all");
+                  }}
+                  onSelectSuggestion={(item) => {
+                    const selectedId = typeof item === "string" ? item : item.id || item.label;
+                    setAiTab(selectedId);
+                    setAiSearchQuery(selectedId === "all" ? "" : (typeof item === "string" ? item : item.label));
+                  }}
+                  suggestions={aiSearchSuggestions}
+                  placeholder="Search position recommendation..."
+                  className="h-10 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-2xs"
+                />
+              </div>
+            </div>
+          </CardHeader>
+
+          {/* Content: 3-column grid of Navy Blue Candidate Boxes */}
+          <CardContent className="p-5 sm:p-6 relative z-10">
+            {topCandidates.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {topCandidates.map((a, index) => {
+                  const scoreVal = Math.round(Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0));
+                  const fitLabel = a.ai_evaluation?.fit_label || a.fit_category || "high";
+                  const name = `${a.first_name || ""} ${a.last_name || ""}`;
+                  const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
+                  const dept = a.job_posting?.department?.department_name || a.job_posting?.department?.name;
+                  const rankText = index === 0 ? "🥇 #1 Top" : index === 1 ? "🥈 #2 High" : "🥉 #3 Rank";
+                  const rankStyle = index === 0 
+                    ? "bg-[#E15B1D]/30 text-[#F97316] border-[#E15B1D]/50 ring-1 ring-[#E15B1D]/30" 
+                    : index === 1 
+                    ? "bg-blue-400/20 text-blue-300 border-blue-400/40" 
+                    : "bg-slate-400/20 text-slate-300 border-slate-400/40";
+
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => setSelectedApplicantId(a.id)}
+                      className="group rounded-2xl bg-[#111A62] text-white p-4 border border-slate-800/40 hover:border-[#E15B1D]/70 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3.5 shadow-md shadow-[#111A62]/10 hover:shadow-xl hover:shadow-[#111A62]/20 hover:scale-[1.01]"
+                    >
+                      {/* Candidate Info Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E2B8F] to-[#E15B1D] text-xs font-black text-white ring-1 ring-white/20 shadow-xs">
+                            {(a.first_name?.[0] || "") + (a.last_name?.[0] || "")}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-extrabold text-white truncate group-hover:text-[#F97316] transition">
+                              {name}
+                            </p>
+                            <p className="text-xs text-slate-300 truncate mt-0.5">{pos}</p>
+                            {dept && <p className="text-[10px] text-slate-400 truncate">{dept}</p>}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${rankStyle} shrink-0`}>
+                          {rankText}
+                        </span>
+                      </div>
+
+                      {/* Badges and Score Footer */}
+                      <div className="flex items-center justify-between pt-2.5 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-[#F97316] bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/15 font-mono">
+                            {scoreVal}%
+                          </span>
+                          <Badge tone={FIT_TONE[fitLabel] || "success"} className="text-[10px] uppercase font-extrabold px-2 py-0.5">
+                            {FIT_LABEL[fitLabel] || fitLabel}
+                          </Badge>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs font-bold text-white group-hover:text-[#F97316] transition flex items-center gap-1 cursor-pointer"
+                        >
+                          View <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                <div className="h-10 w-10 rounded-2xl bg-[#E15B1D]/10 text-[#E15B1D] flex items-center justify-center mb-2">
+                  <Trophy size={20} />
+                </div>
+                <p className="text-sm font-bold text-slate-800 dark:text-white">No AI-ranked candidates in this category</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">Select another position from the search bar or run AI Resume Screening to generate scores.</p>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Error banner */}
@@ -665,25 +721,47 @@ export default function Applicants() {
           ) : (
             /* ── FULL TABLE DIRECTORY (When no candidate is open) ───── */
             <Card className={`animate-fade-in transition-all duration-300 ${isScrolled && !selectedApplicantId ? "sticky top-4 z-20 shadow-2xl ring-1 ring-slate-900/10 border-slate-300 bg-white" : ""}`}>
-              <CardHeader className="py-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                  <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2 shrink-0">
-                    <Users className="text-[#111A62]" size={18} /> Applicants Directory ({processedApplicants.length})
-                  </CardTitle>
+              <CardHeader className="py-4 border-b border-slate-100">
+                <div className="flex flex-col gap-4">
+                  {/* Top Row: Title & Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                      <Users className="text-[#111A62]" size={18} /> Applicants Directory ({processedApplicants.length})
+                    </CardTitle>
 
-                  {/* Searchbar & Filters Inline Side-by-Side Toolbar */}
-                  <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
-                    <div className="w-full sm:w-56 flex-1 sm:flex-initial min-w-[200px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isFiltered && (
+                        <button
+                          onClick={resetFilters}
+                          className="flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer"
+                          title="Reset Filters"
+                        >
+                          <X size={14} /> Reset
+                        </button>
+                      )}
+                      {isScrolled && !selectedApplicantId && (
+                        <button
+                          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                          className="flex h-9 items-center gap-1.5 rounded-lg border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition cursor-pointer"
+                          title="Scroll to top"
+                        >
+                          ↑ Stats
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Search & Filters Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
+                    <div className="lg:col-span-2">
                       <SearchBar
                         value={q}
                         onChange={handleSearch}
-                        placeholder="Search candidate..."
+                        placeholder="Search candidate name or position..."
                         className="h-10 text-xs"
                       />
                     </div>
-
-                    {/* Position Applied Dropdown */}
-                    <div className="flex-1 sm:flex-initial min-w-[180px]">
+                    <div className="col-span-1">
                       <Select
                         icon={Briefcase}
                         size="md"
@@ -692,19 +770,15 @@ export default function Applicants() {
                           setSelectedPosition(e.target.value);
                           setPage(1);
                         }}
-                        buttonClassName="bg-slate-50 hover:bg-white"
+                        buttonClassName="bg-slate-50 hover:bg-white h-10 w-full"
                       >
-                        <option value="all">All Positions ({positionsList.length})</option>
+                        <option value="all">All Positions</option>
                         {positionsList.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.title}
-                          </option>
+                          <option key={p.id} value={p.id}>{p.title}</option>
                         ))}
                       </Select>
                     </div>
-
-                    {/* Fit Level Dropdown */}
-                    <div className="flex-1 sm:flex-initial min-w-[145px]">
+                    <div className="col-span-1">
                       <Select
                         icon={SlidersHorizontal}
                         size="md"
@@ -713,7 +787,7 @@ export default function Applicants() {
                           setSelectedFit(e.target.value);
                           setPage(1);
                         }}
-                        buttonClassName="bg-slate-50 hover:bg-white"
+                        buttonClassName="bg-slate-50 hover:bg-white h-10 w-full"
                       >
                         <option value="all">All Fit Levels</option>
                         <option value="high">High Fit</option>
@@ -722,68 +796,41 @@ export default function Applicants() {
                         <option value="unscreened">Unscreened</option>
                       </Select>
                     </div>
-
-                    {/* Status Dropdown */}
-                    <div className="flex-1 sm:flex-initial min-w-[145px]">
+                    <div className="col-span-1">
                       <Select
                         icon={Filter}
                         size="md"
                         value={status}
                         onChange={(e) => handleStatusChange(e.target.value)}
-                        buttonClassName="bg-slate-50 hover:bg-white"
+                        buttonClassName="bg-slate-50 hover:bg-white h-10 w-full"
                       >
                         {STATUSES.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
+                          <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </Select>
                     </div>
-
-                    {/* Sort By Dropdown */}
-                    <div className="flex-1 sm:flex-initial min-w-[175px]">
+                    <div className="col-span-1">
                       <Select
                         icon={ArrowUpDown}
                         size="md"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        buttonClassName="bg-slate-50 hover:bg-white"
+                        buttonClassName="bg-slate-50 hover:bg-white h-10 w-full"
                       >
-                        <option value="score_desc">AI Score: High to Low</option>
-                        <option value="score_asc">AI Score: Low to High</option>
-                        <option value="newest">Applied: Newest First</option>
-                        <option value="oldest">Applied: Oldest First</option>
+                        <option value="score_desc">AI Score: Hi to Lo</option>
+                        <option value="score_asc">AI Score: Lo to Hi</option>
+                        <option value="newest">Applied: Newest</option>
+                        <option value="oldest">Applied: Oldest</option>
                       </Select>
                     </div>
-
-                    {/* Reset Filters */}
-                    {isFiltered && (
-                      <button
-                        onClick={resetFilters}
-                        className="flex h-10 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer shrink-0"
-                        title="Reset Filters"
-                      >
-                        <X size={14} /> Reset
-                      </button>
-                    )}
-
-                    {isScrolled && !selectedApplicantId && (
-                      <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        className="h-10 rounded-xl border border-[#111A62]/20 bg-[#111A62]/5 px-3 py-1.5 text-xs font-extrabold text-[#111A62] hover:bg-[#111A62]/10 transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Scroll to top"
-                      >
-                        ↑ Stats
-                      </button>
-                    )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 <Table>
-                  <THead>
-                    <tr>
-                      <TH className="w-10 text-center">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.length === processedApplicants.length && processedApplicants.length > 0}
@@ -791,25 +838,25 @@ export default function Applicants() {
                           className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                           title="Select all on this page"
                         />
-                      </TH>
-                      <TH>Applicant</TH>
-                      <TH>Position Applied</TH>
-                      <TH>Status</TH>
-                      <TH>AI Score</TH>
-                      <TH>Fit Level</TH>
-                      <TH className="text-right">Actions</TH>
-                    </tr>
-                  </THead>
-                  <tbody>
+                      </TableHead>
+                      <TableHead>Applicant</TableHead>
+                      <TableHead>Position Applied</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>AI Score</TableHead>
+                      <TableHead>Fit Level</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {loading ? (
-                      <tr>
-                        <TD colSpan={7} className="p-4">
+                      <TableRow>
+                        <TableCell colSpan={7} className="p-4">
                           <TableSkeleton rows={10} />
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : processedApplicants.length === 0 ? (
-                      <tr>
-                        <TD colSpan={7} className="py-12 text-center">
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-12 text-center">
                           <Users size={48} className="mx-auto mb-3 text-slate-300" />
                           <p className="text-sm font-semibold text-slate-600">No applicants found</p>
                           {isFiltered && (
@@ -820,28 +867,28 @@ export default function Applicants() {
                               Reset active filters
                             </button>
                           )}
-                        </TD>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       processedApplicants.map((a) => {
                         const eval_ = a.ai_evaluation;
                         const job = a.job_posting?.job_library;
                         const isChecked = selectedIds.includes(a.id);
                         return (
-                          <tr
+                          <TableRow
                             key={a.id}
-                            className={`cursor-pointer transition hover:bg-slate-50 ${isChecked ? "bg-blue-50/40" : ""}`}
+                            className={`cursor-pointer transition ${isChecked ? "bg-blue-50/40" : ""}`}
                             onClick={() => handleViewDetails(a.id)}
                           >
-                            <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => handleToggleSelectOne(a.id, e)}
                                 className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
                               />
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <div className="flex items-center gap-2.5">
                                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
                                   {a.first_name?.charAt(0)}{a.last_name?.charAt(0)}
@@ -853,14 +900,14 @@ export default function Applicants() {
                                   <p className="text-xs text-slate-400">{a.email}</p>
                                 </div>
                               </div>
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <p className="font-semibold text-slate-900">{job?.job_title || "Unspecified"}</p>
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               <StatusChip status={a.status} />
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               {eval_?.ai_score != null ? (
                                 <span className="font-mono text-xs font-bold text-slate-900">
                                   {Math.round(Number(eval_.ai_score))}%
@@ -872,8 +919,8 @@ export default function Applicants() {
                               ) : (
                                 <span className="text-xs text-slate-400">—</span>
                               )}
-                            </TD>
-                            <TD>
+                            </TableCell>
+                            <TableCell>
                               {(eval_?.fit_label || a.fit_category) ? (
                                 <Badge tone={FIT_TONE[eval_?.fit_label || a.fit_category] || "default"} className="capitalize">
                                   {FIT_LABEL[eval_?.fit_label || a.fit_category] || (eval_?.fit_label || a.fit_category)}
@@ -881,24 +928,24 @@ export default function Applicants() {
                               ) : (
                                 <span className="text-xs text-slate-400">—</span>
                               )}
-                            </TD>
-                            <TD className="text-right">
+                            </TableCell>
+                            <TableCell className="text-right">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleViewDetails(a.id);
                                 }}
-                                className="flex items-center gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer"
+                                className="flex items-center justify-end gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer ml-auto"
                               >
                                 <Eye size={14} /> View Candidate <ChevronRight size={14} />
                               </button>
-                            </TD>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })
                     )}
-                  </tbody>
+                  </TableBody>
                 </Table>
 
                 {!loading && total > 10 && (
@@ -960,6 +1007,45 @@ export default function Applicants() {
         confirmText="Mark Ready & Notify"
         loading={actionLoading === `ready_${interviewConfirm?.id}`}
       />
+    </div>
+  );
+}
+
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+  };
+  const theme = colorMap[accentColor] || colorMap.navy;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+        active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+      }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-3.5 p-4">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white leading-none mt-1">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

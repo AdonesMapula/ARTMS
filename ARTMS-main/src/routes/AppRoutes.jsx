@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from "react";
+import { AnimatePresence } from "framer-motion";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SplashScreen from "../components/ui/SplashScreen";
@@ -89,13 +90,15 @@ const DebugPermissions = lazy(() => import("../pages/DebugPermissions"));
 export default function AppRoutes() {
   const { loading } = useAuth();
 
-  if (loading) {
-    return <SplashScreen />;
-  }
-
   return (
-    <BrowserRouter>
-      <Suspense fallback={null}>
+    <>
+      <AnimatePresence>
+        {loading && <SplashScreen key="splash" />}
+      </AnimatePresence>
+
+      {!loading && (
+        <BrowserRouter>
+          <Suspense fallback={null}>
         <Routes>
           {/* ── Public site (no auth required) ───────────────────────────── */}
           <Route element={<PublicLayout />}>
@@ -366,5 +369,7 @@ export default function AppRoutes() {
         </Routes>
       </Suspense>
     </BrowserRouter>
+      )}
+    </>
   );
 }
