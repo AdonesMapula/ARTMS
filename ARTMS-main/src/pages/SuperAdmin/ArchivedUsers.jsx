@@ -7,7 +7,7 @@ import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
-import Skeleton from "../../components/ui/Skeleton";
+import { Skeleton } from "../../components/ui/skeleton";
 import Modal from "../../components/ui/Modal";
 import userService from "../../services/userService";
 import { useToast } from "../../context/ToastContext";

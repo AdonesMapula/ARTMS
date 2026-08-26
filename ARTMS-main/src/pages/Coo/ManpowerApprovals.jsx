@@ -5,7 +5,7 @@ import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
-import Skeleton from "../../components/ui/Skeleton";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import { ManpowerApproveModal } from "../../modals";
 import AlertModal from "../../components/ui/AlertModal";
 import manpowerService from "../../services/manpowerService";
@@ -290,10 +290,8 @@ export default function ManpowerApprovals() {
         </CardHeader>
         <CardContent className="pt-2">
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
+            <div className="py-2">
+              <CardSkeleton count={6} className="!grid-cols-2 lg:!grid-cols-3" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center">

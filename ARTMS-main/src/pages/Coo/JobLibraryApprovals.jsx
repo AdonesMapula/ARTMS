@@ -5,7 +5,7 @@ import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
-import Skeleton from "../../components/ui/Skeleton";
+import CardSkeleton from "../../components/ui/CardSkeleton";
 import AlertModal from "../../components/ui/AlertModal";
 import { JobLibraryApproveModal } from "../../modals";
 import JobLibraryViewPanel from "../../components/job/JobLibraryViewPanel";
@@ -17,10 +17,10 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
 const fmt = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
     : "—";
 const fmtMoney = (v) =>
   v != null ? `₱${Number(v).toLocaleString("en-PH")}` : "—";
@@ -38,11 +38,11 @@ const PAGE_SIZE = 10;
 
 export default function JobLibraryApprovals() {
   const toast = useToast();
-  const [rows,         setRows]         = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [page,         setPage]         = useState(1);
-  const [total,        setTotal]        = useState(0);
-  const [q,            setQ]            = useState("");
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
 
   // Modal state
@@ -53,7 +53,7 @@ export default function JobLibraryApprovals() {
     remarks: "",
   });
   const [viewModal, setViewModal] = useState({ open: false, job: null });
-  const [saving,   setSaving]   = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Alert modal & Toast helper
   const [alert, setAlert] = useState({ open: false, variant: "info", title: "", message: "" });
@@ -69,7 +69,7 @@ export default function JobLibraryApprovals() {
       setLoading(true);
       try {
         const params = {
-          page:     pageNum,
+          page: pageNum,
           per_page: PAGE_SIZE,
         };
         if (statusFilter !== "all") params.approval_status = statusFilter;
@@ -95,7 +95,7 @@ export default function JobLibraryApprovals() {
     if (!query) return true;
     return (
       String(r.id).includes(query) ||
-      (r.job_title    ?? "").toLowerCase().includes(query) ||
+      (r.job_title ?? "").toLowerCase().includes(query) ||
       (r.job_category ?? "").toLowerCase().includes(query) ||
       (r.creator?.name ?? "").toLowerCase().includes(query)
     );
@@ -121,7 +121,7 @@ export default function JobLibraryApprovals() {
     setSaving(true);
     try {
       await api.patch(`/job-library/${approveModal.job.id}/approve`, {
-        status:  approveModal.status,
+        status: approveModal.status,
         remarks: approveModal.remarks.trim() || null,
       });
       const act = approveModal.status;
@@ -148,7 +148,7 @@ export default function JobLibraryApprovals() {
   };
 
   // ── Stat counts from current full page (best-effort while paginated) ────
-  const pendingCount  = rows.filter((r) => r.approval_status === "pending").length;
+  const pendingCount = rows.filter((r) => r.approval_status === "pending").length;
   const approvedCount = rows.filter((r) => r.approval_status === "approved").length;
 
   useEffect(() => {
@@ -251,11 +251,10 @@ export default function JobLibraryApprovals() {
                 <button
                   key={f.value}
                   onClick={() => { setStatusFilter(f.value); setPage(1); }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    statusFilter === f.value
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === f.value
                       ? "border-[#111A62] bg-[#111A62] text-white"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -281,10 +280,8 @@ export default function JobLibraryApprovals() {
         </CardHeader>
         <CardContent className="pt-2">
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
+            <div className="py-2">
+              <CardSkeleton count={6} className="!grid-cols-2 lg:!grid-cols-3" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center">
@@ -326,19 +323,19 @@ export default function JobLibraryApprovals() {
                               {r.job_title}
                             </h3>
                           </div>
-                          <Badge 
+                          <Badge
                             tone={
                               r.approval_status === "pending" && (r.approval_remarks || r.remarks)
                                 ? "info"
                                 : APPROVAL_TONE[r.approval_status] ?? "default"
-                            } 
+                            }
                             className="text-xs font-semibold"
                           >
-                            {r.approval_status === "pending" && (r.approval_remarks || r.remarks) 
-                              ? "Resubmitted (Revised)" 
-                              : r.approval_status === "revised" 
-                              ? "Needs Revision (HR)"
-                              : r.approval_status.charAt(0).toUpperCase() + r.approval_status.slice(1)}
+                            {r.approval_status === "pending" && (r.approval_remarks || r.remarks)
+                              ? "Resubmitted (Revised)"
+                              : r.approval_status === "revised"
+                                ? "Needs Revision (HR)"
+                                : r.approval_status.charAt(0).toUpperCase() + r.approval_status.slice(1)}
                           </Badge>
                         </div>
 

@@ -5,8 +5,10 @@ import {
   FiCheckCircle, FiActivity, FiLayers, FiBarChart2 
 } from "react-icons/fi";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import Badge from "../../components/ui/Badge";
+import { Skeleton } from "../../components/ui/skeleton";
+import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
 import dashboardService from "../../services/dashboardService";
 import { cn } from "../../utils/cn";
 

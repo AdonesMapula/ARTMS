@@ -6,7 +6,7 @@ import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import Pagination from "../../components/ui/Pagination";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
-import Skeleton from "../../components/ui/Skeleton";
+import { Skeleton } from "../../components/ui/skeleton";
 import DepartmentModal from "../../modals/DepartmentModal";
 import departmentService from "../../services/departmentService";
 import { useToast } from "../../context/ToastContext";
