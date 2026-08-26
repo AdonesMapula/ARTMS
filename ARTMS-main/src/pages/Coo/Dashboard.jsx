@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
-import Skeleton from "../../components/ui/Skeleton";
+import { Skeleton } from "../../components/ui/Skeleton";
 import Pagination from "../../components/ui/Pagination";
 import SearchBar from "../../components/ui/SearchBar";
 import Select from "../../components/ui/Select";

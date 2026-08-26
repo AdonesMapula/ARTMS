@@ -7,9 +7,17 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(() => authService.getStoredUser());
   const [loading, setLoading] = useState(true);
 
-  // On mount, verify the stored token is still valid (fast & non-blocking)
+  // On mount, verify the stored token is still valid
   useEffect(() => {
     const token = localStorage.getItem('artms_token');
+    const startTime = Date.now();
+    const MIN_LOAD_TIME = 2200; // Match the animation duration requested
+
+    const finishLoading = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, MIN_LOAD_TIME - elapsed);
+      setTimeout(() => setLoading(false), remaining);
+    };
 
     if (token) {
       authService.me()
@@ -31,9 +39,9 @@ export function AuthProvider({ children }) {
           localStorage.removeItem('artms_user');
           setUser(null);
         })
-        .finally(() => setLoading(false));
+        .finally(() => finishLoading());
     } else {
-      setLoading(false);
+      finishLoading();
     }
   }, []);
 

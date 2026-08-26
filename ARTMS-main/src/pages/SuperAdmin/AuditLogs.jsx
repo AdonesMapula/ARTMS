@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Ca
 import SearchBar from "../../components/ui/SearchBar";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import Select from "../../components/ui/Select";
@@ -162,11 +163,7 @@ export default function AuditLogs() {
               </THead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr>
-                    <TD colSpan="6" className="text-center py-12 text-slate-500 font-medium">
-                      <FiRefreshCw className="animate-spin inline-block mr-2 text-[var(--artms-primary)]" size={18} /> Loading audit logs...
-                    </TD>
-                  </tr>
+                  <TableSkeleton rows={6} />
                 ) : filteredLogs.length === 0 ? (
                    <tr>
                     <TD colSpan="6" className="text-center py-12 text-slate-500 font-medium">

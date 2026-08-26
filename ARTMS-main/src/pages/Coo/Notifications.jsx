@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { FiBookOpen, FiCheckCircle, FiXCircle, FiAlertTriangle, FiClock, FiActivity } from "react-icons/fi";
 import { Card, CardContent } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
+import { Skeleton } from "../../components/ui/Skeleton";
 import notificationService from "../../services/notificationService";
 
 export default function CooNotifications() {
@@ -98,9 +99,15 @@ export default function CooNotifications() {
         </div>
         <div className="p-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
-              <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-              <p className="text-xs font-semibold tracking-wide">Retrieving history logs...</p>
+            <div className="relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+              <div className="space-y-8">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10" />
+                    <Skeleton className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] h-24 rounded-2xl" />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">

@@ -7,7 +7,7 @@ import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
-import Skeleton from "../../components/ui/Skeleton";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { UserModal, QuickAddRoleModal, QuickAddDepartmentModal } from "../../modals";
 import userService from "../../services/userService";
 import departmentService from "../../services/departmentService";
