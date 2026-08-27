@@ -7,6 +7,7 @@ import {
 import axios from "axios";
 import applicantService from "../services/applicantService";
 import BirthDatePicker from "../components/ui/BirthDatePicker";
+import Select from "../components/ui/Select";
 import { API_BASE_URL as API_URL } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
 
