@@ -187,55 +187,30 @@ export default function JobLibraryApprovals() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-              <BookOpen size={24} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Total Entries</p>
-              <p className="text-2xl font-extrabold text-slate-900">{total}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
-              <Clock size={24} className="text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Pending</p>
-              <p className="text-2xl font-extrabold text-slate-900">{pendingCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-              <CheckCircle size={24} className="text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Approved</p>
-              <p className="text-2xl font-extrabold text-slate-900">{approvedCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
-              <XCircle size={24} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Rejected</p>
-              <p className="text-2xl font-extrabold text-slate-900">
-                {rows.filter((r) => r.approval_status === "rejected").length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Entries"
+          value={total}
+          icon={<BookOpen size={24} />}
+          themeColor="blue"
+        />
+        <StatCard
+          title="Pending"
+          value={pendingCount}
+          icon={<Clock size={24} />}
+          themeColor="amber"
+        />
+        <StatCard
+          title="Approved"
+          value={approvedCount}
+          icon={<CheckCircle size={24} />}
+          themeColor="emerald"
+        />
+        <StatCard
+          title="Rejected"
+          value={rows.filter((r) => r.approval_status === "rejected").length}
+          icon={<XCircle size={24} />}
+          themeColor="red"
+        />
       </div>
 
       {/* Filters & Search */}
@@ -463,12 +438,42 @@ export default function JobLibraryApprovals() {
       />
 
       <AlertModal
-        open={alert.open}
+        isOpen={alert.open}
         variant={alert.variant}
         title={alert.title}
         message={alert.message}
         onClose={closeAlert}
+        onConfirm={closeAlert}
       />
+    </div>
+  );
+}
+
+// ── KPI / StatCard Component ──────────────────────────────────────────────────
+function StatCard({ title, value, icon, themeColor }) {
+  const colorMap = {
+    blue: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    red: { bg: "bg-red-100 dark:bg-red-950/60", text: "text-red-600 dark:text-red-400" },
+  };
+  const theme = colorMap[themeColor] || colorMap.blue;
+
+  return (
+    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D] flex flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
+            <p className="text-3xl font-black tracking-tight text-[#111A62]">{value}</p>
+          </div>
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Button from "../../components/ui/Button";
 import dashboardService from "../../services/dashboardService";
 import { cn } from "../../utils/cn";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, ResponsiveContainer, Legend } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../components/ui/chart";
 
 export default function DepartmentHeadDashboard() {
   const [stats, setStats]     = useState(null);
@@ -193,47 +195,55 @@ export default function DepartmentHeadDashboard() {
 
 // ── KPI BOX ──────────────────────────────────────────────────────────────────
 function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
-  const themes = {
-    navy: { bg: "bg-[#111A62]/10", border: "border-[#111A62]/20", iconText: "text-[#111A62]" },
-    orange: { bg: "bg-[#E15B1D]/10", border: "border-[#E15B1D]/20", iconText: "text-[#E15B1D]" },
-    teal: { bg: "bg-teal-500/10", border: "border-teal-500/20", iconText: "text-teal-600" },
-    indigo: { bg: "bg-indigo-500/10", border: "border-indigo-500/20", iconText: "text-indigo-600" },
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
   };
-  const current = themes[accentColor] || themes.navy;
+  const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:shadow-xl hover:shadow-slate-900/5 hover:-translate-y-1 duration-300">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
-            {trend && (
-              <span className={cn(
-                "inline-flex items-center text-[10px] font-extrabold rounded-full px-2 py-0.5 mt-1",
-                trendPositive ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"
-              )}>
-                {trend}
-              </span>
-            )}
+    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D] flex flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black tracking-tight text-[#111A62]">{value}</p>
+              {trend && (
+                <span className={cn(
+                  "inline-flex items-center text-[10px] font-extrabold rounded-full px-2 py-0.5",
+                  trendPositive ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"
+                )}>
+                  {trend}
+                </span>
+              )}
+            </div>
+            {subtitle && <p className="text-xs font-semibold text-slate-400 pt-1">{subtitle}</p>}
           </div>
-          <p className="text-xs font-semibold text-slate-400 pt-1">{subtitle}</p>
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
         </div>
-        <div className={cn(
-          "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition",
-          current.bg, current.iconText
-        )}>
-          {icon}
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
 // ── WEEKLY ACTIVITY CHART COMPONENT ──────────────────────────────────────────
+const chartConfig = {
+  present: { label: "Present", color: "#111A62" },
+  onLeave: { label: "On Leave", color: "#E15B1D" },
+};
+
 function DepartmentActivityChart({ weeklyActivity }) {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  
   const data = weeklyActivity || [
     { day: "Mon", present: 85, onLeave: 5 },
     { day: "Tue", present: 90, onLeave: 2 },
@@ -243,9 +253,6 @@ function DepartmentActivityChart({ weeklyActivity }) {
     { day: "Sat", present: 30, onLeave: 0 },
     { day: "Sun", present: 20, onLeave: 0 },
   ];
-
-  const maxVal = 100;
-  const H = 240;
 
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col min-h-[380px]">
@@ -263,25 +270,19 @@ function DepartmentActivityChart({ weeklyActivity }) {
         </div>
       </div>
 
-      <div className="flex-1 flex items-end justify-between gap-3 px-2 mt-auto">
-        {data.map((d, i) => {
-          const pHeight = (d.present / maxVal) * H;
-          const lHeight = (d.onLeave / maxVal) * H;
-          return (
-            <div key={i} className="flex flex-col items-center gap-3 w-full group">
-              <div className="relative flex items-end justify-center w-full h-[240px] bg-slate-50/50 rounded-2xl overflow-hidden group-hover:bg-slate-100/60 transition border border-transparent group-hover:border-slate-200/50">
-                {/* Tooltip on hover */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
-                  {d.present}% Present
-                </div>
-                
-                <div className="w-1/3 min-w-[14px] bg-[#E15B1D] rounded-t-lg mx-0.5 transition-all duration-700 ease-out group-hover:brightness-110" style={{ height: `${lHeight}px` }} />
-                <div className="w-1/3 min-w-[14px] bg-[#111A62] rounded-t-lg mx-0.5 transition-all duration-700 ease-out group-hover:brightness-110" style={{ height: `${pHeight}px` }} />
-              </div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 group-hover:text-[#111A62] transition-colors">{d.day}</span>
-            </div>
-          );
-        })}
+      <div className="flex-1 min-h-[260px]">
+        <ChartContainer config={chartConfig} className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 700 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+              <ChartTooltip cursor={{ fill: 'transparent' }} content={<ChartTooltipContent />} />
+              <Bar dataKey="onLeave" name="On Leave" stackId="a" fill="#E15B1D" radius={[0, 0, 4, 4]} barSize={32} />
+              <Bar dataKey="present" name="Present" stackId="a" fill="#111A62" radius={[4, 4, 0, 0]} barSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </div>
     </Card>
   );
