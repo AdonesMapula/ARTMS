@@ -184,6 +184,8 @@ class JobPostingController extends Controller
     {
         $data = $request->validate([
             'vacancies_count'      => ['sometimes', 'integer', 'min:1'],
+            'status'               => ['sometimes', 'string', 'in:published,closed,draft,pending_approval,revised,cancelled'],
+            'is_published'         => ['sometimes', 'boolean'],
             'closing_date'         => ['nullable', 'date'],
             'location'             => ['nullable', 'string'],
             'description'          => ['nullable', 'string'],
@@ -192,10 +194,19 @@ class JobPostingController extends Controller
             'is_modified_from_prf' => ['boolean'],
         ]);
 
+        if (isset($data['status'])) {
+            $data['is_published'] = ($data['status'] === 'published');
+        } elseif (isset($data['is_published'])) {
+            $data['status'] = $data['is_published'] ? 'published' : 'closed';
+        }
+
         $jobPosting->update($data);
         $this->invalidatePostingCaches();
 
-        return response()->json(['message' => 'Job posting updated successfully.', 'posting' => $jobPosting->fresh()]);
+        return response()->json([
+            'message' => 'Job posting updated successfully.',
+            'posting' => $jobPosting->fresh(['jobLibrary', 'department', 'requester', 'approver'])
+        ]);
     }
 
     public function destroy(JobPosting $jobPosting): JsonResponse
@@ -203,6 +214,8 @@ class JobPostingController extends Controller
         if ($jobPosting->applicants()->exists()) {
             return response()->json(['message' => 'Cannot delete posting with existing applicants.'], 409);
         }
+
+        \App\Models\ManpowerRequest::where('job_posting_id', $jobPosting->id)->update(['job_posting_id' => null]);
 
         AuditLog::record('delete', 'job_posting', "Deleted job posting ID {$jobPosting->id}");
         $jobPosting->delete();
@@ -232,6 +245,7 @@ class JobPostingController extends Controller
                 $skippedCount++;
                 continue;
             }
+            \App\Models\ManpowerRequest::where('job_posting_id', $posting->id)->update(['job_posting_id' => null]);
             $posting->delete();
             $deletedCount++;
         }

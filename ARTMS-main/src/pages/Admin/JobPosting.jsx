@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
-  Briefcase, Eye, EyeOff, CheckCircle, Clock, XCircle,
-  Plus, X, AlertCircle, AlertTriangle, FileText, Edit, Trash2, Filter, RefreshCw, ChevronRight, ChevronDown,
-  GraduationCap, List, FileCheck, Building2, MapPin, DollarSign, Save, Loader
+  Briefcase, EyeOff, CheckCircle,
+  Plus, X, AlertCircle, Trash2, Filter, RefreshCw, ChevronRight,
+  Building2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -13,15 +13,13 @@ import TableSkeleton from "../../components/ui/TableSkeleton";
 import CardSkeleton from "../../components/ui/CardSkeleton";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
-import DatePicker from "../../components/ui/DatePicker";
 import AlertModal from "../../components/ui/AlertModal";
 import JobPostingCreateModal from "../../modals/JobPostingCreateModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ActionLoadingModal from "../../components/ui/ActionLoadingModal";
 import JobPostingEditPanel from "../../components/job/JobPostingEditPanel";
 import api from "../../services/api";
-import { calculateSalaryBreakdown } from "../../utils/salaryUtils";
+import jobService from "../../services/jobService";
 import { useToast } from "../../context/ToastContext";
 
 const STATUS_TONE = {
@@ -31,22 +29,12 @@ const STATUS_TONE = {
   closed: "default",
   cancelled: "danger",
 };
-const APPROVAL_TONE = { approved: "success", pending: "warning", revised: "warning", rejected: "danger" };
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
   { value: "published", label: "Published" },
   { value: "closed", label: "Closed" },
 ];
-
-const taClass =
-  "w-full rounded-lg border border-[var(--artms-border)] bg-white px-3 py-2 text-sm text-slate-900 leading-relaxed outline-none transition resize-none focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]";
-const selectClass =
-  "w-full rounded-lg border border-[var(--artms-border)] bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]";
-
-function deepEqual(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
 
 export default function JobPosting() {
   const toast = useToast();
@@ -59,7 +47,6 @@ export default function JobPosting() {
   const pageSize = 5;
 
   // Selected Posting ID for Split View Detail & Edit Panel
-  const [openDetailId, setOpenDetailId] = useState(null);
   const [selectedPostingId, setSelectedPostingId] = useState(null);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -70,7 +57,6 @@ export default function JobPosting() {
   const [selectedPRF, setSelectedPRF] = useState(null);
   const [selectedPosting, setSelectedPosting] = useState(null);
   const [prfToDelete, setPrfToDelete] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, postingId: null });
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -85,7 +71,11 @@ export default function JobPosting() {
     setAlertModalState(modalConfig);
     if (modalConfig?.title) {
       const v = modalConfig.variant === "danger" ? "error" : modalConfig.variant || "info";
-      toast[v] ? toast[v](modalConfig.title, modalConfig.message) : toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
+      if (typeof toast?.[v] === "function") {
+        toast[v](modalConfig.title, modalConfig.message);
+      } else if (typeof toast?.showToast === "function") {
+        toast.showToast({ title: modalConfig.title, message: modalConfig.message, type: v });
+      }
     }
   };
 
@@ -151,6 +141,7 @@ export default function JobPosting() {
       });
       setCreateModalOpen(false);
       fetchData();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
     } catch (error) {
       console.error("Error creating posting:", error);
       setAlertModal({
@@ -165,19 +156,26 @@ export default function JobPosting() {
   };
 
   const handleDeletePosting = async () => {
-    if (!deleteConfirm.postingId) return;
+    const postingId = selectedPosting?.id;
+    if (!postingId) return;
 
     setDeleting(true);
     try {
-      await api.delete(`/job-postings/${deleteConfirm.postingId}`);
+      await api.delete(`/job-postings/${postingId}`);
       setAlertModal({
         open: true,
         variant: "success",
         title: "Success",
         message: "Job posting was deleted successfully.",
       });
-      setDeleteConfirm({ open: false, postingId: null });
+      setDeleteModalOpen(false);
+      setSelectedPosting(null);
+      if (selectedPostingId === postingId) {
+        setSelectedPostingId(null);
+      }
+      setSelectedIds((prev) => prev.filter((id) => id !== postingId));
       fetchData();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
     } catch (error) {
       console.error("Error deleting posting:", error);
       setAlertModal({
@@ -204,6 +202,7 @@ export default function JobPosting() {
       setDeletePRFModalOpen(false);
       setPrfToDelete(null);
       fetchData();
+      window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
     } catch (error) {
       console.error("Error deleting PRF:", error);
       setAlertModal({
@@ -243,20 +242,23 @@ export default function JobPosting() {
     if (selectedIds.length === 0) return;
     setBulkDeleting(true);
     try {
-      const res = await jobService.postings.bulkDelete(selectedIds);
+      const res = await api.post("/job-postings/bulk-delete", { ids: selectedIds });
       setAlertModal({
         open: true,
         variant: "success",
         title: "Bulk Deletion Complete",
         message: res.data?.message || `Successfully deleted ${selectedIds.length} job postings.`,
       });
+      if (selectedIds.includes(selectedPostingId)) {
+        setSelectedPostingId(null);
+      }
       setSelectedIds([]);
       fetchData();
       window.dispatchEvent(new CustomEvent("artms-refresh-sidebar"));
     } catch (err) {
       setAlertModal({
         open: true,
-        variant: "danger",
+        variant: "error",
         title: "Bulk Deletion Failed",
         message: err.response?.data?.message || "Failed to delete selected job postings.",
       });
