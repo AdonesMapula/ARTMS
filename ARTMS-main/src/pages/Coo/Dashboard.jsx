@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Users, ShieldCheck, Building2, Activity, TrendingUp, AlertTriangle, ShieldAlert,
-  FileText, CheckCircle2, Lock, Cpu, Server, RefreshCw, BarChart3, PieChart, LineChart,
+  FileText, CheckCircle2, Lock, Cpu, Server, RefreshCw, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
   Calendar, ChevronRight, Filter, Sparkles, Layers, ArrowUpRight, Clock, UserPlus, Eye,
   CheckCircle, XCircle, Clipboard, ArrowRight, Search, FileCheck
 } from "lucide-react";
@@ -16,6 +16,16 @@ import Select from "../../components/ui/Select";
 import { useAuth } from "../../context/AuthContext";
 import dashboardService from "../../services/dashboardService";
 import { cn } from "../../utils/cn";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer
+} from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "../../components/ui/chart";
 
 // ── COLOR PALETTE TOKENS ───────────────────────────────────────────────────────
 const COLORS = {
@@ -247,46 +257,56 @@ export default function CooDashboard() {
    1. KPI STAT BOX COMPONENT
    ─────────────────────────────────────────────────────────────────────────── */
 function KPIBox({ title, value, subtitle, trend, trendPositive, icon, accentColor }) {
-  const themes = {
-    navy: { bg: "bg-[#111A62]/10", border: "border-[#111A62]/20", iconText: "text-[#111A62]" },
-    orange: { bg: "bg-[#E15B1D]/10", border: "border-[#E15B1D]/20", iconText: "text-[#E15B1D]" },
-    teal: { bg: "bg-teal-500/10", border: "border-teal-500/20", iconText: "text-teal-600" },
-    indigo: { bg: "bg-indigo-500/10", border: "border-indigo-500/20", iconText: "text-indigo-600" },
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
   };
-  const current = themes[accentColor] || themes.navy;
+  const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <Card className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
-            {trend && (
-              <span className={cn(
-                "inline-flex items-center text-[11px] font-extrabold rounded-full px-2 py-0.5",
-                trendPositive ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"
-              )}>
-                {trend}
-              </span>
-            )}
+    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D] flex flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black tracking-tight text-[#111A62]">{value}</p>
+              {trend && (
+                <span className={cn(
+                  "inline-flex items-center text-[10px] font-extrabold rounded-full px-2 py-0.5",
+                  trendPositive ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" : "bg-amber-50 text-amber-700 border border-amber-200/60"
+                )}>
+                  {trend}
+                </span>
+              )}
+            </div>
+            {subtitle && <p className="text-xs font-semibold text-slate-400 pt-1">{subtitle}</p>}
           </div>
-          <p className="text-xs font-semibold text-slate-400 pt-1">{subtitle}</p>
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
         </div>
-        <div className={cn(
-          "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition",
-          current.bg, current.iconText
-        )}>
-          {icon}
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
    2. MIDDLE LEFT: AREA / LINE CHART -> PRF VOLUME & HEADCOUNT TRENDS
    ─────────────────────────────────────────────────────────────────────────── */
+const reqChartConfig = {
+  requests: { label: "Submitted PRFs", color: COLORS.navy },
+  headcount: { label: "Requested Headcount", color: COLORS.orange },
+};
+
 function PrfTrendsChart({ stats, totalRequests }) {
   const [timeRange, setTimeRange] = useState("7M"); // "7M", "30D", "24H"
 
@@ -342,52 +362,18 @@ function PrfTrendsChart({ stats, totalRequests }) {
   const maxRequests = Math.max(...dataSets.map(d => d.requests), 5);
   const maxHeadcount = Math.max(...dataSets.map(d => d.headcount), 10);
 
-  // SVG Coordinates setup (Width: 600, Height: 210)
-  const W = 600;
-  const H = 210;
-  const padX = 40;
-  const padY = 25;
-
-  const getPoints = (key, maxVal) => {
-    return dataSets.map((d, i) => {
-      const x = padX + (i / (dataSets.length - 1 || 1)) * (W - padX * 2);
-      const y = H - padY - (d[key] / maxVal) * (H - padY * 2);
-      return { x, y, value: d[key], label: d.label };
-    });
-  };
-
-  const reqPts = getPoints("requests", maxRequests);
-  const hcPts = getPoints("headcount", maxHeadcount);
-
-  const makeCurve = (pts) => {
-    if (pts.length === 0) return "";
-    let d = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const xMid = (pts[i].x + pts[i + 1].x) / 2;
-      d += ` C ${xMid} ${pts[i].y}, ${xMid} ${pts[i + 1].y}, ${pts[i + 1].x} ${pts[i + 1].y}`;
-    }
-    return d;
-  };
-
-  const reqPath = makeCurve(reqPts);
-  const reqArea = `${reqPath} L ${reqPts[reqPts.length - 1]?.x || W} ${H - padY} L ${reqPts[0]?.x || padX} ${H - padY} Z`;
-
-  const hcPath = makeCurve(hcPts);
-  const hcArea = `${hcPath} L ${hcPts[hcPts.length - 1]?.x || W} ${H - padY} L ${hcPts[0]?.x || padX} ${H - padY} Z`;
-
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between">
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <LineChart size={18} className="text-[#111A62]" />
+              <LineChartIcon size={18} className="text-[#111A62]" />
               <h3 className="text-base font-extrabold text-slate-900">Requisition & Headcount Trends</h3>
             </div>
             <p className="text-xs font-medium text-slate-500 mt-0.5">Dual-metric staffing demand and requested headcount trajectory</p>
           </div>
           
-          {/* Time Range Switcher */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit self-start sm:self-auto border border-slate-200/60">
             {["24H", "30D", "7M"].map((t) => (
               <button
@@ -404,7 +390,6 @@ function PrfTrendsChart({ stats, totalRequests }) {
           </div>
         </div>
 
-        {/* Chart Legend & Stats Summary */}
         <div className="grid grid-cols-2 gap-4 mb-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/70">
           <div className="flex items-center gap-3">
             <span className="h-4 w-4 rounded-full bg-[#111A62] ring-4 ring-[#111A62]/20 shrink-0" />
@@ -423,72 +408,27 @@ function PrfTrendsChart({ stats, totalRequests }) {
         </div>
       </div>
 
-      {/* SVG Interactive Visual Area Graph */}
-      <div className="relative w-full overflow-x-auto my-2">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-52 sm:h-64 overflow-visible font-sans">
-          <defs>
-            <linearGradient id="reqGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#111A62" stopOpacity="0.35" />
-              <stop offset="95%" stopColor="#111A62" stopOpacity="0.0" />
-            </linearGradient>
-            <linearGradient id="hcGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#E15B1D" stopOpacity="0.30" />
-              <stop offset="95%" stopColor="#E15B1D" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-
-          {/* Grid Lines & Y Labels */}
-          {[0, 0.25, 0.5, 0.75, 1].map((step, i) => {
-            const y = H - padY - step * (H - padY * 2);
-            return (
-              <g key={i}>
-                <line x1={padX} y1={y} x2={W - padX} y2={y} stroke="#E2E8F0" strokeDasharray={step === 0 ? "none" : "3 3"} strokeWidth="1" />
-              </g>
-            );
-          })}
-
-          {/* Req Area & Curve (Navy Blue) */}
-          <path d={reqArea} fill="url(#reqGrad)" className="transition-all duration-500" />
-          <path d={reqPath} fill="none" stroke="#111A62" strokeWidth="3" strokeLinecap="round" className="transition-all duration-500 drop-shadow-md" />
-
-          {/* Headcount Area & Curve (Orange) */}
-          <path d={hcArea} fill="url(#hcGrad)" className="transition-all duration-500" />
-          <path d={hcPath} fill="none" stroke="#E15B1D" strokeWidth="3" strokeLinecap="round" strokeDasharray="6 2" className="transition-all duration-500" />
-
-          {/* Data Points & X-Axis Labels */}
-          {reqPts.map((p, i) => {
-            const hc = hcPts[i];
-            return (
-              <g key={i} className="group cursor-pointer">
-                <rect x={p.x - 20} y={padY} width="40" height={H - padY * 2} fill="transparent" />
-
-                <line x1={p.x} y1={padY} x2={p.x} y2={H - padY} stroke="#94A3B8" strokeWidth="1" strokeDasharray="2 2" className="opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                
-                <circle cx={p.x} cy={p.y} r="10" fill="#111A62" fillOpacity="0" className="group-hover:fill-[#111A62] group-hover:[fill-opacity:0.15] transition-all duration-200" />
-                <circle cx={p.x} cy={p.y} r="5" fill="#111A62" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
-                
-                {hc && (
-                  <>
-                    <circle cx={hc.x} cy={hc.y} r="10" fill="#E15B1D" fillOpacity="0" className="group-hover:fill-[#E15B1D] group-hover:[fill-opacity:0.15] transition-all duration-200" />
-                    <circle cx={hc.x} cy={hc.y} r="5" fill="#E15B1D" stroke="white" strokeWidth="2.5" className="transition-all duration-200" />
-                  </>
-                )}
-
-                <text x={p.x} y={H - 6} textAnchor="middle" fill="#475569" className="text-[11px] font-extrabold select-none">
-                  {p.label}
-                </text>
-
-                {/* Interactive Tooltip on Hover */}
-                <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none drop-shadow-xl" transform={`translate(${p.x > W - 120 ? p.x - 110 : p.x - 30}, ${Math.max(5, p.y - 50)})`}>
-                  <rect width="115" height="42" rx="8" fill="#1E293B" stroke="#334155" />
-                  <text x="10" y="16" fill="#60A5FA" className="text-[10px] font-extrabold">PRFs: {p.value}</text>
-                  <text x="10" y="32" fill="#FB923C" className="text-[10px] font-extrabold">Seats: {hc?.value || 0}</text>
-                </g>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+      <ChartContainer config={reqChartConfig} className="w-full h-52 sm:h-64 my-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={dataSets} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={COLORS.navy} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorHc" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={COLORS.orange} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={COLORS.orange} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 700 }} dy={10} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Area type="monotone" dataKey="requests" name="PRFs" stroke={COLORS.navy} strokeWidth={3} fillOpacity={1} fill="url(#colorReq)" activeDot={{ r: 6, strokeWidth: 2, fill: "#fff" }} />
+            <Area type="monotone" dataKey="headcount" name="Headcount" stroke={COLORS.orange} strokeWidth={3} strokeDasharray="6 2" fillOpacity={1} fill="url(#colorHc)" activeDot={{ r: 6, strokeWidth: 2, fill: "#fff" }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartContainer>
 
       <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
         <span>⚡ Requisition throughput index: Optimal</span>
@@ -524,7 +464,8 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
         name: level.name,
         count: cnt,
         percent: Math.round((cnt / total) * 100),
-        color: level.color,
+        fill: level.color.hex,
+        textColor: level.color.text,
       };
     });
   }, [requestsByUrgency, totalRequests]);
@@ -535,18 +476,18 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
     const pen = pendingCount || 0;
     const rej = rejectedCount || 0;
     return [
-      { name: "Approved PRFs", count: app, percent: Math.round((app / total) * 100), color: { hex: "#10B981", text: "text-emerald-600", bg: "bg-emerald-500" } },
-      { name: "Pending Review", count: pen, percent: Math.round((pen / total) * 100), color: { hex: "#F59E0B", text: "text-amber-600", bg: "bg-amber-500" } },
-      { name: "Declined / Held", count: rej, percent: Math.round((rej / total) * 100), color: { hex: "#E11D48", text: "text-rose-600", bg: "bg-rose-500" } },
+      { name: "Approved PRFs", count: app, percent: Math.round((app / total) * 100), fill: "#10B981", textColor: "text-emerald-600" },
+      { name: "Pending Review", count: pen, percent: Math.round((pen / total) * 100), fill: "#F59E0B", textColor: "text-amber-600" },
+      { name: "Declined / Held", count: rej, percent: Math.round((rej / total) * 100), fill: "#E11D48", textColor: "text-rose-600" },
     ];
   }, [totalRequests, approvedCount, pendingCount, rejectedCount]);
 
   const currentList = activeTab === "urgency" ? urgencyData : statusData;
   const totalCount = currentList.reduce((acc, i) => acc + i.count, 0);
 
-  const R = 54;
-  const CIRC = 2 * Math.PI * R;
-  let currentOffset = 0;
+  const chartConfig = {
+    count: { label: "Total Forms", color: COLORS.navy }
+  };
 
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between">
@@ -554,13 +495,12 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
         <div className="flex items-center justify-between gap-2 mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <PieChart size={18} className="text-[#E15B1D]" />
+              <PieChartIcon size={18} className="text-[#E15B1D]" />
               <h3 className="text-base font-extrabold text-slate-900">Urgency & Status Distribution</h3>
             </div>
             <p className="text-xs font-medium text-slate-500 mt-0.5">Priority classification and executive approval status</p>
           </div>
 
-          {/* Toggle Tab */}
           <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 shrink-0">
             <button
               onClick={() => setActiveTab("urgency")}
@@ -585,35 +525,28 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center my-4">
-        {/* Animated SVG Donut */}
-        <div className="sm:col-span-6 flex justify-center relative">
-          <svg className="w-44 h-44 -rotate-90 transform overflow-visible" viewBox="0 0 140 140">
-            <circle cx="70" cy="70" r={R} stroke="#F1F5F9" strokeWidth="22" fill="transparent" />
-            
-            {currentList.map((item, index) => {
-              const dashVal = (item.percent / 100) * CIRC;
-              const offset = currentOffset;
-              currentOffset += dashVal;
-
-              return (
-                <circle
-                  key={index}
-                  cx="70"
-                  cy="70"
-                  r={R}
-                  stroke={item.color.hex}
-                  strokeWidth="22"
-                  strokeDasharray={`${dashVal} ${CIRC - dashVal}`}
-                  strokeDashoffset={-offset}
-                  strokeLinecap="butt"
-                  fill="transparent"
-                  className="transition-all duration-700 hover:stroke-width-26 cursor-pointer opacity-95 hover:opacity-100 drop-shadow-sm"
-                />
-              );
-            })}
-          </svg>
+        <div className="sm:col-span-6 flex justify-center relative h-44">
+          <ChartContainer config={chartConfig} className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Pie
+                  data={currentList}
+                  dataKey="count"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={80}
+                  strokeWidth={5}
+                  paddingAngle={2}
+                >
+                  {currentList.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} className="stroke-white dark:stroke-slate-950" />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartContainer>
           
-          {/* Inner Center Content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
             <span className="text-2xl font-black text-slate-900">{totalCount || totalRequests}</span>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -622,7 +555,6 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
           </div>
         </div>
 
-        {/* Interactive Legend List */}
         <div className="sm:col-span-6 space-y-2.5 max-h-56 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {currentList.map((item, idx) => (
             <div
@@ -630,12 +562,12 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
               className="group flex items-center justify-between p-2.5 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-md transition duration-200 cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="h-3.5 w-3.5 rounded-lg shrink-0 shadow-sm" style={{ backgroundColor: item.color.hex }} />
+                <span className="h-3.5 w-3.5 rounded-lg shrink-0 shadow-sm" style={{ backgroundColor: item.fill }} />
                 <span className="text-xs font-extrabold text-slate-800 truncate group-hover:text-[#111A62] transition-colors">{item.name}</span>
               </div>
               <div className="flex items-baseline gap-2 shrink-0 ml-2">
                 <span className="text-xs font-bold text-slate-500">({item.count})</span>
-                <span className={cn("text-xs font-black", item.color.text)}>{item.percent}%</span>
+                <span className={cn("text-xs font-black", item.textColor)}>{item.percent}%</span>
               </div>
             </div>
           ))}
@@ -655,6 +587,10 @@ function UrgencyStatusDistributionChart({ requestsByUrgency, totalRequests, appr
 /* ───────────────────────────────────────────────────────────────────────────
    4. BOTTOM LEFT: BAR CHART / DEPARTMENTS ALLOCATION
    ─────────────────────────────────────────────────────────────────────────── */
+const deptChartConfig = {
+  count: { label: "PRFs", color: COLORS.navy },
+};
+
 function DepartmentAllocationChart({ requestsByDept, totalRequests }) {
   const [viewMode, setViewMode] = useState("bar"); // "bar" or "dept"
 
@@ -667,15 +603,15 @@ function DepartmentAllocationChart({ requestsByDept, totalRequests }) {
           label: d.name || "General Department",
           count: val,
           percent: Math.min(100, Math.round((val / total) * 100)),
-          color: idx % 2 === 0 ? "#111A62" : "#E15B1D"
+          fill: idx % 2 === 0 ? COLORS.navy : COLORS.orange
         };
       });
     }
     return [
-      { label: "Operations & IT", count: 6, percent: 40, color: "#111A62" },
-      { label: "Human Resources", count: 5, percent: 33, color: "#E15B1D" },
-      { label: "Finance & Accounting", count: 2, percent: 14, color: "#0D9488" },
-      { label: "Sales & Marketing", count: 2, percent: 13, color: "#4F46E5" },
+      { label: "Operations & IT", count: 6, percent: 40, fill: COLORS.navy },
+      { label: "Human Resources", count: 5, percent: 33, fill: COLORS.orange },
+      { label: "Finance & Accounting", count: 2, percent: 14, fill: COLORS.teal },
+      { label: "Sales & Marketing", count: 2, percent: 13, fill: COLORS.indigo },
     ];
   }, [requestsByDept, totalRequests]);
 
@@ -691,7 +627,6 @@ function DepartmentAllocationChart({ requestsByDept, totalRequests }) {
             <p className="text-xs font-medium text-slate-500 mt-0.5">Manpower requisition distribution across organizational units</p>
           </div>
 
-          {/* Mode Switcher */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/60 self-start sm:self-auto">
             <button
               onClick={() => setViewMode("bar")}
@@ -715,33 +650,28 @@ function DepartmentAllocationChart({ requestsByDept, totalRequests }) {
         </div>
       </div>
 
-      {/* VIEW MODE 1: BAR CHART (ACTION VOLUME) */}
       {viewMode === "bar" && (
-        <div className="space-y-3.5 my-3 flex-1">
-          {deptStats.map((item, i) => (
-            <div key={i} className="group space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-slate-800 group-hover:text-[#111A62] transition-colors">{item.label}</span>
-                <span className="font-mono font-black text-slate-600">{item.count} <span className="text-[10px] text-slate-400 font-normal">PRFs</span></span>
-              </div>
-              <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200/60">
-                <div
-                  className="h-full rounded-full transition-all duration-700 ease-out shadow-sm"
-                  style={{
-                    width: `${Math.max(8, item.percent)}%`,
-                    backgroundColor: item.color,
-                    backgroundImage: item.color === "#111A62" ? "linear-gradient(to right, #111A62, #2563eb)" : "linear-gradient(to right, #E15B1D, #fb923c)"
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+        <div className="my-3 flex-1 h-[260px]">
+          <ChartContainer config={deptChartConfig} className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={deptStats} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+                <XAxis type="number" hide />
+                <YAxis dataKey="label" type="category" width={110} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 700 }} />
+                <ChartTooltip cursor={{ fill: 'transparent' }} content={<ChartTooltipContent />} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                  {deptStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
         </div>
       )}
 
-      {/* VIEW MODE 2: DEPARTMENTS RESOURCE LIST */}
       {viewMode === "dept" && (
-        <div className="my-3 flex-1 space-y-3 max-h-64 overflow-y-auto pr-1">
+        <div className="my-3 flex-1 space-y-3 h-[260px] overflow-y-auto pr-1">
           {deptStats.map((d, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-teal-500 transition">
               <div className="flex items-center gap-3">
@@ -829,8 +759,8 @@ function PendingApprovalsTable({ recentPending, recentHistory, approvedRequests 
   return (
     <Card className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between">
       <div>
-        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4 mb-4">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="w-full">
             <div className="flex items-center gap-2">
               <Layers size={18} className="text-[#111A62]" />
               <h3 className="text-base font-extrabold text-slate-900">Pending PRFs Needing Approval</h3>
@@ -838,9 +768,9 @@ function PendingApprovalsTable({ recentPending, recentHistory, approvedRequests 
             <p className="text-xs font-medium text-slate-500 mt-0.5">Executive approval queue for personnel requisition forms</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full 2xl:w-auto shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full">
             {/* Search Bar Component */}
-            <div className="flex-1 sm:flex-none sm:w-56">
+            <div className="flex-1 sm:flex-none sm:w-64">
               <SearchBar
                 value={filterQuery}
                 onChange={handleFilterChange}
