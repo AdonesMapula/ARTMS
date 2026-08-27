@@ -19,27 +19,22 @@ class AuthController extends Controller
 {
     /**
      * Determine if a user requires OTP verification for login.
-     * Centralized policy check: Super Admin, HR Admin / HR Dept Head, and Department Heads are exempt from OTP.
+     * Only the specified default credentials bypass OTP verification.
+     * All newly created or other user accounts (regardless of role) strictly require OTP verification.
      */
     protected function requiresLoginOtp(User $user): bool
     {
-        // Exempt Super Admin, HR Admin, and Department Head roles
-        if ($user->isSuperAdmin() || $user->isHrAdmin() || $user->isDepartmentHead()) {
-            return false;
-        }
-
-        // Seeded credential email exemptions
+        // Specific hardcoded credentials exempt from OTP
         $exemptEmails = [
             'superadmin@artms.com',
             'hradmin@artms.com',
+            'coo@artms.com',
             'depthead@artms.com',
+            'interviewer@artms.com',
+            'employee@artms.com',
         ];
 
-        if (in_array(strtolower((string) $user->email), $exemptEmails, true)) {
-            return false;
-        }
-
-        return true;
+        return ! in_array(strtolower(trim((string) $user->email)), $exemptEmails, true);
     }
 
     /**

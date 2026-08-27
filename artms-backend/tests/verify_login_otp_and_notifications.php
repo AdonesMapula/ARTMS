@@ -101,56 +101,54 @@ $employeeUser = User::firstOrCreate(['email' => 'employee_test@artms.com'], [
 
 $authController = app(\App\Http\Controllers\AuthController::class);
 
-echo "--- 1. Testing Super Admin, HR Admin & Dept Head Direct Login (Bypass OTP) ---\n";
+echo "--- 1. Testing Hardcoded Default Credentials Direct Login (Bypass OTP) ---\n";
 
-// Super Admin
-$loginReqSuper = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
-    'email' => 'superadmin_test@artms.com',
+$hardcodedAccounts = [
+    'superadmin@artms.com'  => 'SuperAdmin@2024',
+    'hradmin@artms.com'     => 'HrAdmin@2024',
+    'coo@artms.com'         => 'CooUser@2024',
+    'depthead@artms.com'    => 'DeptHead@2024',
+    'interviewer@artms.com' => 'Interviewer@2024',
+    'employee@artms.com'    => 'Employee@2024',
+];
+
+foreach ($hardcodedAccounts as $email => $pass) {
+    $req = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
+        'email' => $email,
+        'password' => $pass,
+    ]);
+    $res = $authController->login($req);
+    $data = $res->getData(true);
+    assertTest($res->getStatusCode() === 200, "{$email} login returns HTTP 200");
+    assertTest(isset($data['token']) && !empty($data['token']), "{$email} receives Sanctum token immediately without OTP");
+    assertTest(!isset($data['requires_otp']) || $data['requires_otp'] === false, "{$email} requires_otp is false");
+}
+
+echo "\n--- 2. Testing Newly Created Users / Other Accounts (Strictly Require OTP) ---\n";
+
+$newUser = User::updateOrCreate(['email' => 'new_hr_manager@company.com'], [
+    'name' => 'New HR Manager',
+    'first_name' => 'New',
+    'last_name' => 'Manager',
+    'role' => 'hr_admin',
+    'department_id' => $deptA->id,
+    'password' => Hash::make('Secret123!'),
+    'is_active' => true,
+]);
+
+$loginReqNew = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
+    'email' => 'new_hr_manager@company.com',
     'password' => 'Secret123!',
 ]);
-$resSuper = $authController->login($loginReqSuper);
-$dataSuper = $resSuper->getData(true);
-assertTest($resSuper->getStatusCode() === 200, "Super Admin login returns HTTP 200");
-assertTest(isset($dataSuper['token']) && !empty($dataSuper['token']), "Super Admin receives Sanctum token immediately");
-assertTest(!isset($dataSuper['requires_otp']) || $dataSuper['requires_otp'] === false, "Super Admin requires_otp is false");
+$resNew = $authController->login($loginReqNew);
+$dataNew = $resNew->getData(true);
 
-// HR Admin
-$loginReqHR = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
-    'email' => 'hr_test@artms.com',
-    'password' => 'Secret123!',
-]);
-$resHR = $authController->login($loginReqHR);
-$dataHR = $resHR->getData(true);
-assertTest($resHR->getStatusCode() === 200, "HR Admin login returns HTTP 200");
-assertTest(isset($dataHR['token']) && !empty($dataHR['token']), "HR Admin receives Sanctum token immediately without OTP");
-assertTest(!isset($dataHR['requires_otp']) || $dataHR['requires_otp'] === false, "HR Admin requires_otp is false");
+assertTest($resNew->getStatusCode() === 200, "Newly created HR user login returns HTTP 200");
+assertTest(isset($dataNew['requires_otp']) && $dataNew['requires_otp'] === true, "Newly created user requires_otp is true");
+assertTest(!isset($dataNew['token']), "No Sanctum token issued before OTP verification for new user");
+assertTest(isset($dataNew['verification_id']) && !empty($dataNew['verification_id']), "Temporary verification_id issued for new user");
 
-// Dept Head
-$loginReqDeptHead = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
-    'email' => 'depthead_a@artms.com',
-    'password' => 'Secret123!',
-]);
-$resDeptHead = $authController->login($loginReqDeptHead);
-$dataDeptHead = $resDeptHead->getData(true);
-assertTest($resDeptHead->getStatusCode() === 200, "Dept Head login returns HTTP 200");
-assertTest(isset($dataDeptHead['token']) && !empty($dataDeptHead['token']), "Dept Head receives Sanctum token immediately without OTP");
-assertTest(!isset($dataDeptHead['requires_otp']) || $dataDeptHead['requires_otp'] === false, "Dept Head requires_otp is false");
-
-echo "\n--- 2. Testing Regular Employee Login (Requires OTP) ---\n";
-
-$loginReqEmp = \App\Http\Requests\Auth\LoginRequest::create('/api/auth/login', 'POST', [
-    'email' => 'employee_test@artms.com',
-    'password' => 'Secret123!',
-]);
-$resEmp = $authController->login($loginReqEmp);
-$dataEmp = $resEmp->getData(true);
-
-assertTest($resEmp->getStatusCode() === 200, "Employee login returns HTTP 200");
-assertTest(isset($dataEmp['requires_otp']) && $dataEmp['requires_otp'] === true, "Employee requires_otp is true");
-assertTest(!isset($dataEmp['token']), "No Sanctum token issued before OTP verification");
-assertTest(isset($dataEmp['verification_id']) && !empty($dataEmp['verification_id']), "Temporary verification_id issued");
-
-$verificationId = $dataEmp['verification_id'];
+$verificationId = $dataNew['verification_id'];
 $otpRecord = AuthenticationOtp::where('verification_id', $verificationId)->first();
 assertTest($otpRecord !== null, "AuthenticationOtp record exists in database");
 assertTest($otpRecord->purpose === 'login_verification', "OTP purpose is 'login_verification'");
@@ -184,7 +182,7 @@ $dataGood = $resGood->getData(true);
 
 assertTest($resGood->getStatusCode() === 200, "Correct OTP verification returns HTTP 200");
 assertTest(isset($dataGood['token']) && !empty($dataGood['token']), "Sanctum token issued upon successful OTP verification");
-assertTest($dataGood['user']['email'] === 'employee_test@artms.com', "Authenticated user returned in payload");
+assertTest($dataGood['user']['email'] === 'new_hr_manager@company.com', "Authenticated user returned in payload");
 
 // D. Reuse prevention
 $verifyReqReuse = Request::create('/api/auth/verify-login-otp', 'POST', [
