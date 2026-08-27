@@ -28,9 +28,166 @@ const getRoleLabel = (role) =>
  *   - a collapsible group with child NavLinks  (has `children` array)
  *   - a section label (type: "label")
  */
-function NavItem({ it, isCollapsed, setIsCollapsed }) {
+function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
   const location = useLocation();
+  // Auto-expand when any child is active
+  const anyChildActive = it.children.some((c) =>
+    location.pathname.startsWith(c.to)
+  );
+  const [open, setOpen] = useState(anyChildActive);
 
+  const handleOpenChange = (val) => {
+    setOpen(val);
+    if (val && isCollapsed) {
+      setIsCollapsed(false);
+    }
+  };
+
+  const triggerContent = (
+    <button
+      type="button"
+      className={cn(
+        "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
+        isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
+        anyChildActive
+          ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+          : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
+      )}
+    >
+      {it.icon && (
+        <span className="nav-icon text-base transition-colors shrink-0">{it.icon}</span>
+      )}
+      
+      <div className={cn("flex items-center justify-between overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0 ml-0" : "flex-1 opacity-100 ml-2")}>
+        <span className="truncate text-left">{it.label}</span>
+        <div className="flex items-center shrink-0">
+          {it.badge && (
+            <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A]">
+              {it.badge}
+            </span>
+          )}
+          <span className="text-slate-400 transition-transform duration-200 ml-2">
+            {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+
+  if (isCollapsed) {
+    // In collapsed mode, render a Popover flyout instead of expanding the sidebar inline
+    return (
+      <li className="flex justify-center">
+        <Popover>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                {triggerContent}
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold">
+              <div className="flex items-center">
+                {it.label}
+                {it.badge && (
+                  <span className="ml-2 rounded-full bg-[#FD761A] px-1.5 py-0.5 text-[9px] text-white">
+                    {it.badge}
+                  </span>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+
+          <PopoverContent side="right" sideOffset={12} className="w-56 p-2 rounded-xl border border-[var(--artms-border)] shadow-xl z-[200]">
+            <div className="px-2 py-1.5 mb-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{it.label}</p>
+            </div>
+            <ul className="space-y-1">
+              {it.children.map((child) => (
+                <li key={child.to}>
+                  <NavLink
+                    to={child.to}
+                    end={child.end}
+                    onMouseEnter={() => preloadRoute(child.to)}
+                    onFocus={() => preloadRoute(child.to)}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center rounded-lg px-2 py-2 gap-2 text-sm font-semibold transition-all duration-200 focus:outline-none group",
+                        isActive
+                          ? "bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white"
+                      )
+                    }
+                  >
+                    {child.icon && (
+                      <span className="nav-icon text-sm transition-colors shrink-0 group-hover:text-[#111A62]">
+                        {child.icon}
+                      </span>
+                    )}
+                    <span className="flex-1 truncate">{child.label}</span>
+                    {child.badge && (
+                      <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[10px] font-bold text-[#FD761A]">
+                        {child.badge}
+                      </span>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      </li>
+    );
+  }
+
+  // In expanded mode, render the normal inline Collapsible
+  return (
+    <li>
+      <Collapsible open={open} onOpenChange={handleOpenChange} className="w-full">
+        <CollapsibleTrigger asChild>
+          {triggerContent}
+        </CollapsibleTrigger>
+
+        {/* Children — indented */}
+        <CollapsibleContent className="sidebar-collapsible-content overflow-hidden">
+          <ul className="mt-0.5 space-y-0.5 transition-all duration-300 pl-4">
+          {it.children.map((child) => (
+            <li key={child.to}>
+              <NavLink
+                to={child.to}
+                end={child.end}
+                onMouseEnter={() => preloadRoute(child.to)}
+                onFocus={() => preloadRoute(child.to)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center rounded-xl font-semibold transition-all duration-200 group focus:outline-none px-3 py-2 gap-2 text-sm",
+                    isActive
+                      ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+                      : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
+                  )
+                }
+              >
+                {child.icon && (
+                  <span className="nav-icon text-sm transition-colors shrink-0">{child.icon}</span>
+                )}
+                <div className="flex flex-1 items-center justify-between overflow-hidden transition-all duration-300">
+                  <span className="truncate">{child.label}</span>
+                  {child.badge && (
+                    <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A] ml-2">
+                      {child.badge}
+                    </span>
+                  )}
+                </div>
+              </NavLink>
+            </li>
+          ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
+    </li>
+  );
+}
+
+function NavItem({ it, isCollapsed, setIsCollapsed }) {
   // Section label
   if (it.type === "label") {
     if (isCollapsed) {
@@ -51,160 +208,12 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
 
   // A group item has children but no `to`
   if (it.children?.length) {
-    // Auto-expand when any child is active
-    const anyChildActive = it.children.some((c) =>
-      location.pathname.startsWith(c.to)
-    );
-    const [open, setOpen] = useState(anyChildActive);
-
-    const handleOpenChange = (val) => {
-      setOpen(val);
-      if (val && isCollapsed) {
-        setIsCollapsed(false);
-      }
-    };
-
-    const triggerContent = (
-      <button
-        type="button"
-        className={cn(
-          "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
-          isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
-          anyChildActive
-            ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
-            : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
-        )}
-      >
-        {it.icon && (
-          <span className="nav-icon text-base transition-colors shrink-0">{it.icon}</span>
-        )}
-        
-        <div className={cn("flex items-center justify-between overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0 ml-0" : "flex-1 opacity-100 ml-2")}>
-          <span className="truncate text-left">{it.label}</span>
-          <div className="flex items-center shrink-0">
-            {it.badge && (
-              <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A]">
-                {it.badge}
-              </span>
-            )}
-            <span className="text-slate-400 transition-transform duration-200 ml-2">
-              {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
-            </span>
-          </div>
-        </div>
-      </button>
-    );
-
-    if (isCollapsed) {
-      // In collapsed mode, render a Popover flyout instead of expanding the sidebar inline
-      return (
-        <li className="flex justify-center">
-          <Popover>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  {triggerContent}
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold">
-                <div className="flex items-center">
-                  {it.label}
-                  {it.badge && (
-                    <span className="ml-2 rounded-full bg-[#FD761A] px-1.5 py-0.5 text-[9px] text-white">
-                      {it.badge}
-                    </span>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-            <PopoverContent side="right" sideOffset={12} className="w-56 p-2 rounded-xl border border-[var(--artms-border)] shadow-xl z-[200]">
-              <div className="px-2 py-1.5 mb-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{it.label}</p>
-              </div>
-              <ul className="space-y-1">
-                {it.children.map((child) => (
-                  <li key={child.to}>
-                    <NavLink
-                      to={child.to}
-                      end={child.end}
-                      onMouseEnter={() => preloadRoute(child.to)}
-                      onFocus={() => preloadRoute(child.to)}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center rounded-lg px-2 py-2 gap-2 text-sm font-semibold transition-all duration-200 focus:outline-none group",
-                          isActive
-                            ? "bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white"
-                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white"
-                        )
-                      }
-                    >
-                      {child.icon && (
-                        <span className="nav-icon text-sm transition-colors shrink-0 group-hover:text-[#111A62]">
-                          {child.icon}
-                        </span>
-                      )}
-                      <span className="flex-1 truncate">{child.label}</span>
-                      {child.badge && (
-                        <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[10px] font-bold text-[#FD761A]">
-                          {child.badge}
-                        </span>
-                      )}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </PopoverContent>
-          </Popover>
-        </li>
-      );
-    }
-
-    // In expanded mode, render the normal inline Collapsible
     return (
-      <li>
-        <Collapsible open={open} onOpenChange={handleOpenChange} className="w-full">
-          <CollapsibleTrigger asChild>
-            {triggerContent}
-          </CollapsibleTrigger>
-
-          {/* Children — indented */}
-          <CollapsibleContent className="sidebar-collapsible-content overflow-hidden">
-            <ul className="mt-0.5 space-y-0.5 transition-all duration-300 pl-4">
-            {it.children.map((child) => (
-              <li key={child.to}>
-                <NavLink
-                  to={child.to}
-                  end={child.end}
-                  onMouseEnter={() => preloadRoute(child.to)}
-                  onFocus={() => preloadRoute(child.to)}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center rounded-xl font-semibold transition-all duration-200 group focus:outline-none px-3 py-2 gap-2 text-sm",
-                      isActive
-                        ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
-                        : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
-                    )
-                  }
-                >
-                  {child.icon && (
-                    <span className="nav-icon text-sm transition-colors shrink-0">{child.icon}</span>
-                  )}
-                  <div className="flex flex-1 items-center justify-between overflow-hidden transition-all duration-300">
-                    <span className="truncate">{child.label}</span>
-                    {child.badge && (
-                      <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A] ml-2">
-                        {child.badge}
-                      </span>
-                    )}
-                  </div>
-                </NavLink>
-              </li>
-            ))}
-            </ul>
-          </CollapsibleContent>
-        </Collapsible>
-      </li>
+      <NavGroupItem
+        it={it}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
     );
   }
 
