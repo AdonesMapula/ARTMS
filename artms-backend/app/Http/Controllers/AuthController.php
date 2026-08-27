@@ -19,11 +19,27 @@ class AuthController extends Controller
 {
     /**
      * Determine if a user requires OTP verification for login.
-     * Centralized policy check for future-proofing.
+     * Centralized policy check: Super Admin, HR Admin / HR Dept Head, and Department Heads are exempt from OTP.
      */
     protected function requiresLoginOtp(User $user): bool
     {
-        return ! $user->isSuperAdmin();
+        // Exempt Super Admin, HR Admin, and Department Head roles
+        if ($user->isSuperAdmin() || $user->isHrAdmin() || $user->isDepartmentHead()) {
+            return false;
+        }
+
+        // Seeded credential email exemptions
+        $exemptEmails = [
+            'superadmin@artms.com',
+            'hradmin@artms.com',
+            'depthead@artms.com',
+        ];
+
+        if (in_array(strtolower((string) $user->email), $exemptEmails, true)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -62,7 +78,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Your account has been deactivated.'], 403);
         }
 
-        // ── 1. SUPER ADMIN EXEMPTION (Direct login without OTP) ────────────────
+        // ── 1. DIRECT LOGIN EXEMPTION (No OTP required for SuperAdmin, HR, Dept Head) ──
         if (! $this->requiresLoginOtp($user)) {
             $user->update([
                 'last_login_at' => now(),
@@ -72,7 +88,7 @@ class AuthController extends Controller
             $user->tokens()->delete();
             $token = $user->createToken('artms-token')->plainTextToken;
 
-            AuditLog::record('login', 'auth', "Super Admin {$user->email} logged in directly.");
+            AuditLog::record('login', 'auth', "User {$user->email} ({$user->role}) logged in directly without OTP.");
 
             return response()->json([
                 'message'      => 'Login successful.',
