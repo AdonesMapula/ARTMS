@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Briefcase, EyeOff, CheckCircle,
   Plus, X, AlertCircle, Trash2, Filter, RefreshCw, ChevronRight,
-  Building2
+  Building2, FileText, Edit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
