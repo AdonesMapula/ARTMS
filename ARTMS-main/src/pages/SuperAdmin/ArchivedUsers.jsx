@@ -221,47 +221,56 @@ export default function ArchivedUsers() {
         </div>
       </div>
 
-      <Card className="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg font-extrabold text-[#111A62]">
-              <UsersIcon size={20} className="text-[#E15B1D]" />
-              Archived Directory
-            </CardTitle>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-              {/* Role Filter */}
-              <div className="relative w-full sm:w-auto">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full sm:w-48 appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-xs font-semibold text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition cursor-pointer"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-                <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              </div>
-
-              {/* Search Bar */}
-              <div className="w-full sm:w-64">
-                <SearchBar
-                  placeholder="Search archived users..."
-                  value={q}
-                  onChange={(val) => {
-                    setQ(val);
-                    setPage(1);
-                  }}
-                  className="rounded-xl shadow-sm bg-white"
-                />
+      {/* Filters & Search */}
+      <Card>
+        <CardContent className="py-4 px-5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="w-full sm:flex-1 min-w-[220px]">
+              <SearchBar
+                value={q}
+                onChange={(val) => {
+                  setQ(val);
+                  setPage(1);
+                }}
+                placeholder="Search archived users by name, email, or role..."
+                className="h-11 text-sm"
+              />
+            </div>
+            <div className="flex w-full sm:w-auto gap-3">
+              <div className="w-full sm:w-48 shrink-0">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Filter size={14} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => {
+                      setRoleFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Archived Users ({filtered.length} {filtered.length === 1 ? "user" : "users"})
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           <Table>
             <THead>
               <tr>

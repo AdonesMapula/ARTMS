@@ -299,107 +299,110 @@ export default function Users() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-              <UsersIcon size={24} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Total Users</p>
-              <p className="text-2xl font-extrabold text-slate-900">{stats.total}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-              <UserCheck size={24} className="text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Active Users</p>
-              <p className="text-2xl font-extrabold text-slate-900">{stats.active}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
-              <UserX size={24} className="text-slate-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">Inactive Users</p>
-              <p className="text-2xl font-extrabold text-slate-900">{stats.inactive}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
-              <UsersIcon size={24} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500">HR Admins</p>
-              <p className="text-2xl font-extrabold text-slate-900">{stats.hrAdmin}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <StatFilterCard
+          title="Total Users"
+          value={stats.total}
+          icon={<UsersIcon size={22} />}
+          accentColor="navy"
+          active={statusFilter === "all" && roleFilter === "all"}
+          onClick={() => {
+            setStatusFilter("all");
+            setRoleFilter("all");
+            setPage(1);
+          }}
+        />
+        <StatFilterCard
+          title="Active Users"
+          value={stats.active}
+          icon={<UserCheck size={22} />}
+          accentColor="emerald"
+          active={statusFilter === "active" && roleFilter === "all"}
+          onClick={() => {
+            setStatusFilter("active");
+            setRoleFilter("all");
+            setPage(1);
+          }}
+        />
+        <StatFilterCard
+          title="Inactive Users"
+          value={stats.inactive}
+          icon={<UserX size={22} />}
+          accentColor="rose"
+          active={statusFilter === "inactive" && roleFilter === "all"}
+          onClick={() => {
+            setStatusFilter("inactive");
+            setRoleFilter("all");
+            setPage(1);
+          }}
+        />
+        <StatFilterCard
+          title="HR Admins"
+          value={stats.hrAdmin}
+          icon={<UsersIcon size={22} />}
+          accentColor="purple"
+          active={statusFilter === "all" && roleFilter === "hr_admin"}
+          onClick={() => {
+            setStatusFilter("all");
+            setRoleFilter("hr_admin");
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Filters & Search */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Filter size={16} />
-              Filters:
-            </div>
-            <div className="flex flex-1 flex-wrap gap-2">
-              {ROLES.map((role) => (
-                <button
-                  key={role.value}
-                  onClick={() => {
-                    setRoleFilter(role.value);
-                    setPage(1);
-                  }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    roleFilter === role.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  {role.label}
-                </button>
-              ))}
-              <div className="mx-2 h-6 w-px bg-slate-200"></div>
-              {STATUSES.map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() => {
-                    setStatusFilter(status.value);
-                    setPage(1);
-                  }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    statusFilter === status.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  {status.label}
-                </button>
-              ))}
-            </div>
-            <div className="w-full lg:w-64">
+        <CardContent className="py-4 px-5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="w-full sm:flex-1 min-w-[220px]">
               <SearchBar
                 value={q}
                 onChange={(val) => {
                   setQ(val);
                   setPage(1);
                 }}
-                placeholder="Search users..."
+                placeholder="Search users by name, email, or role..."
+                className="h-11 text-sm"
               />
+            </div>
+            <div className="flex w-full sm:w-auto gap-3">
+              <div className="w-full sm:w-48 shrink-0">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Filter size={14} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => {
+                      setRoleFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="w-full sm:w-48 shrink-0">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Filter size={14} className="text-slate-400" />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -639,6 +642,45 @@ export default function Users() {
         onConfirm={handleBulkArchive}
         onClose={() => setBulkArchiveConfirm(false)}
       />
+    </div>
+  );
+}
+
+function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
+  const colorMap = {
+    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+  };
+  const theme = colorMap[accentColor] || colorMap.navy;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+        active
+          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
+          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+      }`}
+    >
+      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
+            <div className={theme.text}>
+              {icon}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
