@@ -133,6 +133,7 @@ class AiScreeningController extends Controller
 You are an expert HR screening AI for ARTMS. Evaluate the resume below objectively against the job requirements.
 Do NOT use discriminatory criteria. Evaluate strictly based on skills, education, and relevant experience.
 If the candidate is a low fit for this specific position but shows strong potential in other areas, suggest 1-2 alternative roles.
+Also, extract the top 3 most impressive, quantifiable achievements from the candidate's resume (e.g. "Increased sales by 30%").
 
 == POSITION ==
 Title: {$positionTitle}
@@ -179,7 +180,8 @@ Respond with ONLY valid JSON:
   "ai_feedback": "<constructive feedback for the applicant>",
   "red_flags": ["<employment gap concern>", "<missing critical requirement>", "etc"],
   "interview_questions": ["<custom question 1>", "<custom question 2>", "<custom question 3>"],
-  "alternative_roles": ["<role 1>", "<role 2>"]
+  "alternative_roles": ["<role 1>", "<role 2>"],
+  "top_achievements": ["<achievement 1>", "<achievement 2>", "<achievement 3>"]
 }
 EOT;
 
@@ -213,6 +215,7 @@ EOT;
         $scoreBreakdown['red_flags']          = $aiData['red_flags'];
         $scoreBreakdown['interview_questions']= $aiData['interview_questions'];
         $scoreBreakdown['alternative_roles']  = $aiData['alternative_roles'] ?? [];
+        $scoreBreakdown['top_achievements']   = $aiData['top_achievements'] ?? [];
         $scoreBreakdown['parsed_cv']          = $parsedFields;
 
         $evaluation = AiEvaluation::updateOrCreate(

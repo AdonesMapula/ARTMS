@@ -217,6 +217,7 @@ class AiGuardrailService
         $redFlags = array_values(array_filter(array_map('trim', (array) ($data['red_flags'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 300));
         $interviewQuestions = array_values(array_filter(array_map('trim', (array) ($data['interview_questions'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 300));
         $alternativeRoles = array_values(array_filter(array_map('trim', (array) ($data['alternative_roles'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 150));
+        $topAchievements = array_values(array_filter(array_map('trim', (array) ($data['top_achievements'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 300));
 
         return [
             'ai_score'            => $totalScore,
@@ -234,6 +235,7 @@ class AiGuardrailService
             'red_flags'           => $redFlags,
             'interview_questions' => $interviewQuestions,
             'alternative_roles'   => $alternativeRoles,
+            'top_achievements'    => $topAchievements,
         ];
     }
 
