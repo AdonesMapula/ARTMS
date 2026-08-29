@@ -207,6 +207,9 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const skillsMissing = Array.isArray(screening.skills_missing) ? screening.skills_missing : [];
   const summary = screening.ai_summary || screening.summary || null;
   const feedback = screening.ai_feedback || screening.feedback || screening.ai_recommendation || null;
+  const redFlags = screening.score_breakdown?.red_flags || [];
+  const interviewQuestions = screening.score_breakdown?.interview_questions || [];
+  const alternativeRoles = screening.score_breakdown?.alternative_roles || [];
   const isReady = app.status === "ready_for_interview";
   const isHired = app.status === "hired";
 
@@ -495,6 +498,39 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 <div className="mt-3 rounded-2xl bg-amber-50/60 p-4">
                   <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">Feedback for Applicant</p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                </div>
+              )}
+
+              {redFlags.length > 0 && (
+                <div className="mt-3 rounded-2xl bg-red-50 p-4 border border-red-100">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-red-600">🚩 Red Flags & Concerns</p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {redFlags.map((flag, idx) => (
+                      <li key={idx} className="leading-relaxed">{flag}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {interviewQuestions.length > 0 && (
+                <div className="mt-3 rounded-2xl bg-indigo-50 p-4 border border-indigo-100">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-indigo-600">💡 Recommended Interview Questions</p>
+                  <ul className="list-decimal pl-5 space-y-2 text-xs text-slate-700 font-medium">
+                    {interviewQuestions.map((q, idx) => (
+                      <li key={idx} className="leading-relaxed">{q}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {alternativeRoles.length > 0 && (
+                <div className="mt-3 rounded-2xl bg-teal-50 p-4 border border-teal-100">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-teal-600">🔄 Alternative Role Suggestions</p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {alternativeRoles.map((role, idx) => (
+                      <li key={idx} className="leading-relaxed">{role}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

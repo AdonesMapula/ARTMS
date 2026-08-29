@@ -30,6 +30,9 @@ export default function ResumePreviewModal({
   const summary = screening.ai_summary || screening.summary || null;
   const feedback = screening.ai_feedback || screening.feedback || screening.ai_recommendation || null;
   const breakdown = screening.score_breakdown || {};
+  const redFlags = breakdown.red_flags || [];
+  const interviewQuestions = breakdown.interview_questions || [];
+  const alternativeRoles = breakdown.alternative_roles || [];
   
   const BREAKDOWN_FIELDS = [
     { key: "education", label: "Education", max: 25 },
@@ -195,6 +198,42 @@ export default function ResumePreviewModal({
                 <div className="rounded-xl bg-amber-50/70 p-3.5 border border-amber-100/50">
                   <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-600">Feedback for Applicant</p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                </div>
+              )}
+
+              {/* Red Flags */}
+              {redFlags.length > 0 && (
+                <div className="rounded-xl bg-red-50 p-3.5 border border-red-100/50">
+                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-red-600">🚩 Red Flags & Concerns</p>
+                  <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {redFlags.map((flag, idx) => (
+                      <li key={idx} className="leading-relaxed">{flag}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Interview Questions */}
+              {interviewQuestions.length > 0 && (
+                <div className="rounded-xl bg-indigo-50 p-3.5 border border-indigo-100/50">
+                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">💡 Recommended Interview Questions</p>
+                  <ul className="list-decimal pl-4 space-y-2 text-xs text-slate-700 font-medium">
+                    {interviewQuestions.map((q, idx) => (
+                      <li key={idx} className="leading-relaxed">{q}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Alternative Roles */}
+              {alternativeRoles.length > 0 && (
+                <div className="rounded-xl bg-teal-50 p-3.5 border border-teal-100/50">
+                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-teal-600">🔄 Alternative Role Suggestions</p>
+                  <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {alternativeRoles.map((role, idx) => (
+                      <li key={idx} className="leading-relaxed">{role}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
