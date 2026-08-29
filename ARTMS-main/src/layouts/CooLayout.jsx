@@ -2,7 +2,7 @@ import DashboardShell from "./DashboardShell";
 import ScrollToTop from "../components/ScrollToTop";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
-import { FiGrid, FiClipboard, FiBell, FiBookOpen, FiCheckSquare, FiBriefcase, FiUser } from "react-icons/fi";
+import { FiGrid, FiClipboard, FiBell, FiBookOpen, FiCheckSquare, FiBriefcase, FiUser, FiMessageSquare } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
@@ -52,6 +52,11 @@ export default function CooLayout() {
       label: "History Log",
       to: "/coo/notifications",
       icon: <FiBookOpen />,
+    },
+    {
+      label: "Messages",
+      to: "/coo/messages",
+      icon: <FiMessageSquare />,
     },
     {
       label: "Profile",

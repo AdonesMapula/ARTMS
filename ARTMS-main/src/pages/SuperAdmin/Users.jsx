@@ -3,6 +3,7 @@ import { Users as UsersIcon, User as UserIcon, UserPlus, UserCheck, UserX, Filte
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import SearchBar from "../../components/ui/SearchBar";
+import Select from "../../components/ui/Select";
 import Badge from "../../components/ui/Badge";
 import { Table, TD, TH, THead } from "../../components/ui/Table";
 import Pagination from "../../components/ui/Pagination";
@@ -366,42 +367,28 @@ export default function Users() {
             </div>
             <div className="flex w-full sm:w-auto gap-3">
               <div className="w-full sm:w-48 shrink-0">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Filter size={14} className="text-slate-400" />
-                  </div>
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => {
-                      setRoleFilter(e.target.value);
-                      setPage(1);
-                    }}
-                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  options={ROLES}
+                  icon={Filter}
+                  placeholder="All Roles"
+                />
               </div>
               <div className="w-full sm:w-48 shrink-0">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Filter size={14} className="text-slate-400" />
-                  </div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => {
-                      setStatusFilter(e.target.value);
-                      setPage(1);
-                    }}
-                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  options={STATUSES}
+                  icon={Filter}
+                  placeholder="All Status"
+                />
               </div>
             </div>
           </div>

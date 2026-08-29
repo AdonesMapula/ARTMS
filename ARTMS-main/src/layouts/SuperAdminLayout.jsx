@@ -20,6 +20,7 @@ import {
   FiFileText,
   FiBell,
   FiUser,
+  FiMessageSquare,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
@@ -72,6 +73,7 @@ export default function SuperAdminLayout() {
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },
     { label: "Notifications", to: "/superadmin/notifications", icon: <FiBell /> },
+    { label: "Messages", to: "/superadmin/messages", icon: <FiMessageSquare /> },
     { label: "Profile", to: "/superadmin/profile", icon: <FiUser /> },
     { label: "System Settings", to: "/superadmin/settings", icon: <FiSettings /> },
   ];

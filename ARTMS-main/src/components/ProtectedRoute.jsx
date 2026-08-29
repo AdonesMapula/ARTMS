@@ -33,7 +33,7 @@ export default function ProtectedRoute({ allowedRoles }) {
       hr_admin:        '/admin/dashboard',
       coo:             '/coo/dashboard',
       department_head: '/department-head/dashboard',
-      employee:        '/admin/dashboard',
+      employee:        '/employee/dashboard',
     };
     return <Navigate to={dashboards[role] || '/login'} replace />;
   }

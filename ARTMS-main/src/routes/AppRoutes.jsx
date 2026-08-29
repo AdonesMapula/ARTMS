@@ -35,6 +35,14 @@ const ManpowerRequest = lazy(() => import("../pages/DepartmentHead/ManpowerReque
 const RequestHistory = lazy(() => import("../pages/DepartmentHead/RequestHistory"));
 const DepartmentHeadNotifications = lazy(() => import("../pages/DepartmentHead/Notifications"));
 const DepartmentHeadProfile = lazy(() => import("../pages/DepartmentHead/Profile"));
+const DepartmentHeadMessages = lazy(() => import("../pages/DepartmentHead/Messages"));
+
+// ── Lazy-Loaded Employee Pages ──────────────────────────────────────────────
+const EmployeeLayout = lazy(() => import("../layouts/EmployeeLayout"));
+const EmployeeDashboard = lazy(() => import("../pages/Employee/Dashboard"));
+const EmployeeRequirements = lazy(() => import("../pages/Employee/Requirements"));
+const EmployeeProfile = lazy(() => import("../pages/Employee/Profile"));
+const EmployeeMessages = lazy(() => import("../pages/Employee/Messages"));
 
 // ── Lazy-Loaded HR Admin Pages ──────────────────────────────────────────────
 const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
@@ -52,6 +60,7 @@ const Attendance = lazy(() => import("../pages/Admin/Attendance"));
 const AdminNotifications = lazy(() => import("../pages/Admin/Notifications"));
 const AdminProfile = lazy(() => import("../pages/Admin/Profile"));
 const Settings = lazy(() => import("../pages/Admin/Settings"));
+const AdminMessages = lazy(() => import("../pages/Admin/Messages"));
 
 // ── Lazy-Loaded Video Interview Pages ───────────────────────────────────────
 const ActiveInterviewRoom = lazy(() => import("../pages/Interview/ActiveInterviewRoom"));
@@ -63,6 +72,7 @@ const ManpowerApprovals = lazy(() => import("../pages/Coo/ManpowerApprovals"));
 const JobLibraryApprovals = lazy(() => import("../pages/Coo/JobLibraryApprovals"));
 const CooNotifications = lazy(() => import("../pages/Coo/Notifications"));
 const CooProfile = lazy(() => import("../pages/Coo/Profile"));
+const CooMessages = lazy(() => import("../pages/Coo/Messages"));
 
 // ── Lazy-Loaded Super Admin Pages ───────────────────────────────────────────
 const SuperAdminDashboard = lazy(() => import("../pages/SuperAdmin/Dashboard"));
@@ -73,6 +83,7 @@ const Roles = lazy(() => import("../pages/SuperAdmin/Roles"));
 const SuperAdminSettings = lazy(() => import("../pages/SuperAdmin/Settings"));
 const AuditLogs = lazy(() => import("../pages/SuperAdmin/AuditLogs"));
 const SuperAdminProfile = lazy(() => import("../pages/SuperAdmin/Profile"));
+const SuperAdminMessages = lazy(() => import("../pages/SuperAdmin/Messages"));
 const HrManpowerRequests = lazy(() => import("../pages/SuperAdmin/HrManpowerRequests"));
 const HrJobLibrary = lazy(() => import("../pages/SuperAdmin/HrJobLibrary"));
 const HrJobPosting = lazy(() => import("../pages/SuperAdmin/HrJobPosting"));
@@ -148,12 +159,24 @@ export default function AppRoutes() {
               />
               
               <Route path="notifications" element={<DepartmentHeadNotifications />} />
+              <Route path="messages" element={<DepartmentHeadMessages />} />
               <Route path="profile" element={<DepartmentHeadProfile />} />
             </Route>
           </Route>
 
+          {/* ── Employee (role-protected) ─────────────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={["employee"]} />}>
+            <Route path="/employee" element={<EmployeeLayout />}>
+              <Route index element={<Navigate to="/employee/dashboard" replace />} />
+              <Route path="dashboard" element={<EmployeeDashboard />} />
+              <Route path="requirements" element={<EmployeeRequirements />} />
+              <Route path="messages" element={<EmployeeMessages />} />
+              <Route path="profile" element={<EmployeeProfile />} />
+            </Route>
+          </Route>
+
           {/* ── HR Admin (role-protected) ─────────────────────────────────── */}
-          <Route element={<ProtectedRoute allowedRoles={["hr_admin", "employee"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["hr_admin"]} />}>
             <Route path="/admin/interviews/:id/room" element={<ActiveInterviewRoom />} />
             <Route
               path="/admin/interviews/:id/report"
@@ -258,6 +281,7 @@ export default function AppRoutes() {
               />
               
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="messages" element={<AdminMessages />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="settings" element={<Settings />} />
             </Route>
@@ -287,6 +311,7 @@ export default function AppRoutes() {
               />
               
               <Route path="notifications" element={<CooNotifications />} />
+              <Route path="messages" element={<CooMessages />} />
               <Route path="profile" element={<CooProfile />} />
             </Route>
           </Route>
@@ -336,6 +361,7 @@ export default function AppRoutes() {
               <Route path="settings" element={<SuperAdminSettings />} />
               <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="messages" element={<SuperAdminMessages />} />
               <Route path="profile" element={<SuperAdminProfile />} />
               
               <Route path="debug-permissions" element={<DebugPermissions />} />

@@ -105,6 +105,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('boot', [AppBootController::class, 'boot']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
+    // ── Messages (All authenticated users) ──────────────────────────────────
+    Route::get('messages/conversations', [\App\Http\Controllers\MessageController::class, 'conversations']);
+    Route::get('messages/users', [\App\Http\Controllers\MessageController::class, 'users']);
+    Route::get('messages/{userId}', [\App\Http\Controllers\MessageController::class, 'thread']);
+    Route::post('messages', [\App\Http\Controllers\MessageController::class, 'store']);
+    Route::put('messages/{id}/read', [\App\Http\Controllers\MessageController::class, 'markAsRead']);
+
     // ── Notifications ────────────────────────────────────────────────────────
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);

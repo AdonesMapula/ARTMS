@@ -20,6 +20,8 @@ export default function AccessDenied() {
       navigate("/coo/dashboard");
     } else if (user.role === "department_head") {
       navigate("/department-head/dashboard");
+    } else if (user.role === "employee") {
+      navigate("/employee/dashboard");
     } else {
       navigate("/");
     }

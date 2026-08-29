@@ -17,6 +17,7 @@ import {
   FiSettings,
   FiBell,
   FiFileText,
+  FiMessageSquare,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { preloadIdleRoutes } from "../utils/preloadRoute";
@@ -73,6 +74,7 @@ export default function AdminLayout() {
     // SYSTEM Section
     { label: "SYSTEM", type: "label" },
     { label: "Notifications", to: "/admin/notifications", icon: <FiBell /> },
+    { label: "Messages", to: "/admin/messages", icon: <FiMessageSquare /> },
     { label: "Profile", to: "/admin/profile", icon: <FiUser /> },
     { label: "Settings", to: "/admin/settings", icon: <FiSettings /> },
   ];
