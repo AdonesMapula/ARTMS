@@ -210,6 +210,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const redFlags = screening.score_breakdown?.red_flags || [];
   const interviewQuestions = screening.score_breakdown?.interview_questions || [];
   const alternativeRoles = screening.score_breakdown?.alternative_roles || [];
+  const topAchievements = screening.score_breakdown?.top_achievements || [];
   const isReady = app.status === "ready_for_interview";
   const isHired = app.status === "hired";
 
@@ -498,6 +499,17 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 <div className="mt-3 rounded-2xl bg-amber-50/60 p-4">
                   <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">Feedback for Applicant</p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                </div>
+              )}
+
+              {topAchievements.length > 0 && (
+                <div className="mt-3 rounded-2xl bg-purple-50 p-4 border border-purple-100">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-purple-600">🏆 Top Achievements</p>
+                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {topAchievements.map((achievement, idx) => (
+                      <li key={idx} className="leading-relaxed">{achievement}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

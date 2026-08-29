@@ -33,6 +33,7 @@ export default function ResumePreviewModal({
   const redFlags = breakdown.red_flags || [];
   const interviewQuestions = breakdown.interview_questions || [];
   const alternativeRoles = breakdown.alternative_roles || [];
+  const topAchievements = breakdown.top_achievements || [];
   
   const BREAKDOWN_FIELDS = [
     { key: "education", label: "Education", max: 25 },
@@ -198,6 +199,18 @@ export default function ResumePreviewModal({
                 <div className="rounded-xl bg-amber-50/70 p-3.5 border border-amber-100/50">
                   <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-600">Feedback for Applicant</p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                </div>
+              )}
+
+              {/* Top Achievements */}
+              {topAchievements.length > 0 && (
+                <div className="rounded-xl bg-purple-50 p-3.5 border border-purple-100/50">
+                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-purple-600">🏆 Top Achievements</p>
+                  <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
+                    {topAchievements.map((achievement, idx) => (
+                      <li key={idx} className="leading-relaxed">{achievement}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
