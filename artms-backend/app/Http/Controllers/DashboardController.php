@@ -356,7 +356,7 @@ class DashboardController extends Controller
             return [
                 'manpower_requests' => $pendingManpower->count(),
                 'applicants'        => Applicant::whereNotIn('status', ['hired', 'rejected'])->count(),
-                'job_postings'      => ManpowerRequest::where('status', 'approved')->whereNull('job_posting_id')->count(),
+                'job_requests'      => ManpowerRequest::where('status', 'approved')->whereNull('job_posting_id')->count(),
                 'job_library'       => JobLibrary::where('approval_status', 'pending')->count(),
                 'interviews'        => Interview::whereIn('status', ['scheduled', 'confirmed'])->count(),
                 'notifications'     => $unreadNotifs,
