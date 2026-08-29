@@ -214,6 +214,10 @@ class AiGuardrailService
         $aiSummary         = self::filterHarmfulLanguage(trim((string) ($data['ai_summary'] ?? 'Candidate evaluation completed against role requirements.')));
         $aiFeedback        = self::filterHarmfulLanguage(trim((string) ($data['ai_feedback'] ?? 'Continue developing targeted industry skills for future opportunities.')));
 
+        $redFlags = array_values(array_filter(array_map('trim', (array) ($data['red_flags'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 300));
+        $interviewQuestions = array_values(array_filter(array_map('trim', (array) ($data['interview_questions'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 300));
+        $alternativeRoles = array_values(array_filter(array_map('trim', (array) ($data['alternative_roles'] ?? [])), fn($s) => !empty($s) && strlen($s) <= 150));
+
         return [
             'ai_score'            => $totalScore,
             'confidence_level'    => $confidenceLevel,
@@ -227,6 +231,9 @@ class AiGuardrailService
             'skills_remarks'      => $skillsRemarks,
             'ai_summary'          => $aiSummary,
             'ai_feedback'         => $aiFeedback,
+            'red_flags'           => $redFlags,
+            'interview_questions' => $interviewQuestions,
+            'alternative_roles'   => $alternativeRoles,
         ];
     }
 

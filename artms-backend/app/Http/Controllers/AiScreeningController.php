@@ -132,6 +132,7 @@ class AiScreeningController extends Controller
         $prompt = <<<EOT
 You are an expert HR screening AI for ARTMS. Evaluate the resume below objectively against the job requirements.
 Do NOT use discriminatory criteria. Evaluate strictly based on skills, education, and relevant experience.
+If the candidate is a low fit for this specific position but shows strong potential in other areas, suggest 1-2 alternative roles.
 
 == POSITION ==
 Title: {$positionTitle}
@@ -175,7 +176,10 @@ Respond with ONLY valid JSON:
   "experience_remarks": "<one sentence>",
   "skills_remarks": "<one sentence>",
   "ai_summary": "<2-3 sentence overall assessment>",
-  "ai_feedback": "<constructive feedback for the applicant>"
+  "ai_feedback": "<constructive feedback for the applicant>",
+  "red_flags": ["<employment gap concern>", "<missing critical requirement>", "etc"],
+  "interview_questions": ["<custom question 1>", "<custom question 2>", "<custom question 3>"],
+  "alternative_roles": ["<role 1>", "<role 2>"]
 }
 EOT;
 
@@ -206,6 +210,9 @@ EOT;
         $scoreBreakdown['education_remarks']  = $aiData['education_remarks'];
         $scoreBreakdown['experience_remarks'] = $aiData['experience_remarks'];
         $scoreBreakdown['skills_remarks']     = $aiData['skills_remarks'];
+        $scoreBreakdown['red_flags']          = $aiData['red_flags'];
+        $scoreBreakdown['interview_questions']= $aiData['interview_questions'];
+        $scoreBreakdown['alternative_roles']  = $aiData['alternative_roles'] ?? [];
         $scoreBreakdown['parsed_cv']          = $parsedFields;
 
         $evaluation = AiEvaluation::updateOrCreate(
