@@ -14,8 +14,10 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ApplicantViewPanel from "../../components/applicant/ApplicantViewPanel";
 import applicantService from "../../services/applicantService";
 import jobService from "../../services/jobService";
+import aiService from "../../services/aiService";
 import { useToast } from "../../context/ToastContext";
 import ConfirmationModal from "../../modals/ConfirmationModal";
+import ScreeningLoadingModal from "../../components/ui/ScreeningLoadingModal";
 
 const STATUSES = [
   { value: "all", label: "All Status" },
@@ -59,6 +61,7 @@ export default function Applicants() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [screeningApplicantId, setScreeningApplicantId] = useState(null);
   const pageSize = 50;
 
   // Fetch Job Postings for Position Filter Dropdown
@@ -148,6 +151,20 @@ export default function Applicants() {
       toast.error("Delete Failed", err.response?.data?.message || "Failed to delete applicant.");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const runScreening = async (id) => {
+    setScreeningApplicantId(id);
+    try {
+      await aiService.screen(id);
+      toast.success("Screening Complete", "AI resume screening has been completed successfully.");
+      await loadApplicants();
+    } catch (err) {
+      const msg = err.response?.data?.message ?? "Screening failed. Check your OpenAI API key.";
+      toast.error("Screening Failed", msg);
+    } finally {
+      setScreeningApplicantId(null);
     }
   };
 
@@ -336,7 +353,10 @@ export default function Applicants() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {screeningApplicantId && (
+        <ScreeningLoadingModal applicant={applicants.find((a) => a.id === screeningApplicantId)} />
+      )}
       {/* ── Title, Stats & AI Leaderboard Container ───── */}
       <div className="space-y-6">
         {/* Header */}
@@ -895,16 +915,31 @@ export default function Applicants() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewDetails(a.id);
-                                }}
-                                className="flex items-center justify-end gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1 rounded-lg transition cursor-pointer ml-auto"
-                              >
-                                <Eye size={14} /> View Candidate <ChevronRight size={14} />
-                              </button>
+                              <div className="flex items-center justify-end gap-1 ml-auto">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    runScreening(a.id);
+                                  }}
+                                  disabled={!!screeningApplicantId}
+                                  className="flex items-center justify-center gap-1 text-xs text-slate-500 font-semibold hover:bg-slate-100 hover:text-slate-700 px-2 py-1.5 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Re-run AI Screening"
+                                >
+                                  <RefreshCw size={14} className={screeningApplicantId === a.id ? "animate-spin" : ""} />
+                                  <span className="hidden xl:inline">{screeningApplicantId === a.id ? "Running..." : "Re-run"}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewDetails(a.id);
+                                  }}
+                                  className="flex items-center justify-end gap-1 text-xs text-[#111A62] font-bold hover:bg-[#111A62]/10 px-2 py-1.5 rounded-lg transition cursor-pointer"
+                                >
+                                  <Eye size={14} /> View Candidate <ChevronRight size={14} />
+                                </button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );

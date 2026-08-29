@@ -40,9 +40,9 @@ const DepartmentHeadProfile = lazy(() => import("../pages/DepartmentHead/Profile
 const AdminDashboard = lazy(() => import("../pages/Admin/Dashboard"));
 const AdminManpowerRequests = lazy(() => import("../pages/Admin/ManpowerRequests"));
 const JobLibrary = lazy(() => import("../pages/Admin/JobLibrary"));
+const JobRequest = lazy(() => import("../pages/Admin/JobRequest"));
 const JobPosting = lazy(() => import("../pages/Admin/JobPosting"));
 const Applicants = lazy(() => import("../pages/Admin/Applicants"));
-const AiScreening = lazy(() => import("../pages/Admin/AiScreening"));
 const Interviews = lazy(() => import("../pages/Admin/Interviews"));
 const InterviewCalendar = lazy(() => import("../pages/Admin/InterviewCalendar"));
 const Pipeline = lazy(() => import("../pages/Admin/Pipeline"));
@@ -77,7 +77,6 @@ const HrManpowerRequests = lazy(() => import("../pages/SuperAdmin/HrManpowerRequ
 const HrJobLibrary = lazy(() => import("../pages/SuperAdmin/HrJobLibrary"));
 const HrJobPosting = lazy(() => import("../pages/SuperAdmin/HrJobPosting"));
 const HrApplicants = lazy(() => import("../pages/SuperAdmin/HrApplicants"));
-const HrAiScreening = lazy(() => import("../pages/SuperAdmin/HrAiScreening"));
 const HrInterviews = lazy(() => import("../pages/SuperAdmin/HrInterviews"));
 const HrPipeline = lazy(() => import("../pages/SuperAdmin/HrPipeline"));
 const HrEmployees = lazy(() => import("../pages/SuperAdmin/HrEmployees"));
@@ -186,6 +185,14 @@ export default function AppRoutes() {
                 }
               />
               <Route
+                path="job-request"
+                element={
+                  <PermissionProtectedRoute permission="view_job_postings">
+                    <JobRequest />
+                  </PermissionProtectedRoute>
+                }
+              />
+              <Route
                 path="job-posting"
                 element={
                   <PermissionProtectedRoute permission="view_job_postings">
@@ -198,14 +205,6 @@ export default function AppRoutes() {
                 element={
                   <PermissionProtectedRoute permission="view_applicants">
                     <Applicants />
-                  </PermissionProtectedRoute>
-                }
-              />
-              <Route
-                path="ai-screening"
-                element={
-                  <PermissionProtectedRoute permission="view_ai_screening">
-                    <AiScreening />
                   </PermissionProtectedRoute>
                 }
               />
@@ -349,8 +348,6 @@ export default function AppRoutes() {
               <Route path="hr-job-posting" element={<HrJobPosting />} />
               <Route path="applicants" element={<HrApplicants />} />
               <Route path="hr-applicants" element={<HrApplicants />} />
-              <Route path="ai-screening" element={<HrAiScreening />} />
-              <Route path="hr-ai-screening" element={<HrAiScreening />} />
               <Route path="interviews" element={<HrInterviews />} />
               <Route path="hr-interviews" element={<HrInterviews />} />
               <Route path="pipeline" element={<HrPipeline />} />

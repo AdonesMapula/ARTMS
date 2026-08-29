@@ -36,10 +36,6 @@ const ROUTE_REGISTRY = {
     importComponent: () => import('../pages/Admin/Applicants'),
     prefetchApis: ['/applicants?per_page=15'],
   },
-  '/admin/ai-screening': {
-    importComponent: () => import('../pages/Admin/AiScreening'),
-    prefetchApis: ['/ai/applicants?per_page=50', '/ai/evaluations?per_page=50'],
-  },
   '/admin/job-posting': {
     importComponent: () => import('../pages/Admin/JobPosting'),
     prefetchApis: ['/job-postings?per_page=15'],

@@ -280,6 +280,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
 
   const [counts, setCounts] = useState({
     manpower_requests: null,
+    job_requests: null,
     job_postings: null,
     job_library: null,
     applicants: null,
@@ -331,6 +332,8 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
         if (counts.manpower_requests !== null) badgeNum += counts.manpower_requests;
       } else if (lowerTo.includes("job-library") || lowerLabel.includes("job library")) {
         if (counts.job_library !== null && counts.job_library !== undefined) badgeNum += counts.job_library;
+      } else if (lowerTo.includes("job-request") || lowerLabel.includes("job request")) {
+        if (counts.job_requests !== null && counts.job_requests !== undefined) badgeNum += counts.job_requests;
       } else if (lowerTo.includes("job-posting") || lowerLabel.includes("job posting")) {
         if (counts.job_postings !== null && counts.job_postings !== undefined) badgeNum += counts.job_postings;
       } else if (lowerTo.includes("applicant") || lowerLabel.includes("applicant")) {

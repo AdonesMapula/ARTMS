@@ -206,46 +206,56 @@ export default function JobPostingEditPanel({ postingId, initialPosting, onClose
     <>
       <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300">
       {/* ── Top Header Banner ────────────────────────────────────────── */}
-      <div className="shrink-0 bg-gradient-to-r from-[#111A62] via-[#1a257c] to-[#0d1550] px-6 py-5 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-white">
-                {postingIdStr}
-              </span>
-              <Badge tone={STATUS_TONE[posting?.status] || "default"} className="capitalize">
-                {posting?.status || "Published"}
-              </Badge>
-              <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-bold text-amber-300 border border-amber-300/30">
-                {vacanciesCount} {vacanciesCount === 1 ? "position needed" : "positions needed"}
-              </span>
-            </div>
-            <h2 className="text-xl font-extrabold text-white truncate">{jobTitle}</h2>
-            <p className="text-xs text-slate-300">
-              Department: <strong className="text-white">{deptName}</strong> • Applicants: <strong className="text-emerald-300">{posting?.applicants_count || 0} candidate(s)</strong>
-            </p>
+      <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-slate-700">
+              {postingIdStr}
+            </span>
+            <Badge tone={STATUS_TONE[posting?.status] || "default"} className="capitalize">
+              {posting?.status || "Published"}
+            </Badge>
+            <span className="rounded-full bg-amber-100/50 px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-200">
+              {vacanciesCount} {vacanciesCount === 1 ? "position needed" : "positions needed"}
+            </span>
           </div>
+          <h3 className="text-lg font-extrabold text-[#111A62] tracking-tight truncate">
+            {jobTitle}
+          </h3>
+          <p className="mt-1 text-sm text-slate-600 leading-relaxed truncate">
+            Department: <strong className="text-slate-800">{deptName}</strong> • Applicants: <strong className="text-emerald-600">{posting?.applicants_count || 0} candidate(s)</strong>
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            aria-label="Edit"
+            className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-[#111A62] active:scale-95 cursor-pointer shadow-sm"
+            title="Edit Job Posting"
+          >
+            <Edit className="h-4 w-4 transition-transform group-hover:scale-110" />
+          </button>
+          {onClose && (
             <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 cursor-pointer"
-              title="Edit Job Posting"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose?.();
+              }}
+              aria-label="Close"
+              className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 cursor-pointer shadow-sm"
+              title="Close Job Panel"
             >
-              <Edit size={15} />
-              <span>Edit</span>
+              <X className="h-4 w-4 transition-transform group-hover:scale-110" />
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 cursor-pointer"
-                title="Close Job Panel"
-              >
-                <X size={15} />
-                <span>Close</span>
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 

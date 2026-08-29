@@ -315,7 +315,7 @@ export default function JobLibrary() {
               Recruitment
             </p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
-              Job Library
+              Job Library Management
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               Reusable job templates for PRFs and job postings — requires COO approval.
@@ -818,11 +818,10 @@ function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
   return (
     <div
       onClick={onClick}
-      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
-        active
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${active
           ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
           : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
-      }`}
+        }`}
     >
       <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
         <CardContent className="flex items-center gap-4 pt-6">

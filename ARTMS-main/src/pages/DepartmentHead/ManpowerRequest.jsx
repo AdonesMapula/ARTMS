@@ -24,6 +24,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import Select from "../../components/ui/Select";
+import SearchBar from "../../components/ui/SearchBar";
 import DatePicker from "../../components/ui/DatePicker";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
@@ -155,6 +156,7 @@ export default function ManpowerRequest() {
   };
 
   const [form, setForm] = useState(initialForm);
+  const [positionSearchText, setPositionSearchText] = useState("");
   // Track which Step 3 fields were auto-filled so we can show a badge
   const [autoFilled, setAutoFilled] = useState(false);
 
@@ -173,6 +175,7 @@ export default function ManpowerRequest() {
         responsibilities: [],
       }));
       setAutoFilled(false);
+      setPositionSearchText("");
       return;
     }
 
@@ -185,6 +188,7 @@ export default function ManpowerRequest() {
       responsibilities: selected.responsibilities || [],
     }));
     setAutoFilled(true);
+    setPositionSearchText(`${selected.job_title}${selected.job_category ? ` — ${selected.job_category}` : ""}`);
   };
 
   // ── Block Modal State & Handlers (Qualifications & Responsibilities Step 3) ──
@@ -324,6 +328,7 @@ export default function ManpowerRequest() {
       await manpowerService.create(payload);
       setForm(initialForm);
       setAutoFilled(false);
+      setPositionSearchText("");
       toast.success(
         "Request Submitted",
         "Your Personnel Requisition Form has been submitted for HR review. You will be notified once it is processed.",
@@ -412,16 +417,22 @@ export default function ManpowerRequest() {
                   </div>
                 </div>
               ) : (
-                <Select
-                  value={form.job_library_id}
-                  onChange={(e) => handleJobLibrarySelect(e.target.value)}
-                  options={[
-                    { value: "", label: "Select a position from the Job Library…" },
-                    ...jobLibrary.map((j) => ({
-                      value: String(j.id),
-                      label: `${j.job_title}${j.job_category ? ` — ${j.job_category}` : ""}`,
-                    })),
-                  ]}
+                <SearchBar
+                  value={positionSearchText}
+                  onChange={(val) => {
+                    setPositionSearchText(val);
+                    if (!val) handleJobLibrarySelect("");
+                  }}
+                  onSelectSuggestion={(item) => {
+                    if (item.id === "all") handleJobLibrarySelect("");
+                    else handleJobLibrarySelect(item.id);
+                  }}
+                  suggestions={jobLibrary.map((j) => ({
+                    id: String(j.id),
+                    label: `${j.job_title}${j.job_category ? ` — ${j.job_category}` : ""}`,
+                  }))}
+                  placeholder="Search a position from the Job Library..."
+                  className="h-[42px] border-slate-300"
                 />
               )}
             </div>

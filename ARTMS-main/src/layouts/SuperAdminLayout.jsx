@@ -64,7 +64,6 @@ export default function SuperAdminLayout() {
     { label: "Job Library", to: "/superadmin/hr-job-library", icon: <FiBriefcase /> },
     { label: "Job Posting", to: "/superadmin/hr-job-posting", icon: <FiLayers /> },
     { label: "Applicants", to: "/superadmin/hr-applicants", icon: <FiUsers /> },
-    { label: "AI Resume Screening", to: "/superadmin/hr-ai-screening", icon: <FiCpu /> },
     { label: "Interviews", to: "/superadmin/hr-interviews", icon: <FiCalendar /> },
     { label: "Pipeline", to: "/superadmin/hr-pipeline", icon: <FiTrendingUp /> },
     { label: "Employees", to: "/superadmin/hr-employees", icon: <FiUsers /> },

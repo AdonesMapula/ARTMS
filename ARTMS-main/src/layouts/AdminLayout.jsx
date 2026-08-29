@@ -37,7 +37,6 @@ export default function AdminLayout() {
   useEffect(() => {
     preloadIdleRoutes([
       '/admin/applicants',
-      '/admin/ai-screening',
       '/admin/job-posting',
       '/admin/interviews',
       '/admin/pipeline',
@@ -57,9 +56,9 @@ export default function AdminLayout() {
       icon: <FiClipboard />,
     },
     { label: "Job Library", to: "/admin/job-library", icon: <FiBriefcase /> },
+    { label: "Job Request", to: "/admin/job-request", icon: <FiFileText /> },
     { label: "Job Posting", to: "/admin/job-posting", icon: <FiLayers /> },
     { label: "Applicants", to: "/admin/applicants", icon: <FiUsers /> },
-    { label: "AI Resume Screening", to: "/admin/ai-screening", icon: <FiCpu /> },
     
     // INTERVIEW & PIPELINE Section
     { label: "INTERVIEW & PIPELINE", type: "label" },

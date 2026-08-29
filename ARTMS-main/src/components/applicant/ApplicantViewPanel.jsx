@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye, RefreshCw, XCircle } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import ResumePreviewModal from "../../modals/ResumePreviewModal";
 import applicantService from "../../services/applicantService";
+import aiService from "../../services/aiService";
 import { useToast } from "../../context/ToastContext";
+import ScreeningLoadingModal from "../ui/ScreeningLoadingModal";
 
 const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
 const FIT_LABEL = { high: "High", medium: "Medium", low: "Low" };
@@ -43,6 +45,18 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const [resumeModalOpen, setResumeModalOpen] = useState(false);
   const [resumeBlobUrl, setResumeBlobUrl] = useState(null);
   const [resumeLoading, setResumeLoading] = useState(false);
+  
+  const [hrForm, setHrForm] = useState({ interpretation: "", decision: "" });
+  const [savingHr, setSavingHr] = useState(false);
+  const [hrSaved, setHrSaved] = useState(false);
+  const [isScreening, setIsScreening] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      const s = data.ai_evaluation || data.aiEvaluation || data.latest_screening || data.screenings?.[0] || {};
+      setHrForm({ interpretation: s.hr_interpretation ?? "", decision: s.hr_decision ?? "" });
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!applicantId) return;
@@ -107,6 +121,42 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
     }
   };
 
+  const runScreening = async () => {
+    setIsScreening(true);
+    try {
+      await aiService.screen(applicantId);
+      toast.success("Screening Complete", "AI resume screening has been completed successfully.");
+      await loadApplicant();
+      onUpdated?.();
+    } catch (err) {
+      const msg = err.response?.data?.message ?? "Screening failed. Check your OpenAI API key.";
+      toast.error("Screening Failed", msg);
+    } finally {
+      setIsScreening(false);
+    }
+  };
+
+  const saveHrReview = async () => {
+    if (!data || !hrForm.decision) return;
+    setSavingHr(true);
+    try {
+      await aiService.hrReview(data.id, {
+        hr_interpretation: hrForm.interpretation,
+        hr_decision: hrForm.decision,
+      });
+      setHrSaved(true);
+      setTimeout(() => setHrSaved(false), 2500);
+      await loadApplicant();
+      onUpdated?.();
+      const label = hrForm.decision === "qualified" ? "Qualified" : "Not Qualified";
+      toast.success("HR Decision Saved", `${data.first_name} ${data.last_name} marked as ${label}.`);
+    } catch (err) {
+      toast.error("Save Failed", err?.response?.data?.message || "Failed to save HR review.");
+    } finally {
+      setSavingHr(false);
+    }
+  };
+
   const handleOpenResume = async () => {
     if (!data?.resume_path) {
       toast.error("No Resume File", "Applicant has not uploaded a resume file.");
@@ -155,12 +205,19 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const parsedCv = breakdown.parsed_cv || null;
   const skillsMatched = Array.isArray(screening.skills_matched) ? screening.skills_matched : [];
   const skillsMissing = Array.isArray(screening.skills_missing) ? screening.skills_missing : [];
-  const summary = screening.ai_summary || screening.summary || screening.ai_feedback || null;
+  const summary = screening.ai_summary || screening.summary || null;
+  const feedback = screening.ai_feedback || screening.feedback || screening.ai_recommendation || null;
   const isReady = app.status === "ready_for_interview";
   const isHired = app.status === "hired";
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300">
+    <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300 relative">
+      {/* ── AI Screening Loading Modal — blocks all interaction ── */}
+      {isScreening && (
+        <div className="absolute inset-0 z-50 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+          <ScreeningLoadingModal applicant={data} inline />
+        </div>
+      )}
       {/* ── Top Header Banner (Styled like Modal.jsx) ────────────────── */}
       <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -245,6 +302,16 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                     <CheckCircle size={14} /> Hire & Create 201 File
                   </Button>
                 )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 text-xs text-slate-700 border-slate-300 bg-white hover:bg-slate-50"
+                  onClick={runScreening}
+                  disabled={isScreening}
+                >
+                  <RefreshCw size={14} className={isScreening ? "animate-spin" : ""} /> {isScreening ? "Re-running..." : "Re-run Screening"}
+                </Button>
 
                 <div className="relative">
                   <Button
@@ -418,10 +485,60 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {summary && (
-                <div className="mt-3 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-700 leading-relaxed font-medium">
-                  <strong>AI Analysis Summary:</strong> {summary}
+                <div className="mt-3 rounded-2xl bg-blue-50 p-4">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-blue-500">AI Summary</p>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{summary}</p>
                 </div>
               )}
+
+              {feedback && (
+                <div className="mt-3 rounded-2xl bg-amber-50/60 p-4">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">Feedback for Applicant</p>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                </div>
+              )}
+
+              {/* HR review form */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">HR Decision</p>
+
+                <textarea
+                  rows={3}
+                  value={hrForm.interpretation}
+                  onChange={e => setHrForm(f => ({ ...f, interpretation: e.target.value }))}
+                  placeholder="Add your HR interpretation or notes…"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 resize-none"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setHrForm(f => ({ ...f, decision: "qualified" }))}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "qualified"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50/50"
+                      }`}
+                  >
+                    <CheckCircle size={13} /> Qualified
+                  </button>
+                  <button
+                    onClick={() => setHrForm(f => ({ ...f, decision: "not_qualified" }))}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "not_qualified"
+                        ? "border-red-300 bg-red-50 text-red-600"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-red-50/50"
+                      }`}
+                  >
+                    <XCircle size={13} /> Not Qualified
+                  </button>
+                </div>
+
+                <button
+                  onClick={saveHrReview}
+                  disabled={savingHr || !hrForm.decision}
+                  className="w-full rounded-xl bg-[#111A62] py-2.5 text-xs font-semibold text-white transition hover:bg-[#1a277a] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                >
+                  {savingHr ? "Saving…" : hrSaved ? "✓ Saved!" : "Save HR Review"}
+                </button>
+              </div>
             </div>
 
             {/* Resume File Card */}
@@ -449,6 +566,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
         onClose={() => setResumeModalOpen(false)}
         url={resumeBlobUrl}
         loading={resumeLoading}
+        applicant={app}
         applicantName={`${app.first_name || ""} ${app.last_name || ""}`.trim() || "Applicant"}
         fileName={app.resume_original_name || app.resume_path?.split("/").pop() || "Resume.pdf"}
       />
