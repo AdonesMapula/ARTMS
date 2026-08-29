@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye, RefreshCw, XCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye, RefreshCw, XCircle, Printer, Sparkles, MessageSquare, Trophy, Flag, Lightbulb } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import ResumePreviewModal from "../../modals/ResumePreviewModal";
@@ -74,6 +74,46 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintQuestions = () => {
+    const screening = data?.ai_evaluation || data?.aiEvaluation || data?.latest_screening || data?.screenings?.[0] || {};
+    const interviewQuestions = screening.score_breakdown?.interview_questions || [];
+    if (interviewQuestions.length === 0) return;
+    
+    const printContent = `
+      <html>
+        <head>
+          <title>Interview Questions - ${data.first_name} ${data.last_name}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; }
+            h1 { font-size: 24px; color: #0f172a; margin-bottom: 8px; }
+            h2 { font-size: 14px; color: #64748b; font-weight: normal; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; }
+            ol { padding-left: 20px; }
+            li { margin-bottom: 16px; font-size: 15px; line-height: 1.6; }
+            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Recommended Interview Questions</h1>
+            <h2>Candidate: ${data.first_name} ${data.last_name} | Position: ${data.job_posting?.job_library?.job_title || 'Applied Role'}</h2>
+          </div>
+          <ol>
+            ${interviewQuestions.map(q => `<li>${q}</li>`).join('')}
+          </ol>
+        </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    printWin.document.open();
+    printWin.document.write(printContent);
+    printWin.document.close();
+    
+    setTimeout(() => {
+      printWin.print();
+    }, 250);
   };
 
   const handleStatusUpdate = async (newStatus) => {
@@ -344,6 +384,22 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               </div>
             </div>
 
+            {/* Resume File Card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-extrabold text-slate-900">Uploaded Resume Document</p>
+                  <p className="text-[11px] text-slate-400">{app.resume_path ? app.resume_path.split("/").pop() : "No file attached"}</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={handleOpenResume} className="gap-1.5 text-xs font-semibold cursor-pointer border-[#111A62]/20 text-[#111A62] hover:bg-[#111A62]/10">
+                <Eye size={14} /> Open Resume
+              </Button>
+            </div>
+
             {/* Contact Details Grid */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
@@ -490,21 +546,30 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {summary && (
                 <div className="mt-3 rounded-2xl bg-blue-50 p-4">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-blue-500">AI Summary</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-blue-500">
+                    <Sparkles size={13} />
+                    AI Summary
+                  </p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{summary}</p>
                 </div>
               )}
 
               {feedback && (
                 <div className="mt-3 rounded-2xl bg-amber-50/60 p-4">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">Feedback for Applicant</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
+                    <MessageSquare size={13} />
+                    Feedback for Applicant
+                  </p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
                 </div>
               )}
 
               {topAchievements.length > 0 && (
                 <div className="mt-3 rounded-2xl bg-purple-50 p-4 border border-purple-100">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-purple-600">🏆 Top Achievements</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-purple-600">
+                    <Trophy size={13} />
+                    Top Achievements
+                  </p>
                   <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
                     {topAchievements.map((achievement, idx) => (
                       <li key={idx} className="leading-relaxed">{achievement}</li>
@@ -515,7 +580,10 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {redFlags.length > 0 && (
                 <div className="mt-3 rounded-2xl bg-red-50 p-4 border border-red-100">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-red-600">🚩 Red Flags & Concerns</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-red-600">
+                    <Flag size={13} />
+                    Red Flags & Concerns
+                  </p>
                   <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
                     {redFlags.map((flag, idx) => (
                       <li key={idx} className="leading-relaxed">{flag}</li>
@@ -526,7 +594,20 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {interviewQuestions.length > 0 && (
                 <div className="mt-3 rounded-2xl bg-indigo-50 p-4 border border-indigo-100">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-indigo-600">💡 Recommended Interview Questions</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-indigo-600">
+                      <Lightbulb size={13} />
+                      Recommended Interview Questions
+                    </p>
+                    <button 
+                      onClick={handlePrintQuestions}
+                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-indigo-500 hover:text-indigo-700 transition-colors bg-indigo-100/50 hover:bg-indigo-200/50 px-2 py-1 rounded-md"
+                      title="Print Questions"
+                    >
+                      <Printer size={12} />
+                      <span>Print</span>
+                    </button>
+                  </div>
                   <ul className="list-decimal pl-5 space-y-2 text-xs text-slate-700 font-medium">
                     {interviewQuestions.map((q, idx) => (
                       <li key={idx} className="leading-relaxed">{q}</li>
@@ -537,7 +618,10 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {alternativeRoles.length > 0 && (
                 <div className="mt-3 rounded-2xl bg-teal-50 p-4 border border-teal-100">
-                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-teal-600">🔄 Alternative Role Suggestions</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-600">
+                    <RefreshCw size={13} />
+                    Alternative Role Suggestions
+                  </p>
                   <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
                     {alternativeRoles.map((role, idx) => (
                       <li key={idx} className="leading-relaxed">{role}</li>
@@ -589,21 +673,6 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               </div>
             </div>
 
-            {/* Resume File Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                  <FileText size={20} />
-                </div>
-                <div>
-                  <p className="text-xs font-extrabold text-slate-900">Uploaded Resume Document</p>
-                  <p className="text-[11px] text-slate-400">{app.resume_path ? app.resume_path.split("/").pop() : "No file attached"}</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={handleOpenResume} className="gap-1.5 text-xs font-semibold cursor-pointer border-[#111A62]/20 text-[#111A62] hover:bg-[#111A62]/10">
-                <Eye size={14} /> Open Resume
-              </Button>
-            </div>
           </>
         )}
       </div>

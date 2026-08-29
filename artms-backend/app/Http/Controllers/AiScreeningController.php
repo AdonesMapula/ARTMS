@@ -134,6 +134,7 @@ You are an expert HR screening AI for ARTMS. Evaluate the resume below objective
 Do NOT use discriminatory criteria. Evaluate strictly based on skills, education, and relevant experience.
 If the candidate is a low fit for this specific position but shows strong potential in other areas, suggest 1-2 alternative roles.
 Also, extract the top 3 most impressive, quantifiable achievements from the candidate's resume (e.g. "Increased sales by 30%").
+Generate 7 to 10 recommended interview questions to thoroughly evaluate the candidate's technical skills and cultural fit.
 
 == POSITION ==
 Title: {$positionTitle}
@@ -179,7 +180,7 @@ Respond with ONLY valid JSON:
   "ai_summary": "<2-3 sentence overall assessment>",
   "ai_feedback": "<constructive feedback for the applicant>",
   "red_flags": ["<employment gap concern>", "<missing critical requirement>", "etc"],
-  "interview_questions": ["<custom question 1>", "<custom question 2>", "<custom question 3>"],
+  "interview_questions": ["<custom question 1>", "<custom question 2>", "...", "<custom question 7-10>"],
   "alternative_roles": ["<role 1>", "<role 2>"],
   "top_achievements": ["<achievement 1>", "<achievement 2>", "<achievement 3>"]
 }
@@ -188,6 +189,10 @@ EOT;
         // ── 4. Call Google Gemini with Guardrails & Key Rotation ────
         try {
             $cacheKey = 'screening_eval_' . $applicant->id . '_' . md5($cleanResumeText . $positionTitle);
+            
+            // Force a fresh AI evaluation when Re-running by clearing the old cache
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+            
             $rawAiData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 86400, function () use ($prompt, $applicant) {
                 $systemInstruction = 'You are a precise HR screening AI. Always respond with valid JSON only matching the schema exactly. Evaluate purely on merit and qualifications.';
                 return \App\Services\GeminiService::generateJson($prompt, $systemInstruction, 0.1, 1024, 'AI Screening: #' . $applicant->id);

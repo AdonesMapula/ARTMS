@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Download, ExternalLink, Printer, X, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Download, ExternalLink, Printer, X, Loader2, AlertCircle, Sparkles, MessageSquare, Trophy, Flag, Lightbulb, RefreshCw } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 
@@ -42,11 +42,11 @@ export default function ResumePreviewModal({
     { key: "other", label: "Other / License", max: 10 },
   ];
 
-  function scoreColor(pct) {
+  const scoreColor = (pct) => {
     if (pct >= 75) return "bg-emerald-500";
     if (pct >= 50) return "bg-amber-400";
     return "bg-red-400";
-  }
+  };
 
   const handleDownload = () => {
     if (!url) return;
@@ -63,12 +63,50 @@ export default function ResumePreviewModal({
     window.open(url, "_blank");
   };
 
-  const handlePrint = () => {
+  const handlePrintResume = () => {
     if (!url) return;
     const printWindow = window.open(url, "_blank");
     if (printWindow) {
       printWindow.focus();
     }
+  };
+
+  const handlePrintQuestions = () => {
+    if (interviewQuestions.length === 0) return;
+    
+    const printContent = `
+      <html>
+        <head>
+          <title>Interview Questions - ${applicantName}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; }
+            h1 { font-size: 24px; color: #0f172a; margin-bottom: 8px; }
+            h2 { font-size: 14px; color: #64748b; font-weight: normal; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; }
+            ol { padding-left: 20px; }
+            li { margin-bottom: 16px; font-size: 15px; line-height: 1.6; }
+            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Recommended Interview Questions</h1>
+            <h2>Candidate: ${applicantName} | Position: ${applicant?.position || 'Applied Role'}</h2>
+          </div>
+          <ol>
+            ${interviewQuestions.map(q => `<li>${q}</li>`).join('')}
+          </ol>
+        </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    printWin.document.open();
+    printWin.document.write(printContent);
+    printWin.document.close();
+    
+    setTimeout(() => {
+      printWin.print();
+    }, 250);
   };
 
   return (
@@ -106,18 +144,29 @@ export default function ResumePreviewModal({
               className="gap-1.5 text-xs cursor-pointer"
             >
               <ExternalLink size={13} />
-              <span className="hidden sm:inline">Open in New Tab</span>
+              <span className="hidden sm:inline">Open</span>
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handlePrint}
+              onClick={handlePrintQuestions}
+              disabled={interviewQuestions.length === 0}
+              className="gap-1.5 text-xs cursor-pointer"
+            >
+              <Printer size={13} />
+              <span className="hidden sm:inline">Print Questions</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handlePrintResume}
               disabled={!url || loading}
               className="gap-1.5 text-xs cursor-pointer"
             >
               <Printer size={13} />
-              <span className="hidden sm:inline">Print</span>
+              <span className="hidden sm:inline">Print Resume</span>
             </Button>
             <Button
               type="button"
@@ -189,7 +238,10 @@ export default function ResumePreviewModal({
               {/* Summary */}
               {summary && (
                 <div className="rounded-xl bg-blue-50/70 p-3.5 border border-blue-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-blue-600">AI Summary</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-blue-600">
+                    <Sparkles size={12} />
+                    AI Summary
+                  </p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{summary}</p>
                 </div>
               )}
@@ -197,7 +249,10 @@ export default function ResumePreviewModal({
               {/* Feedback */}
               {feedback && (
                 <div className="rounded-xl bg-amber-50/70 p-3.5 border border-amber-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-600">Feedback for Applicant</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-600">
+                    <MessageSquare size={12} />
+                    Feedback for Applicant
+                  </p>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
                 </div>
               )}
@@ -205,7 +260,10 @@ export default function ResumePreviewModal({
               {/* Top Achievements */}
               {topAchievements.length > 0 && (
                 <div className="rounded-xl bg-purple-50 p-3.5 border border-purple-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-purple-600">🏆 Top Achievements</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-purple-600">
+                    <Trophy size={12} />
+                    Top Achievements
+                  </p>
                   <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
                     {topAchievements.map((achievement, idx) => (
                       <li key={idx} className="leading-relaxed">{achievement}</li>
@@ -217,7 +275,10 @@ export default function ResumePreviewModal({
               {/* Red Flags */}
               {redFlags.length > 0 && (
                 <div className="rounded-xl bg-red-50 p-3.5 border border-red-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-red-600">🚩 Red Flags & Concerns</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-red-600">
+                    <Flag size={12} />
+                    Red Flags & Concerns
+                  </p>
                   <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
                     {redFlags.map((flag, idx) => (
                       <li key={idx} className="leading-relaxed">{flag}</li>
@@ -229,7 +290,10 @@ export default function ResumePreviewModal({
               {/* Interview Questions */}
               {interviewQuestions.length > 0 && (
                 <div className="rounded-xl bg-indigo-50 p-3.5 border border-indigo-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">💡 Recommended Interview Questions</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">
+                    <Lightbulb size={12} />
+                    Recommended Interview Questions
+                  </p>
                   <ul className="list-decimal pl-4 space-y-2 text-xs text-slate-700 font-medium">
                     {interviewQuestions.map((q, idx) => (
                       <li key={idx} className="leading-relaxed">{q}</li>
@@ -241,7 +305,10 @@ export default function ResumePreviewModal({
               {/* Alternative Roles */}
               {alternativeRoles.length > 0 && (
                 <div className="rounded-xl bg-teal-50 p-3.5 border border-teal-100/50">
-                  <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-teal-600">🔄 Alternative Role Suggestions</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-teal-600">
+                    <RefreshCw size={12} />
+                    Alternative Role Suggestions
+                  </p>
                   <ul className="list-disc pl-4 space-y-1.5 text-xs text-slate-700 font-medium">
                     {alternativeRoles.map((role, idx) => (
                       <li key={idx} className="leading-relaxed">{role}</li>
