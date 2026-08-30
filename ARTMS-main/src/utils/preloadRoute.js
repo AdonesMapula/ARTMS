@@ -40,6 +40,14 @@ const ROUTE_REGISTRY = {
     importComponent: () => import('../pages/Admin/JobPosting'),
     prefetchApis: ['/job-postings?per_page=15'],
   },
+  '/admin/job-library': {
+    importComponent: () => import('../pages/Admin/JobLibrary'),
+    prefetchApis: ['/job-library?per_page=15'],
+  },
+  '/admin/manpower-requests': {
+    importComponent: () => import('../pages/Admin/ManpowerRequests'),
+    prefetchApis: ['/manpower-requests?per_page=15'],
+  },
   '/admin/interviews': {
     importComponent: () => import('../pages/Admin/Interviews'),
     prefetchApis: ['/interviews?per_page=15'],
@@ -47,6 +55,54 @@ const ROUTE_REGISTRY = {
   '/admin/pipeline': {
     importComponent: () => import('../pages/Admin/Pipeline'),
     prefetchApis: ['/applicants?per_page=300', '/job-postings?per_page=100'],
+  },
+  '/admin/employees': {
+    importComponent: () => import('../pages/Admin/Employees'),
+    prefetchApis: ['/employees?per_page=15'],
+  },
+  '/admin/messages': {
+    importComponent: () => import('../pages/Admin/Messages'),
+    prefetchApis: ['/messages/conversations'],
+  },
+  '/superadmin/dashboard': {
+    importComponent: () => import('../pages/SuperAdmin/Dashboard'),
+    prefetchApis: ['/dashboard/super-admin', '/boot'],
+  },
+  '/superadmin/users': {
+    importComponent: () => import('../pages/SuperAdmin/Users'),
+    prefetchApis: ['/users?per_page=15'],
+  },
+  '/superadmin/departments': {
+    importComponent: () => import('../pages/SuperAdmin/Departments'),
+    prefetchApis: ['/departments'],
+  },
+  '/superadmin/messages': {
+    importComponent: () => import('../pages/SuperAdmin/Messages'),
+    prefetchApis: ['/messages/conversations'],
+  },
+  '/depthead/dashboard': {
+    importComponent: () => import('../pages/DepartmentHead/Dashboard'),
+    prefetchApis: ['/dashboard/department-head', '/boot'],
+  },
+  '/depthead/messages': {
+    importComponent: () => import('../pages/DepartmentHead/Messages'),
+    prefetchApis: ['/messages/conversations'],
+  },
+  '/employee/dashboard': {
+    importComponent: () => import('../pages/Employee/Dashboard'),
+    prefetchApis: ['/boot'],
+  },
+  '/employee/messages': {
+    importComponent: () => import('../pages/Employee/Messages'),
+    prefetchApis: ['/messages/conversations'],
+  },
+  '/coo/dashboard': {
+    importComponent: () => import('../pages/Coo/Dashboard'),
+    prefetchApis: ['/dashboard/coo', '/boot'],
+  },
+  '/coo/messages': {
+    importComponent: () => import('../pages/Coo/Messages'),
+    prefetchApis: ['/messages/conversations'],
   },
 };
 

@@ -2,11 +2,23 @@ import { useEffect, useState } from "react";
 import { Mail, Phone, MapPin, Calendar, FileText, ChevronDown, X, Loader, CheckCircle, Download, ExternalLink, Eye, RefreshCw, XCircle, Printer, Sparkles, MessageSquare, Trophy, Flag, Lightbulb } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
+import ActionLoadingModal from "../ui/ActionLoadingModal";
 import ResumePreviewModal from "../../modals/ResumePreviewModal";
 import applicantService from "../../services/applicantService";
 import aiService from "../../services/aiService";
 import { useToast } from "../../context/ToastContext";
 import ScreeningLoadingModal from "../ui/ScreeningLoadingModal";
+
+const STAGE_LABELS = {
+  applied: "Applied",
+  ai_screening: "AI Screening",
+  screening_passed: "Screening Passed",
+  ready_for_interview: "Ready for Interview",
+  interview_1: "Interview 1",
+  interview_2: "Interview 2",
+  hired: "Hired",
+  rejected: "Rejected",
+};
 
 const FIT_TONE = { high: "success", medium: "warning", low: "danger" };
 const FIT_LABEL = { high: "High", medium: "Medium", low: "Low" };
@@ -117,11 +129,17 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   };
 
   const handleStatusUpdate = async (newStatus) => {
-    setActionLoading(newStatus);
+    const stageName = STAGE_LABELS[newStatus] || newStatus.replace(/_/g, " ");
+    setShowStatusMenu(false);
+    setActionLoading({
+      type: "stage",
+      status: newStatus,
+      title: "Moving Pipeline Stage",
+      message: `Moving candidate to "${stageName}" and updating pipeline records. Please wait...`,
+    });
     try {
       await applicantService.updateStatus(applicantId, newStatus);
-      toast.success("Status Updated", `Applicant status changed to ${newStatus.replace(/_/g, " ").toUpperCase()}`);
-      setShowStatusMenu(false);
+      toast.success("Status Updated", `Applicant stage changed to ${stageName.toUpperCase()}`);
       await loadApplicant();
       onUpdated?.();
     } catch (err) {
@@ -132,7 +150,12 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   };
 
   const handleReadyForInterview = async () => {
-    setActionLoading("ready");
+    setActionLoading({
+      type: "ready",
+      status: "ready_for_interview",
+      title: "Advancing to Interview Stage",
+      message: "Moving applicant to Ready for Interview and queueing invitation email...",
+    });
     try {
       await applicantService.readyForInterview(applicantId, {
         message: `Congratulations! You have been selected for an interview for the ${data?.job_posting?.job_library?.job_title || "position"}.`,
@@ -148,7 +171,12 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   };
 
   const handleHire = async () => {
-    setActionLoading("hire");
+    setActionLoading({
+      type: "hire",
+      status: "hired",
+      title: "Hiring Candidate & Creating 201 File",
+      message: "Converting applicant into official 201 employee record. Please wait...",
+    });
     try {
       await applicantService.hireApplicant(applicantId, {});
       toast.success("Hired & 201 File Created", "Applicant converted to 201 Employee Record successfully!");
@@ -327,11 +355,19 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <Button
                     size="sm"
                     variant="primary"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs"
                     onClick={handleReadyForInterview}
-                    disabled={actionLoading === "ready"}
+                    disabled={Boolean(actionLoading) || isScreening}
                   >
-                    <CheckCircle size={14} /> Ready for Interview
+                    {actionLoading?.type === "ready" ? (
+                      <>
+                        <Loader size={14} className="animate-spin" /> Moving to Interview...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={14} /> Ready for Interview
+                      </>
+                    )}
                   </Button>
                 )}
 
@@ -339,11 +375,19 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <Button
                     size="sm"
                     variant="primary"
-                    className="bg-[#111A62] text-white gap-1 text-xs"
+                    className="bg-[#111A62] text-white gap-1.5 text-xs"
                     onClick={handleHire}
-                    disabled={actionLoading === "hire"}
+                    disabled={Boolean(actionLoading) || isScreening}
                   >
-                    <CheckCircle size={14} /> Hire & Create 201 File
+                    {actionLoading?.type === "hire" ? (
+                      <>
+                        <Loader size={14} className="animate-spin" /> Creating 201 File...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={14} /> Hire & Create 201 File
+                      </>
+                    )}
                   </Button>
                 )}
 
@@ -352,7 +396,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   variant="outline"
                   className="gap-1 text-xs text-slate-700 border-slate-300 bg-white hover:bg-slate-50"
                   onClick={runScreening}
-                  disabled={isScreening}
+                  disabled={Boolean(actionLoading) || isScreening}
                 >
                   <RefreshCw size={14} className={isScreening ? "animate-spin" : ""} /> {isScreening ? "Re-running..." : "Re-run Screening"}
                 </Button>
@@ -361,21 +405,36 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1 text-xs text-slate-700 border-slate-300 bg-white"
+                    className="gap-1.5 text-xs text-slate-700 border-slate-300 bg-white"
                     onClick={() => setShowStatusMenu(!showStatusMenu)}
+                    disabled={Boolean(actionLoading) || isScreening}
                   >
-                    Move Stage <ChevronDown size={13} />
+                    {actionLoading?.type === "stage" ? (
+                      <>
+                        <Loader size={13} className="animate-spin text-[#111A62]" /> Moving Stage...
+                      </>
+                    ) : (
+                      <>
+                        Move Stage <ChevronDown size={13} />
+                      </>
+                    )}
                   </Button>
 
                   {showStatusMenu && (
-                    <div className="absolute right-0 top-full mt-1 z-30 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl space-y-0.5 text-xs font-semibold text-slate-700">
-                      {["applied", "ai_screening", "screening_passed", "ready_for_interview", "interview_1", "interview_2", "hired", "rejected"].map((s) => (
+                    <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl space-y-0.5 text-xs font-semibold text-slate-700">
+                      {Object.entries(STAGE_LABELS).map(([key, label]) => (
                         <button
-                          key={s}
-                          onClick={() => handleStatusUpdate(s)}
-                          className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-slate-100 transition capitalize cursor-pointer"
+                          key={key}
+                          onClick={() => handleStatusUpdate(key)}
+                          disabled={Boolean(actionLoading)}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 transition cursor-pointer ${
+                            app.status === key ? "bg-slate-100 font-bold text-[#111A62]" : ""
+                          }`}
                         >
-                          {s.replace(/_/g, " ")}
+                          <span>{label}</span>
+                          {actionLoading?.status === key && (
+                            <Loader size={12} className="animate-spin text-[#111A62]" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -686,6 +745,14 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
         applicant={app}
         applicantName={`${app.first_name || ""} ${app.last_name || ""}`.trim() || "Applicant"}
         fileName={app.resume_original_name || app.resume_path?.split("/").pop() || "Resume.pdf"}
+      />
+
+      {/* Full-screen blocking loading overlay for Stage Transitions */}
+      <ActionLoadingModal
+        open={Boolean(actionLoading)}
+        type={actionLoading?.type === "hire" ? "create" : "process"}
+        title={actionLoading?.title || "Moving Pipeline Stage"}
+        message={actionLoading?.message || "Updating candidate stage and refreshing applicant details. Please wait..."}
       />
     </div>
   );

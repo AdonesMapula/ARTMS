@@ -132,5 +132,6 @@ class DatabaseSeeder extends Seeder
         $this->call(JobPostingSeeder::class);
         $this->call(EmployeeSeeder::class);
         $this->call(InterviewSeeder::class);
+        $this->call(MessageSeeder::class);
     }
 }

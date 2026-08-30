@@ -40,6 +40,14 @@ class DashboardController extends Controller
         $cacheKey = CacheKeyService::make('dashboard', "admin:{$year}-{$month}");
 
         $data = $this->cache->remember($cacheKey, 60, function () use ($month, $year) {
+            $statusCounts = Applicant::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->all();
+
+            $i1 = ($statusCounts['interview_1'] ?? 0) + ($statusCounts['interview_1_scheduled'] ?? 0) + ($statusCounts['interview_1_done'] ?? 0);
+            $i2 = ($statusCounts['interview_2'] ?? 0) + ($statusCounts['interview_2_scheduled'] ?? 0) + ($statusCounts['interview_2_done'] ?? 0);
+
             return [
                 'total_employees'       => Employee::where('employment_status', 'active')->count(),
                 'total_departments'     => Department::where('is_active', true)->count(),
@@ -51,13 +59,13 @@ class DashboardController extends Controller
                 'hired_this_month'      => Applicant::where('status', 'hired')->whereMonth('updated_at', $month)->whereYear('updated_at', $year)->count(),
                 'manpower_requests'     => ManpowerRequest::where('status', 'pending')->count(),
                 'applicant_pipeline'    => [
-                    'applied'          => Applicant::where('status', 'applied')->count(),
-                    'ai_screening'     => Applicant::where('status', 'ai_screening')->count(),
-                    'screening_passed' => Applicant::where('status', 'screening_passed')->count(),
-                    'interview_1'      => Applicant::whereIn('status', ['interview_1_scheduled', 'interview_1_done'])->count(),
-                    'interview_2'      => Applicant::whereIn('status', ['interview_2_scheduled', 'interview_2_done'])->count(),
-                    'hired'            => Applicant::where('status', 'hired')->count(),
-                    'rejected'         => Applicant::where('status', 'rejected')->count(),
+                    'applied'          => $statusCounts['applied'] ?? 0,
+                    'ai_screening'     => $statusCounts['ai_screening'] ?? 0,
+                    'screening_passed' => $statusCounts['screening_passed'] ?? 0,
+                    'interview_1'      => $i1,
+                    'interview_2'      => $i2,
+                    'hired'            => $statusCounts['hired'] ?? 0,
+                    'rejected'         => $statusCounts['rejected'] ?? 0,
                 ],
                 'monthly_hires' => Applicant::where('status', 'hired')
                     ->whereYear('updated_at', $year)
@@ -80,9 +88,14 @@ class DashboardController extends Controller
         $cacheKey = CacheKeyService::make('dashboard', 'superadmin:' . now()->format('Y-m-d-H'));
 
         $data = $this->cache->remember($cacheKey, 120, function () {
-            $totalUsers    = User::count();
-            $activeUsers   = User::where('is_active', true)->count();
-            $inactiveUsers = User::where('is_active', false)->count();
+            $userCounts = User::selectRaw('is_active, COUNT(*) as count')
+                ->groupBy('is_active')
+                ->pluck('count', 'is_active')
+                ->all();
+
+            $activeUsers   = $userCounts[1] ?? 0;
+            $inactiveUsers = $userCounts[0] ?? 0;
+            $totalUsers    = $activeUsers + $inactiveUsers;
             $deletedUsers  = User::onlyTrashed()->count();
 
             // 7 months traffic & users growth
@@ -240,10 +253,15 @@ class DashboardController extends Controller
         $cacheKey = CacheKeyService::make('dashboard', "coo:{$year}:" . now()->format('Y-m-d-H-i'));
 
         $data = $this->cache->remember($cacheKey, 60, function () use ($year) {
-            $total    = ManpowerRequest::count();
-            $pending  = ManpowerRequest::where('status', 'pending')->count();
-            $approved = ManpowerRequest::whereIn('status', ['approved', 'fulfilled'])->count();
-            $rejected = ManpowerRequest::whereIn('status', ['rejected', 'revised'])->count();
+            $manpowerCounts = ManpowerRequest::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->all();
+
+            $total    = array_sum($manpowerCounts);
+            $pending  = $manpowerCounts['pending'] ?? 0;
+            $approved = ($manpowerCounts['approved'] ?? 0) + ($manpowerCounts['fulfilled'] ?? 0);
+            $rejected = ($manpowerCounts['rejected'] ?? 0) + ($manpowerCounts['revised'] ?? 0);
 
             $requestsByDepartment = ManpowerRequest::selectRaw('departments.department_name as name, COUNT(*) as value')
                 ->join('departments', 'manpower_requests.department_id', '=', 'departments.id')
@@ -303,10 +321,15 @@ class DashboardController extends Controller
                 ->get();
 
             // Job Library Stats
-            $totalJobLibrary    = JobLibrary::count();
-            $pendingJobLibrary  = JobLibrary::where('approval_status', 'pending')->count();
-            $approvedJobLibrary = JobLibrary::where('approval_status', 'approved')->count();
-            $rejectedJobLibrary = JobLibrary::where('approval_status', 'rejected')->count();
+            $jobLibraryCounts = JobLibrary::selectRaw('approval_status, COUNT(*) as count')
+                ->groupBy('approval_status')
+                ->pluck('count', 'approval_status')
+                ->all();
+
+            $totalJobLibrary    = array_sum($jobLibraryCounts);
+            $pendingJobLibrary  = $jobLibraryCounts['pending'] ?? 0;
+            $approvedJobLibrary = $jobLibraryCounts['approved'] ?? 0;
+            $rejectedJobLibrary = $jobLibraryCounts['rejected'] ?? 0;
 
             return [
                 'total_requests'         => $total,
