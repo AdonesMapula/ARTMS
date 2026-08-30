@@ -226,11 +226,6 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   };
 
   const handleOpenResume = async () => {
-    if (!data?.resume_path) {
-      toast.error("No Resume File", "Applicant has not uploaded a resume file.");
-      return;
-    }
-
     setResumeModalOpen(true);
     setResumeLoading(true);
     try {
@@ -239,8 +234,8 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
       const objectUrl = URL.createObjectURL(blob);
       setResumeBlobUrl(objectUrl);
     } catch (err) {
-      console.error("Failed to load resume document:", err);
-      toast.error("Resume Error", "Could not load the resume file from storage.");
+      console.warn("Could not load binary resume file, using candidate profile details:", err);
+      setResumeBlobUrl(null);
     } finally {
       setResumeLoading(false);
     }

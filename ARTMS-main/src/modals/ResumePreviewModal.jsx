@@ -329,10 +329,60 @@ export default function ResumePreviewModal({
               <p className="text-sm font-semibold">Loading Resume Document...</p>
             </div>
           ) : !url ? (
-            <div className="flex flex-col items-center gap-2 text-slate-500 py-16 text-center">
-              <AlertCircle size={36} className="text-amber-500" />
-              <p className="text-sm font-bold text-slate-700">Resume File Not Available</p>
-              <p className="text-xs text-slate-400">The applicant has not uploaded a readable resume file.</p>
+            <div className="h-full w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="border-b border-slate-100 pb-5 mb-5 flex items-start justify-between">
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 mb-2 border border-blue-100">
+                      Digital Candidate Profile
+                    </span>
+                    <h3 className="text-xl font-black text-slate-900">{applicantName}</h3>
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                      Applied for <span className="text-[#111A62] font-bold">{applicant?.job_posting?.job_library?.job_title || applicant?.position || "Target Position"}</span>
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111A62]/10 text-base font-black text-[#111A62]">
+                    {applicantName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Email Address</p>
+                    <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">{applicant?.email || "Not Provided"}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Phone Number</p>
+                    <p className="text-xs font-bold text-slate-800 mt-0.5">{applicant?.phone || "Not Provided"}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Experience</p>
+                    <p className="text-xs font-bold text-slate-800 mt-0.5">
+                      {applicant?.years_of_experience ? `${applicant.years_of_experience} Years` : "Screened via AI"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Highest Education</p>
+                    <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">
+                      {applicant?.highest_education || "Degree / College Level"}
+                    </p>
+                  </div>
+                </div>
+
+                {summary && (
+                  <div className="space-y-1.5 mb-5">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Professional Summary</p>
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      {summary}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                <span>Application ID: {applicant?.application_id || `APP-${applicant?.id || "N/A"}`}</span>
+                <span>ARTMS Talent Management</span>
+              </div>
             </div>
           ) : isImage ? (
             <div className="h-full w-full overflow-auto rounded-xl border border-slate-200 bg-white p-2 shadow-inner">
