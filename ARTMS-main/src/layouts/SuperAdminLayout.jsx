@@ -21,11 +21,13 @@ import {
   FiBell,
   FiUser,
   FiMessageSquare,
+  FiDatabase,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
+  developer:       "Developer",
   hr_admin:        "Human Resources Admin",
   coo:             "Chief Operating Officer",
   department_head: "Department Head",
@@ -53,6 +55,7 @@ export default function SuperAdminLayout() {
     },
     { label: "Departments", to: "/superadmin/departments", icon: <FiUsers /> },
     { label: "Roles & Permissions", to: "/superadmin/roles", icon: <FiShield /> },
+    { label: "Database Manager", to: "/superadmin/database", icon: <FiDatabase /> },
     { label: "Audit Logs", to: "/superadmin/audit-logs", icon: <FiActivity /> },
 
     // HR ADMIN ACCESS Section

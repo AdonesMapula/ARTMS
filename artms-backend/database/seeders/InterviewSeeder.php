@@ -13,18 +13,24 @@ class InterviewSeeder extends Seeder
     {
         $hrAdmin = User::where('email', 'hradmin@artms.com')->first();
 
+        $defaultPosting = \App\Models\JobPosting::first();
+        if (!$defaultPosting) {
+            $this->command->warn('No job postings found. Seed job postings first via JobPostingSeeder.');
+            return;
+        }
+
         // Grab applicants that are in applicable statuses
         $applicants = Applicant::whereIn('status', [
             'new', 'screening', 'interview_scheduled', 'interview_completed',
-        ])->with('jobPosting')->get();
+        ])->get();
 
         // If none found, grab any applicants
         if ($applicants->isEmpty()) {
-            $applicants = Applicant::with('jobPosting')->limit(10)->get();
+            $applicants = Applicant::limit(10)->get();
         }
 
         if ($applicants->isEmpty()) {
-            $this->command->warn('No applicants found. Seed applicants first via JobPostingSeeder.');
+            $this->command->warn('No applicants found. Seed applicants first via ApplicantSeeder.');
             return;
         }
 
@@ -33,9 +39,10 @@ class InterviewSeeder extends Seeder
         // ── Interview 1 — Initial Screening (Scheduled, upcoming) ────────────
         if ($applicants->count() >= 1) {
             $a = $applicants[0];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'       => $a->id,
-                'job_posting_id'     => $a->job_posting_id,
+                'job_posting_id'     => $pId,
                 'interview_stage'    => 'initial_screening',
                 'interview_type'     => 'online',
                 'scheduled_at'       => now()->addDays(2)->setTime(10, 0),
@@ -50,15 +57,16 @@ class InterviewSeeder extends Seeder
                 'reminder_sent'      => false,
                 'hr_decision'        => 'pending',
             ]);
-            $a->update(['status' => 'interview_scheduled']);
+            $a->update(['status' => 'interview_scheduled', 'job_posting_id' => $pId]);
         }
 
         // ── Interview 2 — Initial Screening (Confirmed) ──────────────────────
         if ($applicants->count() >= 2) {
             $a = $applicants[1];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'          => $a->id,
-                'job_posting_id'        => $a->job_posting_id,
+                'job_posting_id'        => $pId,
                 'interview_stage'       => 'initial_screening',
                 'interview_type'        => 'in_person',
                 'scheduled_at'          => now()->addDays(3)->setTime(14, 0),
@@ -81,9 +89,10 @@ class InterviewSeeder extends Seeder
         // ── Interview 3 — Technical Interview (Completed with evaluation) ────
         if ($applicants->count() >= 3) {
             $a = $applicants[2];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'          => $a->id,
-                'job_posting_id'        => $a->job_posting_id,
+                'job_posting_id'        => $pId,
                 'interview_stage'       => 'technical_interview',
                 'interview_type'        => 'online',
                 'scheduled_at'          => now()->subDays(5)->setTime(9, 0),
@@ -110,15 +119,16 @@ class InterviewSeeder extends Seeder
                 'ai_summary'            => 'Candidate demonstrated excellent communication. Recommended to proceed.',
                 'ai_recommendation'     => 'Proceed to HR Interview.',
             ]);
-            $a->update(['status' => 'interview_completed']);
+            $a->update(['status' => 'interview_completed', 'job_posting_id' => $pId]);
         }
 
         // ── Interview 4 — HR Interview (Scheduled) ───────────────────────────
         if ($applicants->count() >= 4) {
             $a = $applicants[3];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'    => $a->id,
-                'job_posting_id'  => $a->job_posting_id,
+                'job_posting_id'  => $pId,
                 'interview_stage' => 'hr_interview',
                 'interview_type'  => 'in_person',
                 'scheduled_at'    => now()->addDays(7)->setTime(11, 0),
@@ -133,15 +143,16 @@ class InterviewSeeder extends Seeder
                 'reminder_sent'   => false,
                 'hr_decision'     => 'pending',
             ]);
-            $a->update(['status' => 'interview_scheduled']);
+            $a->update(['status' => 'interview_scheduled', 'job_posting_id' => $pId]);
         }
 
         // ── Interview 5 — Final Interview (Scheduled) ────────────────────────
         if ($applicants->count() >= 5) {
             $a = $applicants[4];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'    => $a->id,
-                'job_posting_id'  => $a->job_posting_id,
+                'job_posting_id'  => $pId,
                 'interview_stage' => 'final_interview',
                 'interview_type'  => 'in_person',
                 'scheduled_at'    => now()->addDays(10)->setTime(15, 0),
@@ -156,15 +167,16 @@ class InterviewSeeder extends Seeder
                 'reminder_sent'   => false,
                 'hr_decision'     => 'pending',
             ]);
-            $a->update(['status' => 'interview_scheduled']);
+            $a->update(['status' => 'interview_scheduled', 'job_posting_id' => $pId]);
         }
 
         // ── Interview 6 — AI Screening (Completed with report) ───────────────
         if ($applicants->count() >= 6) {
             $a = $applicants[5];
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'          => $a->id,
-                'job_posting_id'        => $a->job_posting_id,
+                'job_posting_id'        => $pId,
                 'interview_stage'       => 'initial_screening',
                 'interview_type'        => 'online',
                 'scheduled_at'          => now()->subDays(3)->setTime(9, 0),
@@ -185,15 +197,16 @@ class InterviewSeeder extends Seeder
                 'ai_summary'            => 'Candidate demonstrated adequate communication. Recommend for human interview.',
                 'ai_recommendation'     => 'Proceed to Initial Screening with HR.',
             ]);
-            $a->update(['status' => 'screening']);
+            $a->update(['status' => 'screening', 'job_posting_id' => $pId]);
         }
 
         // ── Interview 7 — No Show ────────────────────────────────────────────
         if ($applicants->count() >= 7) {
             $a = $applicants[6] ?? $applicants->last();
+            $pId = \App\Models\JobPosting::where('id', $a->job_posting_id)->exists() ? $a->job_posting_id : $defaultPosting->id;
             $records[] = Interview::create([
                 'applicant_id'    => $a->id,
-                'job_posting_id'  => $a->job_posting_id,
+                'job_posting_id'  => $pId,
                 'interview_stage' => 'initial_screening',
                 'interview_type'  => 'in_person',
                 'scheduled_at'    => now()->subDays(2)->setTime(9, 0),

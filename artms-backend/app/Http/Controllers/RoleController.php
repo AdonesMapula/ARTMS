@@ -16,6 +16,7 @@ class RoleController extends Controller
         // Default system roles
         $systemRoles = [
             ['key' => 'super_admin', 'name' => 'Super Admin', 'is_system' => true],
+            ['key' => 'developer', 'name' => 'Developer', 'is_system' => true],
             ['key' => 'hr_admin', 'name' => 'HR Admin', 'is_system' => true],
             ['key' => 'coo', 'name' => 'COO', 'is_system' => true],
             ['key' => 'department_head', 'name' => 'Department Head', 'is_system' => true],
@@ -24,7 +25,7 @@ class RoleController extends Controller
 
         // Custom roles from database
         $customRoles = CustomRole::where('is_active', true)
-            ->orderBy('name')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($role) {
                 return [

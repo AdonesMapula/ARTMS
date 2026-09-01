@@ -19,23 +19,27 @@
     {{-- Dynamic stage badge --}}
     @php
       $stageLabels = [
-        'interview_1' => 'Initial Interview',
-        'interview_2' => 'Second Interview',
-        'final'       => 'Final Interview',
+        'interview_1'          => 'Initial Interview',
+        'interview_2'          => 'Second Interview',
+        'final'                => 'Final Interview',
+        'technical_assessment' => 'Technical Assessment',
+        'initial_screening'    => 'Initial Screening',
+        'hr_interview'         => 'HR Interview',
+        'managerial_interview' => 'Managerial Interview',
       ];
-      $stageLabel = $stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage));
+      $stageLabel = $stageLabel ?? ($stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage ?? 'interview')));
 
-      $stageBg = match($interview->interview_stage) {
-        'interview_1' => '#dbeafe',
-        'interview_2' => '#fef3c7',
-        'final'       => '#d1fae5',
-        default       => '#e0e7ff',
+      $stageBg = match($interview->interview_stage ?? '') {
+        'interview_1', 'initial_screening'                    => '#dbeafe',
+        'interview_2', 'hr_interview', 'technical_assessment' => '#fef3c7',
+        'final', 'managerial_interview'                       => '#d1fae5',
+        default                                               => '#e0e7ff',
       };
-      $stageColor = match($interview->interview_stage) {
-        'interview_1' => '#1e40af',
-        'interview_2' => '#92400e',
-        'final'       => '#065f46',
-        default       => '#3730a3',
+      $stageColor = match($interview->interview_stage ?? '') {
+        'interview_1', 'initial_screening'                    => '#1e40af',
+        'interview_2', 'hr_interview', 'technical_assessment' => '#92400e',
+        'final', 'managerial_interview'                       => '#065f46',
+        default                                               => '#3730a3',
       };
     @endphp
     <span style="display:inline-block;margin-top:14px;padding:5px 16px;background:{{ $stageBg }};color:{{ $stageColor }};border-radius:999px;font-size:13px;font-weight:700;letter-spacing:0.04em;">

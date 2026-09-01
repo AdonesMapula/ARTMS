@@ -56,9 +56,9 @@ export default function PermissionProtectedRoute({
   }
 
   // ============================================================
-  // SUPER ADMIN BYPASS: Always grant access
+  // SUPER ADMIN & DEVELOPER BYPASS: Always grant access
   // ============================================================
-  if (isSuperAdmin() || userRole === "super_admin") {
+  if (isSuperAdmin() || userRole === "super_admin" || userRole === "developer") {
     return children;
   }
 

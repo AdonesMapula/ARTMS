@@ -37,7 +37,7 @@ class DepartmentCacheService
                     $q->where('department_name', 'like', "%{$search}%")
                       ->orWhere('department_code', 'like', "%{$search}%")
                 )
-                ->orderBy('department_name')
+                ->orderBy('created_at', 'desc')
                 ->get();
         }
 
@@ -46,7 +46,7 @@ class DepartmentCacheService
             self::TTL,
             fn () => Department::withCount(['employees', 'users'])
                 ->with('departmentHeads')
-                ->orderBy('department_name')
+                ->orderBy('created_at', 'desc')
                 ->get()
         );
     }

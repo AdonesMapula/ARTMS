@@ -228,6 +228,7 @@ export default function Interviews() {
   // ── after new interview scheduled ─────────────────────────────────────
   function handleScheduled(newInterview) {
     setScheduleOpen(false);
+    setPage(1);
     fetchInterviews();
     toast.success("Interview Scheduled", "The interview has been scheduled and an email invitation has been sent.");
   }

@@ -2,530 +2,354 @@
 
 namespace Database\Seeders;
 
-use App\Models\AttendanceLog;
-use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Employee;
-use App\Models\EmployeeDocument;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeeSeeder extends Seeder
 {
     public function run(): void
     {
-        $departments = Department::all();
-        if ($departments->isEmpty()) {
-            $this->call(DatabaseSeeder::class);
-            $departments = Department::all();
+        // ── 1. Ensure Standard 10 Departments Exist ──────────────────────────
+        $departmentsData = [
+            ['department_name' => 'Information Technology',    'department_code' => 'IT',    'description' => 'Manages software architecture, systems, and technical infrastructure.'],
+            ['department_name' => 'Human Resources',           'department_code' => 'HR',    'description' => 'Oversees talent acquisition, personnel management, and labor compliance.'],
+            ['department_name' => 'Finance',                   'department_code' => 'FIN',   'description' => 'Handles financial reporting, corporate budgeting, auditing, and payroll.'],
+            ['department_name' => 'Operations',                'department_code' => 'OPS',   'description' => 'Directs daily workflow operations, resource logistics, and supply chain.'],
+            ['department_name' => 'Marketing',                 'department_code' => 'MKT',   'description' => 'Drives brand promotion, digital marketing, public relations, and growth campaigns.'],
+            ['department_name' => 'Administration',            'department_code' => 'ADM',   'description' => 'General corporate facilities management, compliance, and clerical services.'],
+            ['department_name' => 'Software Engineering',      'department_code' => 'ENG',   'description' => 'Product development, core architecture, and full-stack software delivery.'],
+            ['department_name' => 'Quality Assurance',         'department_code' => 'QA',    'description' => 'Software QA testing, automated testing pipelines, and release verification.'],
+            ['department_name' => 'Sales & Business Dev',      'department_code' => 'SALES', 'description' => 'Client acquisition, commercial partnerships, and enterprise accounts.'],
+            ['department_name' => 'Customer Support',          'department_code' => 'CS',    'description' => 'Customer success, post-onboarding support, and helpdesk operations.'],
+        ];
+
+        foreach ($departmentsData as $dept) {
+            $existing = Department::where('department_name', $dept['department_name'])
+                ->orWhere('department_code', $dept['department_code'])
+                ->first();
+
+            if (!$existing) {
+                Department::create($dept);
+            }
         }
 
-        $deptMap = $departments->pluck('id', 'department_name')->toArray();
-        $defaultDeptId = reset($deptMap) ?: 1;
+        // ── 2. Clean out old Employees & Related Tables ──────────────────────
+        Schema::disableForeignKeyConstraints();
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('TRUNCATE TABLE employee_documents, attendance_logs, employees RESTART IDENTITY CASCADE;');
+        } else {
+            DB::table('employee_documents')->truncate();
+            DB::table('attendance_logs')->truncate();
+            DB::table('employees')->truncate();
+        }
+        Schema::enableForeignKeyConstraints();
 
-        // ── Sample Employees (aligned with DATABASE_SCHEMA.md) ──────────────
-        $sampleEmployees = [
+        $deptMap = Department::pluck('id', 'department_name')->toArray();
+
+        // ── 3. Exactly 10 Department Heads Across 10 Departments ─────────────
+        $deptHeads = [
             [
-                'first_name'               => 'Taylor',
-                'middle_name'              => 'A.',
-                'last_name'                => 'Reyes',
-                'email'                    => 'taylor.reyes@artms.com',
-                'phone'                    => '09171234567',
-                'department_id'            => $deptMap['Operations'] ?? $defaultDeptId,
-                'job_title'                => 'Senior Operations Lead',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2023-01-15',
-                'birth_date'               => '1990-04-22',
-                'gender'                   => 'Male',
-                'address'                  => 'Makati City, Metro Manila',
-                'emergency_contact_name'   => 'Carlos Reyes',
-                'emergency_contact_phone'  => '09181234567',
-                'basic_salary'             => 65000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'IT Dept',
+                'middle_name'             => null,
+                'last_name'               => 'Head',
+                'email'                   => 'depthead@artms.com',
+                'phone'                   => '+63 917 100 0001',
+                'department_name'         => 'Information Technology',
+                'job_title'               => 'Head of Information Technology',
+                'basic_salary'            => 115000.00,
+                'hire_date'               => '2021-03-01',
+                'birth_date'              => '1985-08-14',
+                'gender'                  => 'Male',
+                'address'                 => 'IT Park, Lahug, Cebu City, Philippines',
+                'emergency_contact_name'  => 'Maria Head',
+                'emergency_contact_phone' => '+63 917 100 0002',
             ],
             [
-                'first_name'               => 'Morgan',
-                'middle_name'              => null,
-                'last_name'                => 'Lee',
-                'email'                    => 'morgan.lee@artms.com',
-                'phone'                    => '09209876543',
-                'department_id'            => $deptMap['Human Resources'] ?? $defaultDeptId,
-                'job_title'                => 'HR Generalist',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2022-03-03',
-                'birth_date'               => '1993-08-15',
-                'gender'                   => 'Female',
-                'address'                  => 'Quezon City, Metro Manila',
-                'emergency_contact_name'   => 'Sarah Lee',
-                'emergency_contact_phone'  => '09219876543',
-                'basic_salary'             => 45000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Elena',
+                'middle_name'             => 'Marie',
+                'last_name'               => 'Vasquez',
+                'email'                   => 'elena.vasquez@artms.com',
+                'phone'                   => '+63 918 200 0002',
+                'department_name'         => 'Human Resources',
+                'job_title'               => 'Head of Human Resources',
+                'basic_salary'            => 110000.00,
+                'hire_date'               => '2020-06-15',
+                'birth_date'              => '1987-11-20',
+                'gender'                  => 'Female',
+                'address'                 => 'Cebu Business Park, Cebu City, Philippines',
+                'emergency_contact_name'  => 'Carlos Vasquez',
+                'emergency_contact_phone' => '+63 918 200 0003',
             ],
             [
-                'first_name'               => 'Casey',
-                'middle_name'              => 'B.',
-                'last_name'                => 'Tan',
-                'email'                    => 'casey.tan@artms.com',
-                'phone'                    => '09351112222',
-                'department_id'            => $deptMap['Information Technology'] ?? $defaultDeptId,
-                'job_title'                => 'IT Service Desk Specialist',
-                'employment_status'        => 'probationary',
-                'hire_date'                => '2026-07-01',
-                'birth_date'               => '1999-02-10',
-                'gender'                   => 'Male',
-                'address'                  => 'BGC, Taguig City',
-                'emergency_contact_name'   => 'Helen Tan',
-                'emergency_contact_phone'  => '09353334444',
-                'basic_salary'             => 38000.00,
-                'documents_status'         => 'incomplete',
+                'first_name'              => 'Marcus',
+                'middle_name'             => 'James',
+                'last_name'               => 'Sterling',
+                'email'                   => 'marcus.sterling@artms.com',
+                'phone'                   => '+63 919 300 0003',
+                'department_name'         => 'Finance',
+                'job_title'               => 'Head of Finance & Accounting',
+                'basic_salary'            => 125000.00,
+                'hire_date'               => '2019-01-10',
+                'birth_date'              => '1983-04-05',
+                'gender'                  => 'Male',
+                'address'                 => 'Banilad, Mandaue City, Cebu, Philippines',
+                'emergency_contact_name'  => 'Victoria Sterling',
+                'emergency_contact_phone' => '+63 919 300 0004',
             ],
             [
-                'first_name'               => 'Jordan',
-                'middle_name'              => 'C.',
-                'last_name'                => 'Cruz',
-                'email'                    => 'jordan.cruz@artms.com',
-                'phone'                    => '09455556666',
-                'department_id'            => $deptMap['Finance'] ?? $defaultDeptId,
-                'job_title'                => 'Senior Accountant',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2021-09-20',
-                'birth_date'               => '1988-12-05',
-                'gender'                   => 'Male',
-                'address'                  => 'Mandaluyong City',
-                'emergency_contact_name'   => 'Maria Cruz',
-                'emergency_contact_phone'  => '09457778888',
-                'basic_salary'             => 58000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Rodrigo',
+                'middle_name'             => 'Alfonso',
+                'last_name'               => 'Alvarez',
+                'email'                   => 'rodrigo.alvarez@artms.com',
+                'phone'                   => '+63 920 400 0004',
+                'department_name'         => 'Operations',
+                'job_title'               => 'Head of Operations & Logistics',
+                'basic_salary'            => 108000.00,
+                'hire_date'               => '2021-08-01',
+                'birth_date'              => '1986-09-12',
+                'gender'                  => 'Male',
+                'address'                 => 'Poblacion, Lapu-Lapu City, Cebu, Philippines',
+                'emergency_contact_name'  => 'Teresa Alvarez',
+                'emergency_contact_phone' => '+63 920 400 0005',
             ],
             [
-                'first_name'               => 'Riley',
-                'middle_name'              => null,
-                'last_name'                => 'Santos',
-                'email'                    => 'riley.santos@artms.com',
-                'phone'                    => '09569990000',
-                'department_id'            => $deptMap['Operations'] ?? $defaultDeptId,
-                'job_title'                => 'Business Operations Analyst',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2020-06-05',
-                'birth_date'               => '1995-07-19',
-                'gender'                   => 'Female',
-                'address'                  => 'Pasig City, Metro Manila',
-                'emergency_contact_name'   => 'Elena Santos',
-                'emergency_contact_phone'  => '09561112222',
-                'basic_salary'             => 50000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Clara',
+                'middle_name'             => 'Isabel',
+                'last_name'               => 'Del Rosario',
+                'email'                   => 'clara.delrosario@artms.com',
+                'phone'                   => '+63 921 500 0005',
+                'department_name'         => 'Marketing',
+                'job_title'               => 'Head of Marketing & Communications',
+                'basic_salary'            => 105000.00,
+                'hire_date'               => '2022-02-15',
+                'birth_date'              => '1989-07-28',
+                'gender'                  => 'Female',
+                'address'                 => 'Guadalupe, Cebu City, Philippines',
+                'emergency_contact_name'  => 'David Del Rosario',
+                'emergency_contact_phone' => '+63 921 500 0006',
             ],
             [
-                'first_name'               => 'Avery',
-                'middle_name'              => 'D.',
-                'last_name'                => 'Gomez',
-                'email'                    => 'avery.gomez@artms.com',
-                'phone'                    => '09673334444',
-                'department_id'            => $deptMap['Marketing'] ?? $defaultDeptId,
-                'job_title'                => 'Content Specialist',
-                'employment_status'        => 'resigned',
-                'hire_date'                => '2019-02-28',
-                'birth_date'               => '1992-11-30',
-                'gender'                   => 'Female',
-                'address'                  => 'Parañaque City',
-                'emergency_contact_name'   => 'Luis Gomez',
-                'emergency_contact_phone'  => '09675556666',
-                'basic_salary'             => 42000.00,
-                'documents_status'         => 'complete',
-            ],
-            // Additional employees for richer seed data
-            [
-                'first_name'               => 'Samantha',
-                'middle_name'              => 'E.',
-                'last_name'                => 'Villanueva',
-                'email'                    => 'samantha.villanueva@artms.com',
-                'phone'                    => '09281234567',
-                'department_id'            => $deptMap['Finance'] ?? $defaultDeptId,
-                'job_title'                => 'Payroll Officer',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2020-11-10',
-                'birth_date'               => '1991-03-25',
-                'gender'                   => 'Female',
-                'address'                  => 'Las Piñas City, Metro Manila',
-                'emergency_contact_name'   => 'Ramon Villanueva',
-                'emergency_contact_phone'  => '09289876543',
-                'basic_salary'             => 48000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Fernando',
+                'middle_name'             => 'Luis',
+                'last_name'               => 'Gomez',
+                'email'                   => 'fernando.gomez@artms.com',
+                'phone'                   => '+63 922 600 0006',
+                'department_name'         => 'Administration',
+                'job_title'               => 'Head of Corporate Administration',
+                'basic_salary'            => 98000.00,
+                'hire_date'               => '2020-10-01',
+                'birth_date'              => '1984-12-03',
+                'gender'                  => 'Male',
+                'address'                 => 'Tabunok, Talisay City, Cebu, Philippines',
+                'emergency_contact_name'  => 'Sofia Gomez',
+                'emergency_contact_phone' => '+63 922 600 0007',
             ],
             [
-                'first_name'               => 'Marcus',
-                'middle_name'              => null,
-                'last_name'                => 'Dela Torre',
-                'email'                    => 'marcus.delatorre@artms.com',
-                'phone'                    => '09151234567',
-                'department_id'            => $deptMap['Information Technology'] ?? $defaultDeptId,
-                'job_title'                => 'Systems Administrator',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2021-04-01',
-                'birth_date'               => '1989-06-14',
-                'gender'                   => 'Male',
-                'address'                  => 'Caloocan City, Metro Manila',
-                'emergency_contact_name'   => 'Liza Dela Torre',
-                'emergency_contact_phone'  => '09159876543',
-                'basic_salary'             => 55000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Katrina',
+                'middle_name'             => 'Anne',
+                'last_name'               => 'Morales',
+                'email'                   => 'katrina.morales@artms.com',
+                'phone'                   => '+63 923 700 0007',
+                'department_name'         => 'Software Engineering',
+                'job_title'               => 'Head of Software Engineering',
+                'basic_salary'            => 130000.00,
+                'hire_date'               => '2019-11-18',
+                'birth_date'              => '1988-03-25',
+                'gender'                  => 'Female',
+                'address'                 => 'Mandaue Reclamation Area, Cebu, Philippines',
+                'emergency_contact_name'  => 'Julian Morales',
+                'emergency_contact_phone' => '+63 923 700 0008',
             ],
             [
-                'first_name'               => 'Patricia',
-                'middle_name'              => 'G.',
-                'last_name'                => 'Bautista',
-                'email'                    => 'patricia.bautista@artms.com',
-                'phone'                    => '09351113333',
-                'department_id'            => $deptMap['Administration'] ?? $defaultDeptId,
-                'job_title'                => 'Administrative Officer',
-                'employment_status'        => 'contractual',
-                'hire_date'                => '2025-01-15',
-                'birth_date'               => '1998-09-08',
-                'gender'                   => 'Female',
-                'address'                  => 'Marikina City, Metro Manila',
-                'emergency_contact_name'   => 'Jose Bautista',
-                'emergency_contact_phone'  => '09354445555',
-                'basic_salary'             => 32000.00,
-                'documents_status'         => 'pending',
+                'first_name'              => 'Victor',
+                'middle_name'             => 'Manuel',
+                'last_name'               => 'Navarro',
+                'email'                   => 'victor.navarro@artms.com',
+                'phone'                   => '+63 924 800 0008',
+                'department_name'         => 'Quality Assurance',
+                'job_title'               => 'Head of Quality Assurance & Testing',
+                'basic_salary'            => 102000.00,
+                'hire_date'               => '2021-05-10',
+                'birth_date'              => '1990-10-15',
+                'gender'                  => 'Male',
+                'address'                 => 'Basak, San Nicolas, Cebu City, Philippines',
+                'emergency_contact_name'  => 'Angela Navarro',
+                'emergency_contact_phone' => '+63 924 800 0009',
             ],
             [
-                'first_name'               => 'Kevin',
-                'middle_name'              => 'H.',
-                'last_name'                => 'Garcia',
-                'email'                    => 'kevin.garcia@artms.com',
-                'phone'                    => '09461234567',
-                'department_id'            => $deptMap['Marketing'] ?? $defaultDeptId,
-                'job_title'                => 'Digital Marketing Specialist',
-                'employment_status'        => 'probationary',
-                'hire_date'                => '2026-06-01',
-                'birth_date'               => '2000-01-20',
-                'gender'                   => 'Male',
-                'address'                  => 'Valenzuela City, Metro Manila',
-                'emergency_contact_name'   => 'Ana Garcia',
-                'emergency_contact_phone'  => '09469876543',
-                'basic_salary'             => 30000.00,
-                'documents_status'         => 'incomplete',
+                'first_name'              => 'Bianca',
+                'middle_name'             => 'Joy',
+                'last_name'               => 'Sy',
+                'email'                   => 'bianca.sy@artms.com',
+                'phone'                   => '+63 925 900 0009',
+                'department_name'         => 'Sales & Business Dev',
+                'job_title'               => 'Head of Sales & Partnerships',
+                'basic_salary'            => 112000.00,
+                'hire_date'               => '2021-09-01',
+                'birth_date'              => '1987-06-30',
+                'gender'                  => 'Female',
+                'address'                 => 'Mabolo, Cebu City, Philippines',
+                'emergency_contact_name'  => 'Kenneth Sy',
+                'emergency_contact_phone' => '+63 925 900 0010',
             ],
             [
-                'first_name'               => 'Lena',
-                'middle_name'              => null,
-                'last_name'                => 'Mendoza',
-                'email'                    => 'lena.mendoza@artms.com',
-                'phone'                    => '09221234567',
-                'department_id'            => $deptMap['Human Resources'] ?? $defaultDeptId,
-                'job_title'                => 'Recruitment Specialist',
-                'employment_status'        => 'regular',
-                'hire_date'                => '2019-08-01',
-                'birth_date'               => '1987-04-17',
-                'gender'                   => 'Female',
-                'address'                  => 'Malabon City, Metro Manila',
-                'emergency_contact_name'   => 'Pedro Mendoza',
-                'emergency_contact_phone'  => '09229876543',
-                'basic_salary'             => 52000.00,
-                'documents_status'         => 'complete',
-            ],
-            [
-                'first_name'               => 'Daniel',
-                'middle_name'              => 'I.',
-                'last_name'                => 'Ramos',
-                'email'                    => 'daniel.ramos@artms.com',
-                'phone'                    => '09571234567',
-                'department_id'            => $deptMap['Operations'] ?? $defaultDeptId,
-                'job_title'                => 'OJT Intern',
-                'employment_status'        => 'ojt',
-                'hire_date'                => '2026-07-15',
-                'birth_date'               => '2003-03-05',
-                'gender'                   => 'Male',
-                'address'                  => 'Navotas City, Metro Manila',
-                'emergency_contact_name'   => 'Rosa Ramos',
-                'emergency_contact_phone'  => '09579876543',
-                'basic_salary'             => 0.00,
-                'documents_status'         => 'pending',
-            ],
-            [
-                'first_name'               => 'Angela',
-                'middle_name'              => 'J.',
-                'last_name'                => 'Torres',
-                'email'                    => 'angela.torres@artms.com',
-                'phone'                    => '09481234567',
-                'department_id'            => $deptMap['Finance'] ?? $defaultDeptId,
-                'job_title'                => 'Junior Accountant',
-                'employment_status'        => 'terminated',
-                'hire_date'                => '2022-05-10',
-                'birth_date'               => '1996-10-12',
-                'gender'                   => 'Female',
-                'address'                  => 'Paranaque City, Metro Manila',
-                'emergency_contact_name'   => 'Felix Torres',
-                'emergency_contact_phone'  => '09489876543',
-                'basic_salary'             => 35000.00,
-                'documents_status'         => 'complete',
+                'first_name'              => 'Dominic',
+                'middle_name'             => 'Paul',
+                'last_name'               => 'Tan',
+                'email'                   => 'dominic.tan@artms.com',
+                'phone'                   => '+63 926 000 0010',
+                'department_name'         => 'Customer Support',
+                'job_title'               => 'Head of Customer Support & Success',
+                'basic_salary'            => 95000.00,
+                'hire_date'               => '2022-04-11',
+                'birth_date'              => '1991-01-19',
+                'gender'                  => 'Male',
+                'address'                 => 'Linao, Minglanilla, Cebu, Philippines',
+                'emergency_contact_name'  => 'Grace Tan',
+                'emergency_contact_phone' => '+63 926 000 0011',
             ],
         ];
 
-        $summary = [];
+        $outputRows = [];
+        $index = 1;
+        $docBatch = [];
+        $attBatch = [];
+        $now = now();
+        $today = Carbon::today();
 
-        foreach ($sampleEmployees as $index => $empData) {
-            $fullName = trim("{$empData['first_name']} " . ($empData['middle_name'] ? "{$empData['middle_name']} " : '') . $empData['last_name']);
+        $defaultDocTypes = [
+            'birth_cert'    => 'Birth Certificate',
+            'sss_card'      => 'SSS Number / Card / E-1 Form',
+            'tin'           => 'Tax Identification Number (TIN)',
+            'resume'        => 'Updated Resume / Curriculum Vitae',
+            'nbi_clearance' => 'NBI Clearance',
+            'medical_cert'  => 'Medical Clearance / Fit to Work Certificate',
+            'philhealth'    => 'PhilHealth MDR / ID',
+            'pagibig'       => 'Pag-IBIG MID / Member Record',
+            'diploma'       => 'Diploma / Transcript of Records',
+            'photo'         => '2x2 Professional ID Photo',
+        ];
 
-            // 1. Create or Find User account
+        foreach ($deptHeads as $dh) {
+            $deptId = $deptMap[$dh['department_name']] ?? reset($deptMap);
+            $empIdFormatted = 'EMP-' . str_pad($index, 4, '0', STR_PAD_LEFT);
+
+            // Find or create User account for this department head
             $user = User::firstOrCreate(
-                ['email' => $empData['email']],
+                ['email' => $dh['email']],
                 [
-                    'name'          => $fullName,
-                    'password'      => Hash::make('Employee@2026'),
-                    'role'          => 'employee',
-                    'department_id' => $empData['department_id'],
-                    'is_active'     => !in_array($empData['employment_status'], ['resigned', 'terminated']),
+                    'name'          => trim($dh['first_name'] . ' ' . $dh['last_name']),
+                    'first_name'    => $dh['first_name'],
+                    'last_name'     => $dh['last_name'],
+                    'password'      => Hash::make('DeptHead@2024'),
+                    'role'          => 'department_head',
+                    'department_id' => $deptId,
+                    'is_active'     => true,
                 ]
             );
 
-            // 2. Create or Update Employee 201 Record
-            $employee = Employee::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    // New schema columns
-                    'first_name'              => $empData['first_name'],
-                    'middle_name'             => $empData['middle_name'],
-                    'last_name'               => $empData['last_name'],
-                    'email'                   => $empData['email'],
-                    'phone'                   => $empData['phone'],
-                    'department_id'           => $empData['department_id'],
-                    'job_title'               => $empData['job_title'],
-                    'employment_status'       => $empData['employment_status'],
-                    'hire_date'               => $empData['hire_date'],
-                    'birth_date'              => $empData['birth_date'],
-                    'gender'                  => $empData['gender'],
-                    'address'                 => $empData['address'],
-                    'emergency_contact_name'  => $empData['emergency_contact_name'],
-                    'emergency_contact_phone' => $empData['emergency_contact_phone'],
-                    'basic_salary'            => $empData['basic_salary'],
-                    'documents_status'        => $empData['documents_status'],
-                    // Legacy columns (kept in sync for backward compatibility)
-                    'position'                => $empData['job_title'],
-                    'salary'                  => $empData['basic_salary'],
-                    'date_hired'              => $empData['hire_date'],
-                    'contact_number'          => $empData['phone'],
-                    'emergency_contact_number'=> $empData['emergency_contact_phone'],
-                    'employment_type'         => $this->mapEmploymentType($empData['employment_status']),
-                ]
-            );
-
-            // 3. Generate & Assign Employee ID (EMP-XXXX format per schema)
-            $empNumber = $employee->generateEmployeeNumber();
-            if (!$employee->employee_id) {
-                $employee->update(['employee_id' => $empNumber]);
-            } else {
-                $empNumber = $employee->employee_id;
-            }
-            // Also store on user record
-            $user->update(['employee_id' => $empNumber]);
-
-            // 4. Seed 201 Document Checklist & Sample Files
-            $employee->seedDefaultDocuments();
-            $this->seedSampleDocumentFiles($employee, $empNumber);
-
-            // 5. Seed Attendance Logs
-            $this->seedAttendanceLogs($employee, $empData['employment_status']);
-
-            // 6. Seed Audit Log entry
-            AuditLog::firstOrCreate(
-                [
-                    'module'   => 'employee',
-                    'model_id' => $employee->id,
-                    'action'   => 'create',
-                ],
-                [
-                    'user_id'     => $user->id,
-                    'description' => "Initial 201 Employee Record created for {$fullName} ({$empNumber})",
-                    'created_at'  => $empData['hire_date'],
-                ]
-            );
-
-            if ($empData['employment_status'] === 'resigned') {
-                AuditLog::firstOrCreate(
-                    [
-                        'module'   => 'employee',
-                        'model_id' => $employee->id,
-                        'action'   => 'status_change',
-                    ],
-                    [
-                        'user_id'     => 1,
-                        'description' => "Employment status changed to RESIGNED for {$fullName}",
-                        'created_at'  => '2026-05-15',
-                    ]
-                );
+            // Update user's department_id to ensure link
+            if ($user->department_id !== $deptId) {
+                $user->update(['department_id' => $deptId]);
             }
 
-            if ($empData['employment_status'] === 'terminated') {
-                AuditLog::firstOrCreate(
-                    [
-                        'module'   => 'employee',
-                        'model_id' => $employee->id,
-                        'action'   => 'status_change',
-                    ],
-                    [
-                        'user_id'     => 1,
-                        'description' => "Employment status changed to TERMINATED for {$fullName}",
-                        'created_at'  => '2026-06-30',
-                    ]
-                );
-            }
+            $employee = Employee::create([
+                'employee_id'              => $empIdFormatted,
+                'user_id'                  => $user->id,
+                'first_name'               => $dh['first_name'],
+                'middle_name'              => $dh['middle_name'],
+                'last_name'                => $dh['last_name'],
+                'email'                    => $dh['email'],
+                'phone'                    => $dh['phone'],
+                'contact_number'           => $dh['phone'],
+                'department_id'            => $deptId,
+                'job_title'                => $dh['job_title'],
+                'position'                 => $dh['job_title'],
+                'employment_status'        => 'regular',
+                'employment_type'          => 'regular',
+                'hire_date'                => $dh['hire_date'],
+                'date_hired'               => $dh['hire_date'],
+                'birth_date'               => $dh['birth_date'],
+                'gender'                   => $dh['gender'],
+                'address'                  => $dh['address'],
+                'emergency_contact_name'   => $dh['emergency_contact_name'],
+                'emergency_contact_phone'  => $dh['emergency_contact_phone'],
+                'emergency_contact_number' => $dh['emergency_contact_phone'],
+                'basic_salary'             => $dh['basic_salary'],
+                'salary'                   => $dh['basic_salary'],
+                'documents_status'         => 'complete',
+                'clearance_processed'      => false,
+            ]);
 
-            $summary[] = [
-                $empNumber,
-                $fullName,
-                $empData['job_title'],
-                Department::find($empData['department_id'])?->department_name ?? 'N/A',
-                $empData['employment_status'],
-            ];
-        }
-
-        $this->command->info('✅ Employee 201 records seeded successfully!');
-        $this->command->table(
-            ['Employee ID', 'Name', 'Job Title', 'Department', 'Status'],
-            $summary
-        );
-    }
-
-    /**
-     * Map new schema employment_status to legacy employment_type string
-     */
-    private function mapEmploymentType(string $status): string
-    {
-        return match($status) {
-            'regular'       => 'regular',
-            'probationary'  => 'probationary',
-            'contractual'   => 'contractual',
-            'project_based' => 'contractual',
-            'ojt'           => 'ojt',
-            'resigned'      => 'regular',
-            'terminated'    => 'regular',
-            default         => 'regular',
-        };
-    }
-
-    /**
-     * Seed attendance logs based on employment status
-     */
-    private function seedAttendanceLogs(Employee $employee, string $status): void
-    {
-        $today     = now()->toDateString();
-        $yesterday = now()->subDay()->toDateString();
-
-        if (in_array($status, ['regular', 'probationary', 'contractual', 'project_based'])) {
-            AttendanceLog::updateOrCreate(
-                ['employee_id' => $employee->id, 'date' => $today],
-                [
-                    'time_in'      => '08:00:00',
-                    'time_out'     => '17:00:00',
-                    'status'       => 'present',
-                    'late_minutes' => 0,
-                    'hours_worked' => 8.0,
-                    'remarks'      => 'On time / Regular shift',
-                ]
-            );
-            AttendanceLog::updateOrCreate(
-                ['employee_id' => $employee->id, 'date' => $yesterday],
-                [
-                    'time_in'      => '07:55:00',
-                    'time_out'     => '17:05:00',
-                    'status'       => 'present',
-                    'late_minutes' => 0,
-                    'hours_worked' => 8.17,
-                    'remarks'      => 'On time',
-                ]
-            );
-        } elseif ($status === 'ojt') {
-            AttendanceLog::updateOrCreate(
-                ['employee_id' => $employee->id, 'date' => $today],
-                [
-                    'time_in'      => '08:30:00',
-                    'time_out'     => '17:00:00',
-                    'status'       => 'late',
-                    'late_minutes' => 30,
-                    'hours_worked' => 7.5,
-                    'remarks'      => 'OJT trainee — late by 30 mins',
-                ]
-            );
-        } elseif (in_array($status, ['resigned', 'terminated'])) {
-            AttendanceLog::updateOrCreate(
-                ['employee_id' => $employee->id, 'date' => $today],
-                [
-                    'time_in'      => null,
-                    'time_out'     => null,
-                    'status'       => 'absent',
-                    'late_minutes' => 0,
-                    'hours_worked' => 0.0,
-                    'remarks'      => 'Separated / Offboarded',
-                ]
-            );
-        }
-    }
-
-    /**
-     * Generate physical sample test files for employee 201 file storage
-     */
-    private function seedSampleDocumentFiles(Employee $employee, string $empNumber): void
-    {
-        $folder = "employee_documents/{$empNumber}";
-
-        $sampleFiles = [
-            [
-                'type'     => 'resume',
-                'filename' => "Resume_{$empNumber}.pdf",
-                'content'  => "%PDF-1.4 ARTMS Sample Resume Document for Employee {$empNumber}",
-                'status'   => 'verified',
-                'remarks'  => 'Verified original candidate CV',
-            ],
-            [
-                'type'     => 'birth_cert',
-                'filename' => "PSA_BirthCertificate_{$empNumber}.pdf",
-                'content'  => "%PDF-1.4 PSA Birth Certificate Copy for Employee {$empNumber}",
-                'status'   => 'verified',
-                'remarks'  => 'PSA Copy verified',
-            ],
-            [
-                'type'     => 'sss_card',
-                'filename' => "SSS_E1_Form_{$empNumber}.pdf",
-                'content'  => "%PDF-1.4 SSS E1 Member Record for Employee {$empNumber}",
-                'status'   => 'submitted',
-                'remarks'  => 'Submitted for verification',
-            ],
-            [
-                'type'     => 'nbi_clearance',
-                'filename' => "NBI_Clearance_{$empNumber}.pdf",
-                'content'  => "%PDF-1.4 NBI Clearance Document for Employee {$empNumber}",
-                'status'   => 'verified',
-                'remarks'  => 'Valid clearance verified',
-            ],
-            [
-                'type'     => 'medical_cert',
-                'filename' => "Medical_FitToWork_{$empNumber}.pdf",
-                'content'  => "%PDF-1.4 Fit to Work Certificate for Employee {$empNumber}",
-                'status'   => 'verified',
-                'remarks'  => 'Fit to Work verified by clinic',
-            ],
-        ];
-
-        foreach ($sampleFiles as $fileInfo) {
-            $filePath = "{$folder}/{$fileInfo['filename']}";
-            Storage::disk('public')->put($filePath, $fileInfo['content']);
-
-            EmployeeDocument::updateOrCreate(
-                [
+            // Batch documents
+            foreach ($defaultDocTypes as $type => $remarks) {
+                $docBatch[] = [
                     'employee_id'   => $employee->id,
-                    'document_type' => $fileInfo['type'],
-                ],
-                [
-                    'file_path'     => $filePath,
-                    'original_name' => $fileInfo['filename'],
-                    'status'        => $fileInfo['status'],
-                    'remarks'       => $fileInfo['remarks'],
-                    'submitted_at'  => now(),
-                    'verified_at'   => $fileInfo['status'] === 'verified' ? now() : null,
-                ]
+                    'document_type' => $type,
+                    'status'        => 'verified',
+                    'remarks'       => $remarks,
+                    'file_path'     => 'documents/' . strtolower($dh['first_name'] . '_' . $dh['last_name']) . "_{$type}.pdf",
+                    'original_name' => "{$type}.pdf",
+                    'submitted_at'  => $now,
+                    'verified_at'   => $now,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ];
+            }
+
+            // Batch 15 days of attendance logs
+            for ($d = 14; $d >= 0; $d--) {
+                $logDate = $today->copy()->subDays($d);
+                if ($logDate->isWeekend()) {
+                    continue;
+                }
+
+                $timeIn = $logDate->copy()->setTime(7, 55, 0);
+                $timeOut = $logDate->copy()->setTime(17, 10, 0);
+
+                $attBatch[] = [
+                    'employee_id'  => $employee->id,
+                    'date'         => $logDate->toDateString(),
+                    'time_in'      => $timeIn->format('H:i:s'),
+                    'time_out'     => $timeOut->format('H:i:s'),
+                    'status'       => 'present',
+                    'hours_worked' => 9.25,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
+            }
+
+            $outputRows[] = [
+                $empIdFormatted,
+                trim($dh['first_name'] . ' ' . $dh['last_name']),
+                $dh['department_name'],
+                $dh['job_title'],
+                $dh['email'],
+                '₱' . number_format($dh['basic_salary'], 2),
+            ];
+
+            $index++;
+        }
+
+        // Insert batches in bulk
+        if (!empty($docBatch)) {
+            DB::table('employee_documents')->insert($docBatch);
+        }
+        if (!empty($attBatch)) {
+            DB::table('attendance_logs')->insert($attBatch);
+        }
+
+        if (isset($this->command)) {
+            $this->command->info("✅ Successfully seeded exactly 10 Department Head employees across all departments!");
+            $this->command->table(
+                ['Employee ID', 'Name', 'Department', 'Job Title (Dept Head)', 'Email', 'Basic Salary'],
+                $outputRows
             );
         }
     }

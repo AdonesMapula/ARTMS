@@ -53,7 +53,7 @@ class PermissionController extends Controller
     public function getByRole(string $role): JsonResponse
     {
         try {
-            $validRoles = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+            $validRoles = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
             if (!in_array($role, $validRoles)) {
                 return response()->json([
                     'success'     => false,
@@ -62,7 +62,7 @@ class PermissionController extends Controller
                 ], 400);
             }
 
-            if ($role === 'super_admin') {
+            if ($role === 'super_admin' || $role === 'developer') {
                 $permissions = DB::table('permissions')
                     ->orderBy('resource')
                     ->orderBy('name')
@@ -100,7 +100,7 @@ class PermissionController extends Controller
             $user = $request->user();
             $role = $user->role;
 
-            $validRoles = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+            $validRoles = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
             if (!in_array($role, $validRoles)) {
                 return response()->json([
                     'success' => false,
@@ -108,7 +108,7 @@ class PermissionController extends Controller
                 ], 400);
             }
 
-            if ($role === 'super_admin') {
+            if ($role === 'super_admin' || $role === 'developer') {
                 $permissions = DB::table('permissions')
                     ->orderBy('resource')
                     ->orderBy('name')
@@ -143,7 +143,7 @@ class PermissionController extends Controller
     public function updateRolePermissions(Request $request, string $role): JsonResponse
     {
         try {
-            $validRoles = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+            $validRoles = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
             if (!in_array($role, $validRoles)) {
                 return response()->json([
                     'success'     => false,
@@ -152,10 +152,10 @@ class PermissionController extends Controller
                 ], 400);
             }
 
-            if ($role === 'super_admin') {
+            if ($role === 'super_admin' || $role === 'developer') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot modify Super Admin permissions. Super Admin always has full access.',
+                    'message' => 'Cannot modify Super Admin / Developer permissions. Full access is always granted.',
                 ], 403);
             }
 
@@ -290,7 +290,7 @@ class PermissionController extends Controller
     public function checkPermission(string $role, string $permissionName): JsonResponse
     {
         try {
-            $validRoles = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+            $validRoles = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
             if (!in_array($role, $validRoles)) {
                 return response()->json([
                     'success'     => false,
@@ -299,13 +299,13 @@ class PermissionController extends Controller
                 ], 400);
             }
 
-            if ($role === 'super_admin') {
+            if ($role === 'super_admin' || $role === 'developer') {
                 return response()->json([
                     'success'        => true,
                     'role'           => $role,
                     'permission'     => $permissionName,
                     'has_permission' => true,
-                    'reason'         => 'Super Admin has all permissions',
+                    'reason'         => 'Super Admin / Developer has full system access',
                 ]);
             }
 
@@ -449,6 +449,7 @@ class PermissionController extends Controller
     {
         $displayNames = [
             'super_admin'     => 'Super Admin',
+            'developer'       => 'Developer',
             'hr_admin'        => 'HR Admin',
             'coo'             => 'COO',
             'department_head' => 'Department Head',

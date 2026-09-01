@@ -50,9 +50,9 @@ export function usePermissions() {
       setUserRole(user.role);
 
       // ============================================================
-      // SUPER ADMIN BYPASS #1: Hardcoded full access
+      // SUPER ADMIN & DEVELOPER BYPASS #1: Hardcoded full access
       // ============================================================
-      if (user.role === "super_admin") {
+      if (user.role === "super_admin" || user.role === "developer") {
         // Grant wildcard permission that means "access everything"
         setPermissions(["*"]);
         setLoading(false);
@@ -69,9 +69,9 @@ export function usePermissions() {
         setPermissions(permissionNames);
       } catch (apiError) {
         // ============================================================
-        // SUPER ADMIN BYPASS #2: Fallback if API fails
+        // SUPER ADMIN & DEVELOPER BYPASS #2: Fallback if API fails
         // ============================================================
-        if (user.role === "super_admin") {
+        if (user.role === "super_admin" || user.role === "developer") {
           setPermissions(["*"]);
         } else {
           throw apiError;
@@ -82,15 +82,15 @@ export function usePermissions() {
       setError(err);
       
       // ============================================================
-      // SUPER ADMIN BYPASS #3: Final emergency fallback
+      // SUPER ADMIN & DEVELOPER BYPASS #3: Final emergency fallback
       // ============================================================
       try {
         const userStr = localStorage.getItem("artms_user");
         if (userStr) {
           const user = JSON.parse(userStr);
-          if (user.role === "super_admin") {
+          if (user.role === "super_admin" || user.role === "developer") {
             setPermissions(["*"]);
-            setUserRole("super_admin");
+            setUserRole(user.role);
             setLoading(false);
             return;
           }
@@ -109,13 +109,13 @@ export function usePermissions() {
    * Check if user has a specific permission
    * 
    * @param {string} permission - Permission name (e.g., "view_users")
-   * @returns {boolean} - True if user has permission or is Super Admin
+   * @returns {boolean} - True if user has permission or is Super Admin / Developer
    */
   const hasPermission = (permission) => {
     // ============================================================
-    // SUPER ADMIN BYPASS #4: Role-based check
+    // SUPER ADMIN & DEVELOPER BYPASS #4: Role-based check
     // ============================================================
-    if (userRole === "super_admin") {
+    if (userRole === "super_admin" || userRole === "developer") {
       return true;
     }
 
@@ -143,14 +143,14 @@ export function usePermissions() {
    */
   const hasAnyPermission = (permissionList) => {
     // ============================================================
-    // SUPER ADMIN BYPASS #6: Role-based check
+    // SUPER ADMIN & DEVELOPER BYPASS #6: Role-based check
     // ============================================================
-    if (userRole === "super_admin") {
+    if (userRole === "super_admin" || userRole === "developer") {
       return true;
     }
 
     // ============================================================
-    // SUPER ADMIN BYPASS #7: Wildcard check
+    // SUPER ADMIN & DEVELOPER BYPASS #7: Wildcard check
     // ============================================================
     if (permissions.includes("*")) {
       return true;
@@ -169,18 +169,18 @@ export function usePermissions() {
    * Check if user has ALL of the provided permissions
    * 
    * @param {string[]} permissionList - Array of permission names
-   * @returns {boolean} - True if user has all permissions or is Super Admin
+   * @returns {boolean} - True if user has all permissions or is Super Admin / Developer
    */
   const hasAllPermissions = (permissionList) => {
     // ============================================================
-    // SUPER ADMIN BYPASS #8: Role-based check
+    // SUPER ADMIN & DEVELOPER BYPASS #8: Role-based check
     // ============================================================
-    if (userRole === "super_admin") {
+    if (userRole === "super_admin" || userRole === "developer") {
       return true;
     }
 
     // ============================================================
-    // SUPER ADMIN BYPASS #9: Wildcard check
+    // SUPER ADMIN & DEVELOPER BYPASS #9: Wildcard check
     // ============================================================
     if (permissions.includes("*")) {
       return true;
@@ -205,11 +205,11 @@ export function usePermissions() {
   };
 
   /**
-   * Check if current user is Super Admin
+   * Check if current user is Super Admin or Developer
    * @returns {boolean}
    */
   const isSuperAdmin = () => {
-    return userRole === "super_admin" || permissions.includes("*");
+    return userRole === "super_admin" || userRole === "developer" || permissions.includes("*");
   };
 
   return {

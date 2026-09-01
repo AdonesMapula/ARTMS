@@ -39,7 +39,7 @@ class StoreUserRequest extends FormRequest
             'email'         => ['required', 'email', 'max:255'],
             'password'      => $this->filled('password') ? ['string', 'min:8'] : ['nullable'],
             'role'          => ['required', 'string', function ($attribute, $value, $fail) {
-                $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+                $standard = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
                 if (in_array($value, $standard, true)) {
                     return;
                 }

@@ -38,6 +38,16 @@ class UserSeeder extends Seeder
                 'is_active'     => true,
             ],
             [
+                'name'          => 'System Developer',
+                'first_name'    => 'System',
+                'last_name'     => 'Developer',
+                'email'         => 'developer@artms.com',
+                'password'      => Hash::make('Developer@2024'),
+                'role'          => 'developer',
+                'department_id' => $itDept?->id,
+                'is_active'     => true,
+            ],
+            [
                 'name'          => 'HR Administrator',
                 'first_name'    => 'HR',
                 'last_name'     => 'Administrator',
@@ -77,16 +87,6 @@ class UserSeeder extends Seeder
                 'department_id' => $hrDept?->id,
                 'is_active'     => true,
             ],
-            [
-                'name'          => 'Employee User',
-                'first_name'    => 'John',
-                'last_name'     => 'Employee',
-                'email'         => 'employee@artms.com',
-                'password'      => Hash::make('Employee@2024'),
-                'role'          => 'employee',
-                'department_id' => $itDept?->id,
-                'is_active'     => true,
-            ],
         ];
 
         foreach ($users as $userData) {
@@ -99,11 +99,11 @@ class UserSeeder extends Seeder
                 ['Role', 'Name', 'Email', 'Default Password'],
                 [
                     ['Super Admin',     'Super Admin',              'superadmin@artms.com',  'SuperAdmin@2024'],
+                    ['Developer',       'System Developer',         'developer@artms.com',   'Developer@2024'],
                     ['HR Admin',        'HR Administrator',         'hradmin@artms.com',     'HrAdmin@2024'],
                     ['COO',             'Chief Operating Officer',   'coo@artms.com',         'CooUser@2024'],
                     ['Department Head', 'Department Head',          'depthead@artms.com',    'DeptHead@2024'],
                     ['Interviewer',     'Interviewer User',         'interviewer@artms.com', 'Interviewer@2024'],
-                    ['Employee',        'Employee User',            'employee@artms.com',    'Employee@2024'],
                 ]
             );
         }

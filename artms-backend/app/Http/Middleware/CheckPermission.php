@@ -51,8 +51,8 @@ class CheckPermission
             ], 403);
         }
 
-        // Super Admin ALWAYS has all permissions
-        if ($user->role === 'super_admin') {
+        // Super Admin and Developer ALWAYS have all permissions
+        if ($user->role === 'super_admin' || $user->role === 'developer') {
             return $next($request);
         }
 

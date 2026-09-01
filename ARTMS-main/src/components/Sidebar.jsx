@@ -13,6 +13,7 @@ import { preloadRoute } from "../utils/preloadRoute";
 
 const ROLE_LABELS = {
   super_admin:     "Super Admin",
+  developer:       "Developer",
   hr_admin:        "Human Resources Admin",
   coo:             "Chief Operating Officer",
   department_head: "Department Head",

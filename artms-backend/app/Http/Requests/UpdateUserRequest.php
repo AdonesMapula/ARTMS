@@ -58,7 +58,7 @@ class UpdateUserRequest extends FormRequest
             'email'         => ['sometimes', 'email', 'max:255'],
             'password'      => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
             'role'          => ['sometimes', 'string', function ($attribute, $value, $fail) {
-                $standard = ['super_admin', 'hr_admin', 'coo', 'department_head', 'employee'];
+                $standard = ['super_admin', 'developer', 'hr_admin', 'coo', 'department_head', 'employee'];
                 if (in_array($value, $standard, true)) {
                     return;
                 }

@@ -18,8 +18,23 @@ const EMPTY_FORM = {
   address: "", coverLetter: "",
 };
 
-const GENDERS = ["", "Male", "Female"];
+const GENDERS = ["", "Male", "Female", "Prefer not to say"];
 const CIVIL_STATUSES = ["", "Single", "Married", "Divorced", "Widowed", "Separated", "Annulled"];
+
+function calculateAge(birthDateStr) {
+  if (!birthDateStr) return null;
+  const parts = birthDateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [y, m, d] = parts;
+  const birthDate = new Date(y, m - 1, d);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 /**
  * ApplyModal — Inline expandable application form rendered within the job listing page.
@@ -90,11 +105,24 @@ export default function ApplyModal({ open, job, onClose }) {
       });
       if (res.data.success && res.data.data) {
         const p = res.data.data;
+        let parsedDob = p.dateOfBirth || "";
+        let dobUnderAge = false;
+        if (parsedDob) {
+          const age = calculateAge(parsedDob);
+          if (age !== null && age < 18) {
+            parsedDob = "";
+            dobUnderAge = true;
+            setFieldErrors((prev) => ({
+              ...prev,
+              dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+            }));
+          }
+        }
         const next = {
           firstName: p.firstName || "", lastName: p.lastName || "",
           middleName: p.middleName || "", email: p.email || "",
           phone: p.phone || "", address: p.address || "",
-          gender: p.gender || "", dateOfBirth: p.dateOfBirth || "",
+          gender: p.gender || "", dateOfBirth: parsedDob,
           nationality: p.nationality || "", civilStatus: p.civilStatus || "",
         };
         const filled = Object.values(next).filter((v) => v.trim() !== "").length;
@@ -104,8 +132,10 @@ export default function ApplyModal({ open, job, onClose }) {
           ...Object.fromEntries(Object.entries(next).filter(([, v]) => v !== "")),
         }));
         setParseMsg({
-          type: "success",
-          text: `✓ Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct if needed.`,
+          type: dobUnderAge ? "warn" : "success",
+          text: dobUnderAge
+            ? `✓ Resume parsed (${filled} fields). Note: Applicant must be at least 18 years old. Please enter your valid birthdate.`
+            : `✓ Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct if needed.`,
         });
       } else {
         setParseMsg({ type: "warn", text: res.data.message || "Couldn't fully parse the resume. Fill in the remaining fields manually." });
@@ -129,6 +159,19 @@ export default function ApplyModal({ open, job, onClose }) {
     setFieldErrors({});
     if (!resumeFile) { setSubmitError("Please upload your resume before submitting."); return; }
     if (!consent) { setSubmitError("You must accept the informed consent to proceed."); return; }
+
+    if (form.dateOfBirth) {
+      const age = calculateAge(form.dateOfBirth);
+      if (age !== null && age < 18) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+        }));
+        setSubmitError("Applicants must be at least 18 years old. Please re-enter your date of birth.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const fd = new FormData();
@@ -301,8 +344,8 @@ export default function ApplyModal({ open, job, onClose }) {
                 )}
                 {!parsing && parseMsg && (
                   <div className={`mt-3 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm ${parseMsg.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : parseMsg.type === "warn" ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-red-200 bg-red-50 text-red-600"
+                    : parseMsg.type === "warn" ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-red-200 bg-red-50 text-red-600"
                     }`}>
                     {parseMsg.type === "success"
                       ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -339,9 +382,9 @@ export default function ApplyModal({ open, job, onClose }) {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field label="Email Address" required error={fieldErrors.email}>
                   <InlineInput icon={<Mail className="h-4 w-4 text-slate-400" />}>
-                    <input 
-                      type="email" 
-                      value={form.email} 
+                    <input
+                      type="email"
+                      value={form.email}
                       onChange={(e) => {
                         const val = e.target.value;
                         setForm((f) => ({ ...f, email: val }));
@@ -354,28 +397,27 @@ export default function ApplyModal({ open, job, onClose }) {
                         if (fieldErrors.email) {
                           setFieldErrors((prev) => ({ ...prev, email: null }));
                         }
-                      }} 
+                      }}
                       maxLength={100}
-                      className={`${inputCls(fieldErrors.email)} ${
-                        emailStatus === 'valid'
+                      className={`${inputCls(fieldErrors.email)} ${emailStatus === 'valid'
                           ? "!border-emerald-400 focus:!border-emerald-500 focus:!ring-emerald-200"
                           : emailStatus === 'invalid'
-                          ? "!border-rose-400 focus:!border-rose-500 focus:!ring-rose-200 text-rose-600"
-                          : ""
-                      }`}
-                      required 
+                            ? "!border-rose-400 focus:!border-rose-500 focus:!ring-rose-200 text-rose-600"
+                            : ""
+                        }`}
+                      required
                     />
                   </InlineInput>
                   <div className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${emailStatus === 'empty' && !fieldErrors.email ? 'h-0 opacity-0' : 'h-6 opacity-100'}`}>
                     {emailStatus === 'valid' && !fieldErrors.email && (
                       <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 transition-all">
-                        <CheckCircle2 size={14} className="animate-in zoom-in" /> 
+                        <CheckCircle2 size={14} className="animate-in zoom-in" />
                         <span className="animate-in fade-in slide-in-from-left-2 duration-300">Valid email format</span>
                       </div>
                     )}
                     {emailStatus === 'invalid' && !fieldErrors.email && (
                       <div className="flex items-center gap-1.5 text-xs font-bold text-rose-500 transition-all">
-                        <AlertCircle size={14} className="animate-pulse" /> 
+                        <AlertCircle size={14} className="animate-pulse" />
                         <span className="animate-in fade-in slide-in-from-left-2 duration-300">Invalid email format</span>
                       </div>
                     )}
@@ -383,22 +425,45 @@ export default function ApplyModal({ open, job, onClose }) {
                 </Field>
                 <Field label="Mobile Number" error={fieldErrors.phone}>
                   <InlineInput icon={<Phone className="h-4 w-4 text-slate-400" />}>
-                    <input 
-                      value={form.phone} 
+                    <input
+                      value={form.phone}
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9+() -]/g, '');
                         setForm((f) => ({ ...f, phone: val }));
-                      }} 
+                      }}
                       maxLength={20}
-                      placeholder="09xxxxxxxxx" 
-                      className={inputCls(fieldErrors.phone)} 
+                      placeholder="09xxxxxxxxx"
+                      className={inputCls(fieldErrors.phone)}
                     />
                   </InlineInput>
                 </Field>
                 <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
                   <BirthDatePicker
                     value={form.dateOfBirth}
-                    onChange={(val) => setForm((f) => ({ ...f, dateOfBirth: val }))}
+                    onChange={(val) => {
+                      setForm((f) => ({ ...f, dateOfBirth: val }));
+                      if (val) {
+                        const age = calculateAge(val);
+                        if (age !== null && age < 18) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+                          }));
+                        } else {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.dateOfBirth;
+                            return next;
+                          });
+                        }
+                      } else {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.dateOfBirth;
+                          return next;
+                        });
+                      }
+                    }}
                     placeholder="Select date of birth"
                   />
                 </Field>

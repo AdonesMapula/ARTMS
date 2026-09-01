@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, ChevronDown, X, Loader
+  BookOpen, CheckCircle, Clock, Plus, Edit, Trash2, XCircle, Filter, RefreshCw, Eye, FileText, Briefcase, User, DollarSign, Calendar, MousePointerClick, AlertTriangle, ChevronRight, ChevronDown, X, Loader, LayoutGrid, List
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import SearchBar from "../../components/ui/SearchBar";
 import CardSkeleton from "../../components/ui/CardSkeleton";
+import TableSkeleton from "../../components/ui/TableSkeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/Table";
 import Select from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Button from "../../components/ui/Button";
@@ -75,7 +77,8 @@ export default function JobLibrary() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const pageSize = 9;
+  const [viewMode, setViewMode] = useState("list"); // "list" | "grid"
+  const pageSize = 15; // 5 columns x 3 rows = 15 cards per page
 
   // Selected Job Template ID for Split View Detail Panel
   const [selectedJobId, setSelectedJobId] = useState(null);
@@ -191,6 +194,7 @@ export default function JobLibrary() {
           "Success",
           "Job template created and submitted to COO for approval."
         );
+        setPage(1);
       } else {
         await api.put(`/job-library/${formData.id}`, formData);
         showAlert(
@@ -566,8 +570,8 @@ export default function JobLibrary() {
               {/* Cards Grid */}
               <Card className="animate-fade-in transition-all duration-300">
                 <CardHeader className="pb-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                       <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                         <BookOpen className="text-[#111A62]" size={18} /> Job Templates ({filtered.length})
                       </CardTitle>
@@ -595,78 +599,113 @@ export default function JobLibrary() {
                         </Button>
                       )}
                     </div>
+
+                    {/* Grid / List View Toggle */}
+                    <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shrink-0 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          viewMode === "grid"
+                            ? "bg-white text-[#111A62] shadow-xs"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                        title="Grid View (Cards)"
+                      >
+                        <LayoutGrid size={14} />
+                        <span>Cards</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          viewMode === "list"
+                            ? "bg-white text-[#111A62] shadow-xs"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                        title="List View (Table)"
+                      >
+                        <List size={14} />
+                        <span>List</span>
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="py-6">
-                      <CardSkeleton count={6} className="!grid-cols-1 sm:!grid-cols-2 lg:!grid-cols-3" />
+                      {viewMode === "grid" ? (
+                        <CardSkeleton count={10} className="!grid-cols-1 sm:!grid-cols-2 md:!grid-cols-3 lg:!grid-cols-4 xl:!grid-cols-5" />
+                      ) : (
+                        <TableSkeleton rows={8} columns={6} />
+                      )}
                     </div>
                   ) : paginated.length === 0 ? (
                     <div className="py-12 text-center">
                       <FileText size={48} className="mx-auto mb-3 text-slate-300" />
                       <p className="text-sm font-semibold text-slate-600">No job templates found</p>
                     </div>
-                  ) : (
+                  ) : viewMode === "grid" ? (
                     <>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {/* 5-Column Cards Grid */}
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                         {paginated.map((j) => {
                           const isChecked = selectedIds.includes(j.id);
                           return (
                             <Card
                               key={j.id}
                               onClick={() => setSelectedJobId(j.id)}
-                              className={`group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer flex flex-col h-full ${isChecked ? "ring-2 ring-[#111A62] bg-blue-50/20" : ""}`}
+                              className={`group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer flex flex-col h-full rounded-2xl ${isChecked ? "ring-2 ring-[#111A62] bg-blue-50/20" : ""}`}
                             >
-                              <CardContent className="p-5 flex flex-col flex-1 justify-between">
+                              <CardContent className="p-4 flex flex-col flex-1 justify-between">
                                 {/* Top Content */}
                                 <div>
                                   {/* Header */}
-                                  <div className="mb-3 flex items-start justify-between gap-2">
+                                  <div className="mb-2.5 flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
+                                      <div className="flex items-center gap-1.5 mb-1">
                                         {canEdit && (
                                           <input
                                             type="checkbox"
                                             checked={isChecked}
                                             onChange={(e) => handleToggleSelectOne(j.id, e)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer shrink-0"
+                                            className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
                                           />
                                         )}
-                                        <Badge tone="default" className="text-xs font-semibold">
+                                        <Badge tone="default" className="text-[10px] font-semibold font-mono">
                                           JL-{String(j.id).padStart(3, "0")}
                                         </Badge>
-                                        <span className="text-xs text-slate-400">{fmt(j.created_at)}</span>
+                                        <span className="text-[11px] text-slate-400">{fmt(j.created_at)}</span>
                                       </div>
                                       <h3
-                                        className="text-base font-extrabold text-[#111A62] line-clamp-2 min-h-[2.75rem] flex items-center leading-snug"
+                                        className="text-sm font-extrabold text-[#111A62] line-clamp-2 min-h-[2.5rem] flex items-center leading-snug group-hover:text-blue-700 transition-colors"
                                         title={j.job_title}
                                       >
                                         {j.job_title}
                                       </h3>
                                     </div>
-                                    <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize shrink-0">
+                                    <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-[10px] capitalize shrink-0 font-bold">
                                       {j.approval_status}
                                     </Badge>
                                   </div>
 
                                   {/* Details Grid */}
-                                  <div className="mb-4 grid grid-cols-2 gap-2.5">
-                                    <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                      <Briefcase size={16} className="text-slate-400 shrink-0" />
+                                  <div className="mb-3 grid grid-cols-2 gap-2">
+                                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                                      <Briefcase size={14} className="text-slate-400 shrink-0" />
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Category</p>
-                                        <p className="text-xs font-bold text-slate-900 truncate">
+                                        <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Category</p>
+                                        <p className="text-[11px] font-bold text-slate-900 truncate">
                                           {j.job_category || "—"}
                                         </p>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                      <User size={16} className="text-slate-400 shrink-0" />
+                                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                                      <User size={14} className="text-slate-400 shrink-0" />
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Created By</p>
-                                        <p className="text-xs font-bold text-slate-900 truncate">
+                                        <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Created By</p>
+                                        <p className="text-[11px] font-bold text-slate-900 truncate">
                                           {j.creator?.name || "—"}
                                         </p>
                                       </div>
@@ -675,9 +714,9 @@ export default function JobLibrary() {
                                 </div>
 
                                 {/* Actions Bar (Anchored at Bottom) */}
-                                <div className="mt-auto border-t border-slate-100 pt-3 flex items-center justify-between">
+                                <div className="mt-auto border-t border-slate-100 pt-2.5 flex items-center justify-between">
                                   <span className="text-xs font-extrabold text-[#111A62] group-hover:underline flex items-center gap-1">
-                                    View Specification <ChevronRight size={14} />
+                                    View Specification <ChevronRight size={13} />
                                   </span>
                                   {canEdit && (
                                     <button
@@ -688,7 +727,7 @@ export default function JobLibrary() {
                                       className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
                                       title="Delete Template"
                                     >
-                                      <Trash2 size={16} />
+                                      <Trash2 size={15} />
                                     </button>
                                   )}
                                 </div>
@@ -698,7 +737,132 @@ export default function JobLibrary() {
                         })}
                       </div>
 
-                      {filtered.length > 10 && (
+                      {filtered.length > pageSize && (
+                        <div className="mt-6 border-t border-slate-100 pt-4">
+                          <Pagination
+                            page={page}
+                            pageSize={pageSize}
+                            total={filtered.length}
+                            onPageChange={setPage}
+                          />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* List / Table View */}
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                        <Table>
+                          <TableHeader className="bg-slate-50/80">
+                            <TableRow>
+                              {canEdit && (
+                                <TableHead className="w-10">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIds.length === paginated.length && paginated.length > 0}
+                                    onChange={() => handleToggleSelectAll(paginated)}
+                                    className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                                  />
+                                </TableHead>
+                              )}
+                              <TableHead className="w-24">ID</TableHead>
+                              <TableHead>Job Title</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Created By</TableHead>
+                              <TableHead>Date Created</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paginated.map((j) => {
+                              const isChecked = selectedIds.includes(j.id);
+                              return (
+                                <TableRow
+                                  key={j.id}
+                                  onClick={() => setSelectedJobId(j.id)}
+                                  className={`cursor-pointer hover:bg-blue-50/40 transition-colors ${
+                                    isChecked ? "bg-blue-50/30" : ""
+                                  }`}
+                                >
+                                  {canEdit && (
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => handleToggleSelectOne(j.id, e)}
+                                        className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                                      />
+                                    </TableCell>
+                                  )}
+                                  <TableCell>
+                                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                      JL-{String(j.id).padStart(3, "0")}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="max-w-xs sm:max-w-sm">
+                                      <p className="font-extrabold text-[#111A62] text-sm hover:underline">
+                                        {j.job_title}
+                                      </p>
+                                      {j.job_description && (
+                                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                                          {j.job_description}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                                      <Briefcase size={13} className="text-slate-400" />
+                                      {j.job_category || "—"}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                                      <User size={13} className="text-slate-400" />
+                                      {j.creator?.name || "—"}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="text-xs text-slate-500">{fmt(j.created_at)}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge tone={APPROVAL_TONE[j.approval_status] ?? "default"} className="text-xs capitalize font-bold">
+                                      {j.approval_status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setSelectedJobId(j.id)}
+                                        className="h-8 text-xs font-bold text-[#111A62] border-slate-200 hover:bg-slate-100 cursor-pointer"
+                                      >
+                                        View
+                                      </Button>
+                                      {canEdit && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => setDeleteModal({ open: true, job: j })}
+                                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                          title="Delete Template"
+                                        >
+                                          <Trash2 size={14} />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {filtered.length > pageSize && (
                         <div className="mt-6 border-t border-slate-100 pt-4">
                           <Pagination
                             page={page}

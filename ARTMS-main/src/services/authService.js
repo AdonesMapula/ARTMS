@@ -156,6 +156,7 @@ const authService = {
   getRolePath: (role) => {
     const paths = {
       super_admin:     '/superadmin/dashboard',
+      developer:       '/developer/database',
       hr_admin:        '/admin/dashboard',
       coo:             '/coo/dashboard',
       department_head: '/department-head/dashboard',

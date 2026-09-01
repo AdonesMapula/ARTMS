@@ -23,6 +23,21 @@ const EMPTY_FORM = {
 const GENDERS = ["", "Male", "Female", "Non-binary", "Prefer not to say"];
 const CIVIL_STATUSES = ["", "Single", "Married", "Divorced", "Widowed", "Separated", "Annulled"];
 
+function calculateAge(birthDateStr) {
+  if (!birthDateStr) return null;
+  const parts = birthDateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [y, m, d] = parts;
+  const birthDate = new Date(y, m - 1, d);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export default function Apply() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -72,11 +87,24 @@ export default function Apply() {
       });
       if (res.data.success && res.data.data) {
         const p = res.data.data;
+        let parsedDob = p.dateOfBirth || "";
+        let dobUnderAge = false;
+        if (parsedDob) {
+          const age = calculateAge(parsedDob);
+          if (age !== null && age < 18) {
+            parsedDob = "";
+            dobUnderAge = true;
+            setFieldErrors((prev) => ({
+              ...prev,
+              dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+            }));
+          }
+        }
         const next = {
           firstName: p.firstName || "", lastName: p.lastName || "",
           middleName: p.middleName || "", email: p.email || "",
           phone: p.phone || "", address: p.address || "",
-          gender: p.gender || "", dateOfBirth: p.dateOfBirth || "",
+          gender: p.gender || "", dateOfBirth: parsedDob,
           nationality: p.nationality || "", civilStatus: p.civilStatus || "",
         };
         const filled = Object.values(next).filter((v) => v.trim() !== "").length;
@@ -85,8 +113,12 @@ export default function Apply() {
           ...prev,
           ...Object.fromEntries(Object.entries(next).filter(([, v]) => v !== "")),
         }));
-        setParseMsg({ type: "success",
-          text: `Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct anything that looks off.` });
+        setParseMsg({
+          type: dobUnderAge ? "warn" : "success",
+          text: dobUnderAge
+            ? `Resume parsed (${filled} fields). Note: Applicant must be at least 18 years old. Please enter your valid birthdate.`
+            : `Resume parsed — ${filled} field${filled !== 1 ? "s" : ""} auto-filled. Review and correct anything that looks off.`,
+        });
       } else {
         setParsedCount(0);
         setParseMsg({ type: "warn",
@@ -110,6 +142,19 @@ export default function Apply() {
     setFieldErrors({});
     if (!resumeFile) { setSubmitError("Please upload your resume before submitting."); return; }
     if (!consent)    { setSubmitError("You must accept the informed consent to proceed."); return; }
+
+    if (form.dateOfBirth) {
+      const age = calculateAge(form.dateOfBirth);
+      if (age !== null && age < 18) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+        }));
+        setSubmitError("Applicants must be at least 18 years old. Please re-enter your date of birth.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const fd = new FormData();
@@ -303,7 +348,30 @@ export default function Apply() {
                 <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
                   <BirthDatePicker
                     value={form.dateOfBirth}
-                    onChange={(val) => setForm((f) => ({ ...f, dateOfBirth: val }))}
+                    onChange={(val) => {
+                      setForm((f) => ({ ...f, dateOfBirth: val }));
+                      if (val) {
+                        const age = calculateAge(val);
+                        if (age !== null && age < 18) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            dateOfBirth: "Applicants must be at least 18 years old. Please re-enter your date of birth.",
+                          }));
+                        } else {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.dateOfBirth;
+                            return next;
+                          });
+                        }
+                      } else {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.dateOfBirth;
+                          return next;
+                        });
+                      }
+                    }}
                     placeholder="Select date of birth"
                   />
                 </Field>

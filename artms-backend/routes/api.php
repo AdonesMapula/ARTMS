@@ -22,6 +22,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ResumeParserController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\JobCategoryController;
+use App\Http\Controllers\DatabaseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -128,8 +129,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role:coo');
     Route::get('sidebar-counts', [DashboardController::class, 'sidebarCounts']);
 
-    // ── Users  (Super Admin only) ────────────────────────────────────────────
-    Route::middleware('role:super_admin')->group(function () {
+    // ── Users & Permissions & Roles (Super Admin & Developer) ───────────────
+    Route::middleware('role:super_admin,developer')->group(function () {
         Route::get('users/archived', [UserController::class, 'archived']);
         Route::post('users/bulk-archive', [UserController::class, 'bulkArchive']);
         Route::post('users/bulk-restore', [UserController::class, 'bulkRestore']);
@@ -141,7 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('audit-logs', [AuditLogController::class, 'index']);
         Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
         
-        // Permissions Management (Super Admin only)
+        // Permissions Management
         Route::get('permissions', [PermissionController::class, 'index']);
         Route::get('permissions/role/{role}', [PermissionController::class, 'getByRole']);
         Route::post('permissions/role/{role}', [PermissionController::class, 'updateRolePermissions']);
@@ -159,8 +160,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // This allows any logged-in user to fetch their own role's permissions
     Route::get('permissions/my-permissions', [PermissionController::class, 'getMyPermissions']);
 
-    // ── Departments  (Super Admin + HR Admin) ────────────────────────────────
-    Route::middleware('role:super_admin,hr_admin')->group(function () {
+    // ── Departments  (Super Admin + HR Admin + Developer) ───────────────────
+    Route::middleware('role:super_admin,hr_admin,developer')->group(function () {
         Route::post('departments/bulk-delete', [DepartmentController::class, 'bulkDelete']);
         Route::apiResource('departments', DepartmentController::class);
     });
@@ -236,6 +237,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Interviews ───────────────────────────────────────────────────────────
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::apiResource('interviews', InterviewController::class);
+        Route::post('interviews/{interview}/resend-invitation', [InterviewController::class, 'resendInvitation']);
         Route::post('interviews/{interview}/send-reminder',  [InterviewController::class, 'sendReminder']);
         Route::post('interviews/{interview}/livekit-token',  [InterviewController::class, 'generateToken']);
         Route::post('interviews/{interview}/end-session',    [InterviewController::class, 'endSession']);
@@ -276,5 +278,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:hr_admin,super_admin,coo')->group(function () {
         Route::patch('manpower-requests/{manpowerRequest}/approve', [ManpowerRequestController::class, 'approve']);
         Route::get('manpower-requests-approved-for-posting', [ManpowerRequestController::class, 'approvedForPosting']);
+    });
+
+    // ── Developer & Database Management ───────────────────────────────────────
+    Route::middleware('role:developer,super_admin')->prefix('developer')->group(function () {
+        Route::get('database/tables',        [DatabaseController::class, 'tables']);
+        Route::get('database/table-data',    [DatabaseController::class, 'tableData']);
+        Route::post('database/truncate',     [DatabaseController::class, 'truncate']);
+        Route::post('database/bulk-truncate', [DatabaseController::class, 'bulkTruncate']);
+        Route::post('database/purge-except', [DatabaseController::class, 'purgeExcept']);
+        Route::post('database/purge-preset', [DatabaseController::class, 'purgePreset']);
+        Route::post('database/reseed',       [DatabaseController::class, 'reseed']);
     });
 });

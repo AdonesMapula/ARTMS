@@ -67,6 +67,18 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // ── Developer ────────────────────────────────────────────────────────
+        User::firstOrCreate(
+            ['email' => 'developer@artms.com'],
+            [
+                'name'          => 'Lead System Developer',
+                'password'      => Hash::make('Developer@2024'),
+                'role'          => 'developer',
+                'department_id' => $itDept?->id,
+                'is_active'     => true,
+            ]
+        );
+
         // ── HR Admin ─────────────────────────────────────────────────────────
         User::firstOrCreate(
             ['email' => 'hradmin@artms.com'],
@@ -130,6 +142,7 @@ class DatabaseSeeder extends Seeder
         $this->call(PermissionSeeder::class);
         $this->call(ManpowerRequestSeeder::class);
         $this->call(JobPostingSeeder::class);
+        $this->call(ApplicantSeeder::class);
         $this->call(EmployeeSeeder::class);
         $this->call(InterviewSeeder::class);
         $this->call(MessageSeeder::class);

@@ -94,6 +94,10 @@ const HrEmployees = lazy(() => import("../pages/SuperAdmin/HrEmployees"));
 const HrReports = lazy(() => import("../pages/SuperAdmin/HrReports"));
 const HrAttendance = lazy(() => import("../pages/SuperAdmin/HrAttendance"));
 
+// ── Developer Pages ─────────────────────────────────────────────────────────
+const DeveloperLayout = lazy(() => import("../layouts/DeveloperLayout"));
+const DatabaseManager = lazy(() => import("../pages/Developer/DatabaseManager"));
+
 // Debug (temporary)
 const DebugPermissions = lazy(() => import("../pages/DebugPermissions"));
 
@@ -349,15 +353,8 @@ export default function AppRoutes() {
                   </PermissionProtectedRoute>
                 }
               />
-              <Route
-                path="roles"
-                element={
-                  <PermissionProtectedRoute permission="view_roles">
-                    <Roles />
-                  </PermissionProtectedRoute>
-                }
-              />
-              
+              <Route path="roles" element={<Roles />} />
+              <Route path="database" element={<DatabaseManager />} />
               <Route path="settings" element={<SuperAdminSettings />} />
               <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="notifications" element={<AdminNotifications />} />
@@ -384,6 +381,24 @@ export default function AppRoutes() {
               <Route path="hr-reports" element={<HrReports />} />
               <Route path="attendance" element={<HrAttendance />} />
               <Route path="hr-attendance" element={<HrAttendance />} />
+            </Route>
+          </Route>
+
+          {/* ── Developer Portal (role-protected: developer, super_admin) ── */}
+          <Route element={<ProtectedRoute allowedRoles={["developer", "super_admin"]} />}>
+            <Route path="/developer" element={<DeveloperLayout />}>
+              <Route index element={<Navigate to="/developer/database" replace />} />
+              <Route path="database" element={<DatabaseManager />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
+              <Route path="debug-permissions" element={<DebugPermissions />} />
+              <Route path="users" element={<Users />} />
+              <Route path="archived-users" element={<ArchivedUsers />} />
+              <Route path="departments" element={<Departments />} />
+              <Route path="roles" element={<Roles />} />
+              <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="messages" element={<SuperAdminMessages />} />
+              <Route path="profile" element={<SuperAdminProfile />} />
+              <Route path="settings" element={<SuperAdminSettings />} />
             </Route>
           </Route>
 

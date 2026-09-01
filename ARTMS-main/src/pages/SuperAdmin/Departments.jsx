@@ -68,6 +68,7 @@ export default function Departments() {
     } else {
       await departmentService.create(formData);
       toast.success("Department Created", `${formData.department_name || "Department"} has been created successfully.`);
+      setPage(1);
     }
     load();
   };

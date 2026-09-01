@@ -33,7 +33,7 @@ const MIN_YEAR = 1930;
 
 /**
  * BirthDatePicker — Calendar for Date of Birth.
- * - Disables future dates (can only pick today or earlier)
+ * - Disables future dates and dates under minAge (default: 18)
  * - Tap the month/year header to open a Year + Month selector panel
  * - Same polished UI as DatePicker
  *
@@ -41,21 +41,31 @@ const MIN_YEAR = 1930;
  *   value       — ISO date string "YYYY-MM-DD"
  *   onChange    — (isoString) => void
  *   placeholder — string
+ *   minAge      — number (default 18)
  *   className   — wrapper class
  */
 export default function BirthDatePicker({
   value,
   onChange,
   placeholder = "Select date of birth",
+  minAge = 18,
   className,
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Maximum allowed birth date to be at least minAge years old
+  const maxDate = new Date(today.getFullYear() - minAge, today.getMonth(), today.getDate());
+  maxDate.setHours(23, 59, 59, 999);
+  const maxYear = maxDate.getFullYear();
+
   const selected = parseLocalDate(value);
 
   const [open, setOpen] = useState(false);
-  const [viewYear, setViewYear] = useState(selected ? selected.getFullYear() : THIS_YEAR - 25);
+  const [viewYear, setViewYear] = useState(() => {
+    if (selected) return selected.getFullYear();
+    return Math.min(maxYear, THIS_YEAR - 22);
+  });
   const [viewMonth, setViewMonth] = useState(selected ? selected.getMonth() : 0);
   const [animating, setAnimating] = useState(false);
   const [slideDir, setSlideDir] = useState(null);
@@ -115,7 +125,7 @@ export default function BirthDatePicker({
   const handleDayClick = (day) => {
     const clicked = new Date(viewYear, viewMonth, day);
     clicked.setHours(0, 0, 0, 0);
-    if (clicked > today) return; // no future
+    if (clicked > maxDate) return; // Must be at least minAge years old
     onChange?.(toLocalIso(clicked));
     setOpen(false);
   };
@@ -145,16 +155,16 @@ export default function BirthDatePicker({
     );
   };
 
-  const isFuture = (day) => {
+  const isFutureOrUnderAge = (day) => {
     if (!day) return false;
     const d = new Date(viewYear, viewMonth, day);
     d.setHours(0, 0, 0, 0);
-    return d > today;
+    return d > maxDate;
   };
 
-  // Year list from current year down to MIN_YEAR
+  // Year list from maxYear down to MIN_YEAR
   const years = [];
-  for (let y = THIS_YEAR; y >= MIN_YEAR; y--) years.push(y);
+  for (let y = maxYear; y >= MIN_YEAR; y--) years.push(y);
 
   return (
     <div className={cn("relative w-full", className)} ref={containerRef}>
@@ -231,7 +241,7 @@ export default function BirthDatePicker({
                 <button
                   type="button"
                   onClick={() => navigate("next")}
-                  disabled={animating || (viewYear >= THIS_YEAR && viewMonth >= today.getMonth())}
+                  disabled={animating || (viewYear >= maxYear && viewMonth >= maxDate.getMonth())}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-30"
                 >
                   <ChevronRight size={16} />
@@ -259,7 +269,7 @@ export default function BirthDatePicker({
                 {cells.map((day, i) => {
                   const sel = isSelected(day);
                   const tod = isToday(day);
-                  const fut = isFuture(day);
+                  const fut = isFutureOrUnderAge(day);
 
                   return (
                     <div key={i} className="flex items-center justify-center">
@@ -294,7 +304,7 @@ export default function BirthDatePicker({
 
               {/* Footer */}
               <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-                <span className="text-xs text-slate-400 italic">Past dates only</span>
+                <span className="text-xs text-slate-400 italic">Must be at least {minAge} years old</span>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
@@ -330,7 +340,7 @@ export default function BirthDatePicker({
                 >
                   {years.map((y) => {
                     const active = y === viewYear;
-                    const disabled = y > THIS_YEAR;
+                    const disabled = y > maxYear;
                     return (
                       <button
                         key={y}
@@ -339,9 +349,9 @@ export default function BirthDatePicker({
                         disabled={disabled}
                         onClick={() => {
                           setViewYear(y);
-                          // clamp month if viewing future
-                          if (y === THIS_YEAR && viewMonth > today.getMonth()) {
-                            setViewMonth(today.getMonth());
+                          // clamp month if viewing maxYear
+                          if (y === maxYear && viewMonth > maxDate.getMonth()) {
+                            setViewMonth(maxDate.getMonth());
                           }
                         }}
                         className={cn(
@@ -362,8 +372,8 @@ export default function BirthDatePicker({
                 <div className="w-1/2 overflow-y-auto py-2" style={{ scrollbarWidth: "thin" }}>
                   {MONTHS_SHORT.map((m, idx) => {
                     const active = idx === viewMonth;
-                    // disable future months in current year
-                    const disabled = viewYear === THIS_YEAR && idx > today.getMonth();
+                    // disable months beyond max allowed in maxYear
+                    const disabled = viewYear === maxYear && idx > maxDate.getMonth();
                     return (
                       <button
                         key={m}

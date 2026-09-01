@@ -16,7 +16,8 @@ Traditional recruitment processes suffer from fragmented toolsets, manual candid
 - **Applicant Tracking System (ATS)**: Multi-stage candidate pipelines, automated status progression, resume parsing, and application screening.
 - **WebRTC Video Conferencing**: Low-latency, browser-based video interviews powered by **LiveKit Cloud**.
 - **AI-Assisted Evaluations**: Live transcript analysis, automated scoring, and structured candidate assessment reports via **xAI Grok**.
-- **Role-Based Access Control (RBAC)**: Fine-grained permissions across Super Admin, HR Admin, COO, and Department Heads.
+- **Role-Based Access Control (RBAC)**: Fine-grained permissions across Super Admin, Developer, HR Admin, COO, and Department Heads.
+- **Developer Database Management**: Real-time database inspection, table-level truncation, one-click preset purges, and bulk data deletion with customizable table exclusions.
 - **Manpower Requisitions**: Multi-tier approval workflows for departmental staffing requests and job vacancy authorizations.
 - **High-Performance Architecture**: Composite-indexed MySQL database, sub-millisecond Redis cache-aside layer, and consolidated single-flight boot APIs.
 
@@ -198,9 +199,26 @@ Running `php artisan migrate --seed` provisions the following predefined roles f
 | Role | Email | Default Password | Access Level |
 |---|---|---|---|
 | **Super Admin** | `superadmin@artms.com` | `SuperAdmin@2024` | Full system control & configuration |
+| **Developer** | `developer@artms.com` | `Developer@2024` | Database management, schema tracking & diagnostics |
 | **HR Admin** | `hradmin@artms.com` | `HrAdmin@2024` | Recruitment pipelines, job postings & candidates |
 | **COO** | `coo@artms.com` | `CooUser@2024` | High-level executive approvals & reporting |
 | **Department Head** | `depthead@artms.com` | `DeptHead@2024` | Manpower requests & technical evaluations |
+| **Interviewer** | `interviewer@artms.com` | `Interviewer@2024` | Candidate interview evaluation & scoring |
+
+---
+
+## ⚡ Developer Tools & Database Management
+
+Accessible at `/developer/database` (or `/superadmin/database`), the platform includes a dedicated database tracking and cleanup suite:
+
+- **Live Table Explorer**: Inspect schema table names, live row counts, data/index sizes, and storage usage in real time.
+- **Delete Everything Except...**: Bulk wipe all non-excluded tables with zero residue, foreign key constraint handling, and auto-increment sequence resets.
+- **One-Click Purge Presets**:
+  - *Purge Recruitment*: Clears jobs, manpower requests, applicants, and interview reports.
+  - *Purge Workforce*: Clears employees, attendance logs, and payroll items.
+  - *Purge Communications*: Clears messages, conversations, and notifications.
+  - *Wipe All Except System Auth*: Clears all transactional data while preserving users, departments, and roles.
+- **On-Demand Reseeding**: Trigger seeders directly from the dashboard (e.g. 15 distinct job templates, demo candidates).
 
 ---
 

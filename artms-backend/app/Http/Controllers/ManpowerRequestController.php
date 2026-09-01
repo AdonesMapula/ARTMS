@@ -32,7 +32,7 @@ class ManpowerRequestController extends Controller
             })
             ->when(
                 $request->user()->isDepartmentHead(),
-                fn ($q) => $q->where('department_id', $request->user()->department_id)
+                fn ($q) => $q->where('requested_by', $request->user()->id)
             )
             ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);

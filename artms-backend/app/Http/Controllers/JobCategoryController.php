@@ -19,7 +19,7 @@ class JobCategoryController extends Controller
     public function index()
     {
         $categories = $this->cache->remember(CacheKeyService::jobCategories(), 1800, function () {
-            return JobCategory::orderBy('name')->get();
+            return JobCategory::orderBy('created_at', 'desc')->get();
         });
 
         return response()->json($categories);

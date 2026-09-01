@@ -123,6 +123,7 @@ export default function Employees() {
         salary: "", employment_type: "regular", date_hired: new Date().toISOString().slice(0, 10),
         contact_number: "", address: "", emergency_contact_name: "", emergency_contact_number: ""
       });
+      setPage(1);
       fetchEmployees();
       if (res.data?.employee?.id) {
         setSelectedEmpId(res.data.employee.id);

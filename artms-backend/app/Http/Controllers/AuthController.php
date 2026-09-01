@@ -27,6 +27,7 @@ class AuthController extends Controller
         // Specific hardcoded credentials exempt from OTP
         $exemptEmails = [
             'superadmin@artms.com',
+            'developer@artms.com',
             'hradmin@artms.com',
             'coo@artms.com',
             'depthead@artms.com',

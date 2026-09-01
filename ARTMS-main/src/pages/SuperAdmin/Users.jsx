@@ -140,6 +140,7 @@ export default function Users() {
 
       result = await userService.create(createPayload);
       toast.success("User Created", `${combinedName || "New user"} has been created successfully.`);
+      setPage(1);
     }
     load();
     return result;

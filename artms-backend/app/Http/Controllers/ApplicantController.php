@@ -51,7 +51,9 @@ class ApplicantController extends Controller
             ->when($request->job_posting_id, fn ($q) => $q->where('job_posting_id', $request->job_posting_id))
             ->when($request->is_shortlisted, fn ($q) => $q->where('is_shortlisted', true))
             ->when($request->exclude_hired, fn ($q) => $q->where('status', '!=', 'hired'))
-            ->orderByDesc(fn ($q) => $q->select('ai_score')->from('ai_evaluations')->whereColumn('applicant_id', 'applicants.id'))
+            ->when($request->sort_by === 'score_desc', fn ($q) =>
+                $q->orderByDesc(fn ($q2) => $q2->select('ai_score')->from('ai_evaluations')->whereColumn('applicant_id', 'applicants.id'))
+            )
             ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);
 

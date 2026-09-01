@@ -20,7 +20,7 @@ class StoreApplicantRequest extends FormRequest
             'middle_name'      => ['nullable', 'string', 'max:100'],
             'email'            => ['required', 'email', 'max:255'],
             'phone'            => ['nullable', 'string', 'max:20'],
-            'date_of_birth'    => ['nullable', 'date', 'before:today'],
+            'date_of_birth'    => ['nullable', 'date', 'before_or_equal:-18 years'],
             'address'          => ['nullable', 'string', 'max:500'],
             'gender'           => ['nullable', 'string'],
             'civil_status'     => ['nullable', 'string'],
@@ -33,10 +33,11 @@ class StoreApplicantRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'resume.required'             => 'Please upload your resume.',
-            'resume.mimes'                => 'Resume must be a PDF, DOC, DOCX, or TXT file.',
-            'resume.max'                  => 'Resume must not exceed 5MB.',
-            'informed_consent.required'   => 'You must accept the informed consent to proceed.',
+            'date_of_birth.before_or_equal' => 'Applicants must be at least 18 years old to apply. Please re-enter your date of birth.',
+            'resume.required'               => 'Please upload your resume.',
+            'resume.mimes'                  => 'Resume must be a PDF, DOC, DOCX, or TXT file.',
+            'resume.max'                    => 'Resume must not exceed 5MB.',
+            'informed_consent.required'     => 'You must accept the informed consent to proceed.',
         ];
     }
 

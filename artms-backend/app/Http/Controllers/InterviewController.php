@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\GenerateAIInterviewReportJob;
+use App\Mail\InterviewInvitationMail;
 use App\Models\AuditLog;
 use App\Models\Interview;
 use App\Models\InterviewTranscript;
@@ -22,7 +23,7 @@ class InterviewController extends Controller
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->stage, fn ($q) => $q->where('interview_stage', $request->stage))
             ->when($request->applicant_id, fn ($q) => $q->where('applicant_id', $request->applicant_id))
-            ->orderBy('scheduled_at', 'asc')
+            ->orderBy('created_at', 'desc')
             ->paginate($request->per_page ?? 15);
 
         return response()->json($interviews);
@@ -71,19 +72,15 @@ class InterviewController extends Controller
 
         $shouldNotifyApplicant = $request->input('notify_applicant', true);
 
-        if ($applicant && $shouldNotifyApplicant) {
-            try {
-                Mail::send('emails.interview_invitation', [
-                    'applicant' => $applicant,
-                    'interview' => $interview,
-                ], function ($mail) use ($applicant, $stageLabel) {
-                    $mail->to($applicant->email)
-                         ->subject("{$stageLabel} Invitation — ARTMS");
-                });
-            } catch (\Throwable $e) {
-                \Log::error("Failed to send interview invitation to {$applicant->email}: " . $e->getMessage());
-            }
+        if ($applicant && !empty($applicant->email) && $shouldNotifyApplicant) {
             $interview->update(['invitation_sent' => true]);
+            NotificationService::dispatchAsyncMail(function () use ($applicant, $interview, $stageLabel) {
+                try {
+                    Mail::to($applicant->email)->send(new InterviewInvitationMail($applicant, $interview, $stageLabel));
+                } catch (\Throwable $e) {
+                    \Log::error("Failed to send interview invitation to {$applicant->email}: " . $e->getMessage());
+                }
+            });
         }
 
         // Notify targeted interviewer & scheduler
@@ -731,6 +728,10 @@ PROMPT;
      * DELETE /api/interviews/{interview}
      * Delete an interview record and its associated transcripts.
      */
+    /**
+     * DELETE /api/interviews/{interview}
+     * Delete an interview record and its associated transcripts.
+     */
     public function destroy(Interview $interview): JsonResponse
     {
         $id = $interview->id;
@@ -744,5 +745,40 @@ PROMPT;
         return response()->json([
             'message' => 'Interview record deleted successfully.',
         ]);
+    }
+
+    /**
+     * POST /api/interviews/{interview}/resend-invitation
+     * Resend interview invitation email to applicant.
+     */
+    public function resendInvitation(Interview $interview): JsonResponse
+    {
+        $applicant = $interview->applicant;
+        if (! $applicant || empty($applicant->email)) {
+            return response()->json(['message' => 'Applicant email not found.'], 422);
+        }
+
+        $stageLabels = [
+            'technical_assessment' => 'Technical Assessment',
+            'initial_screening'    => 'Initial Screening',
+            'hr_interview'         => 'HR Interview',
+            'managerial_interview' => 'Managerial Interview',
+            'final'                => 'Final Interview',
+            'interview_1'          => 'Initial Interview',
+            'interview_2'          => 'Second Interview',
+        ];
+        $stageLabel = $stageLabels[$interview->interview_stage] ?? ucwords(str_replace('_', ' ', $interview->interview_stage ?? 'interview'));
+
+        NotificationService::dispatchAsyncMail(function () use ($applicant, $interview, $stageLabel) {
+            try {
+                Mail::to($applicant->email)->send(new InterviewInvitationMail($applicant, $interview, $stageLabel));
+            } catch (\Throwable $e) {
+                \Log::error("Failed to resend interview invitation to {$applicant->email}: " . $e->getMessage());
+            }
+        });
+
+        $interview->update(['invitation_sent' => true]);
+
+        return response()->json(['message' => "Interview invitation resent to {$applicant->email}."]);
     }
 }

@@ -32,7 +32,7 @@ class UserController extends Controller
             ->when($request->role, fn ($q) => $q->where('role', $request->role))
             ->when($request->department_id, fn ($q) => $q->where('department_id', $request->department_id));
 
-        $users = $query->orderBy('name')->paginate($request->per_page ?? 15);
+        $users = $query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 15);
 
         return response()->json($users);
     }

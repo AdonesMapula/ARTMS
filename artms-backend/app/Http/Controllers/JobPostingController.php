@@ -51,7 +51,7 @@ class JobPostingController extends Controller
                 ->where('is_published', true)
                 ->where('status', 'published')
                 ->where(fn ($q) => $q->whereNull('closing_date')->orWhere('closing_date', '>=', today()))
-                ->orderBy('posting_date', 'desc')
+                ->orderBy('created_at', 'desc')
                 ->paginate($request->per_page ?? 12);
         });
 

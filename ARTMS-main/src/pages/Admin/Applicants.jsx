@@ -62,7 +62,7 @@ export default function Applicants() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [screeningApplicantId, setScreeningApplicantId] = useState(null);
-  const pageSize = 50;
+  const pageSize = 9;
 
   // Fetch Job Postings for Position Filter Dropdown
   useEffect(() => {
@@ -226,7 +226,7 @@ export default function Applicants() {
   const topCandidates = useMemo(() => {
     return applicants
       .filter((a) => {
-        const score = a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score;
+        const score = a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? a.overall_score;
         if (score == null) return false;
 
         const activeFilter = (aiTab !== "all" ? aiTab : aiSearchQuery) || "";
@@ -240,8 +240,8 @@ export default function Applicants() {
         return true;
       })
       .sort((a, b) => {
-        const scoreA = Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? 0);
-        const scoreB = Number(b.ai_evaluation?.ai_score ?? b.ai_evaluation?.composite_score ?? 0);
+        const scoreA = Number(a.ai_evaluation?.ai_score ?? a.ai_evaluation?.composite_score ?? a.overall_score ?? 0);
+        const scoreB = Number(b.ai_evaluation?.ai_score ?? b.ai_evaluation?.composite_score ?? b.overall_score ?? 0);
         return scoreB - scoreA;
       })
       .slice(0, 3);
@@ -488,6 +488,45 @@ export default function Applicants() {
                 />
               </div>
             </div>
+
+            {/* Interactive Position Filter Chips */}
+            {aiSearchSuggestions.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mt-3.5 scrollbar-none">
+                {aiSearchSuggestions.slice(0, 8).map((pos) => {
+                  const isCurrent =
+                    aiTab === pos.id ||
+                    (pos.id === "all" && (aiTab === "all" || !aiTab) && !aiSearchQuery) ||
+                    (pos.label && aiSearchQuery && aiSearchQuery.toLowerCase() === pos.label.toLowerCase());
+
+                  return (
+                    <button
+                      key={pos.id}
+                      type="button"
+                      onClick={() => {
+                        setAiTab(pos.id);
+                        setAiSearchQuery(pos.id === "all" ? "" : pos.label);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap cursor-pointer shrink-0 border flex items-center gap-1.5 ${
+                        isCurrent
+                          ? "bg-[#111A62] text-white border-[#111A62] shadow-xs"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      <span>{pos.label}</span>
+                      {pos.count > 0 && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isCurrent ? "bg-white/20 text-white font-bold" : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {pos.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </CardHeader>
 
           {/* Content: 3-column grid of Navy Blue Candidate Boxes */}
@@ -501,11 +540,11 @@ export default function Applicants() {
                   const pos = a.job_posting?.job_library?.job_title || a.job_posting?.title || "Position Unspecified";
                   const dept = a.job_posting?.department?.department_name || a.job_posting?.department?.name;
                   const rankText = index === 0 ? "🥇 #1 Top" : index === 1 ? "🥈 #2 High" : "🥉 #3 Rank";
-                  const rankStyle = index === 0 
-                    ? "bg-[#E15B1D]/30 text-[#F97316] border-[#E15B1D]/50 ring-1 ring-[#E15B1D]/30" 
-                    : index === 1 
-                    ? "bg-blue-400/20 text-blue-300 border-blue-400/40" 
-                    : "bg-slate-400/20 text-slate-300 border-slate-400/40";
+                  const rankStyle = index === 0
+                    ? "bg-[#E15B1D]/30 text-[#F97316] border-[#E15B1D]/50 ring-1 ring-[#E15B1D]/30"
+                    : index === 1
+                      ? "bg-blue-400/20 text-blue-300 border-blue-400/40"
+                      : "bg-slate-400/20 text-slate-300 border-slate-400/40";
 
                   return (
                     <div
@@ -642,8 +681,8 @@ export default function Applicants() {
                       key={s.value}
                       onClick={() => handleStatusChange(s.value)}
                       className={`rounded-full px-2.5 py-0.5 border transition cursor-pointer shrink-0 ${status === s.value
-                          ? "bg-[#111A62] text-white border-[#111A62]"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        ? "bg-[#111A62] text-white border-[#111A62]"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                         }`}
                     >
                       {s.label}
@@ -672,8 +711,8 @@ export default function Applicants() {
                         key={a.id}
                         onClick={() => setSelectedApplicantId(a.id)}
                         className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
-                            ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
-                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                           }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -948,7 +987,7 @@ export default function Applicants() {
                   </TableBody>
                 </Table>
 
-                {!loading && total > 10 && (
+                {!loading && total > pageSize && (
                   <div className="mt-4 border-t border-slate-100 pt-4">
                     <Pagination
                       page={page}
@@ -1027,11 +1066,10 @@ function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
   return (
     <div
       onClick={onClick}
-      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
-        active
+      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${active
           ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
           : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
-      }`}
+        }`}
     >
       <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
         <CardContent className="flex items-center gap-3.5 p-4">
