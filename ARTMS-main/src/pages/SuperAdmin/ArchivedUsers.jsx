@@ -222,8 +222,8 @@ export default function ArchivedUsers() {
       </div>
 
       {/* Filters & Search */}
-      <Card>
-        <CardContent className="py-4 px-5">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <CardContent className="py-3 px-4 sm:px-5">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="w-full sm:flex-1 min-w-[220px]">
               <SearchBar
@@ -233,14 +233,14 @@ export default function ArchivedUsers() {
                   setPage(1);
                 }}
                 placeholder="Search archived users by name, email, or role..."
-                className="h-11 text-sm"
+                className="h-9 text-xs"
               />
             </div>
             <div className="flex w-full sm:w-auto gap-3">
               <div className="w-full sm:w-48 shrink-0">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Filter size={14} className="text-slate-400" />
+                    <Filter size={13} className="text-slate-400" />
                   </div>
                   <select
                     value={roleFilter}
@@ -248,7 +248,7 @@ export default function ArchivedUsers() {
                       setRoleFilter(e.target.value);
                       setPage(1);
                     }}
-                    className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-[#111A62] focus:bg-white focus:ring-4 focus:ring-[#111A62]/10"
+                    className="h-9 w-full appearance-none rounded-md border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-850 pl-8 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none transition-colors hover:border-slate-300 dark:hover:border-slate-600 focus:border-[#111A62] dark:focus:border-blue-500 cursor-pointer"
                   >
                     {ROLES.map((r) => (
                       <option key={r.value} value={r.value}>{r.label}</option>
@@ -262,15 +262,18 @@ export default function ArchivedUsers() {
       </Card>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader>
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 py-3 px-4 sm:px-5">
           <div className="flex items-center justify-between">
-            <CardTitle>
-              Archived Users ({filtered.length} {filtered.length === 1 ? "user" : "users"})
+            <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Archived Users</span>
+              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filtered.length} {filtered.length === 1 ? "record" : "records"}
+              </span>
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <THead>
               <tr>
@@ -279,7 +282,7 @@ export default function ArchivedUsers() {
                     type="checkbox"
                     checked={isAllPageSelected}
                     onChange={handleToggleSelectAll}
-                    className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                    className="rounded border-slate-300 dark:border-slate-600 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer"
                   />
                 </TH>
                 <TH>Employee</TH>
@@ -288,23 +291,23 @@ export default function ArchivedUsers() {
                 <TH className="text-right">Actions</TH>
               </tr>
             </THead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     <TD className="w-10 text-center"><Skeleton className="h-4 w-4 rounded" /></TD>
-                    <TD><Skeleton className="h-10 w-48 rounded-lg" /></TD>
-                    <TD><Skeleton className="h-6 w-24 rounded-full" /></TD>
-                    <TD><Skeleton className="h-6 w-32 rounded-lg" /></TD>
-                    <TD><Skeleton className="h-8 w-16 rounded-lg ml-auto" /></TD>
+                    <TD><Skeleton className="h-10 w-48 rounded-md" /></TD>
+                    <TD><Skeleton className="h-5 w-20 rounded" /></TD>
+                    <TD><Skeleton className="h-5 w-28 rounded-md" /></TD>
+                    <TD><Skeleton className="h-7 w-16 rounded-md ml-auto" /></TD>
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-sm font-semibold text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-xs font-semibold text-slate-400">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="rounded-full bg-slate-50 p-3">
-                        <UsersIcon size={24} className="text-slate-300" />
+                      <div className="rounded-md bg-slate-100 dark:bg-slate-800 p-2.5">
+                        <UsersIcon size={22} className="text-slate-400" />
                       </div>
                       No archived users found.
                     </div>
@@ -316,56 +319,56 @@ export default function ArchivedUsers() {
                   const isChecked = selectedIds.includes(user.id);
 
                   return (
-                    <tr key={user.id} className={`transition-colors hover:bg-slate-50/80 ${isChecked ? 'bg-blue-50/40' : ''}`}>
+                    <tr key={user.id} className={`transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}>
                       <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={(e) => handleToggleSelectOne(user.id, e)}
-                          className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                          className="rounded border-slate-300 dark:border-slate-600 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer"
                         />
                       </TD>
                       <TD>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600 shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                             {user.avatar ? (
-                              <img src={user.avatar} alt="avatar" className="h-full w-full rounded-xl object-cover" />
+                              <img src={user.avatar} alt="avatar" className="h-full w-full rounded-md object-cover" />
                             ) : (
                               combinedName.charAt(0).toUpperCase()
                             )}
                           </div>
                           <div>
-                            <p className="font-extrabold text-slate-900 leading-tight">
+                            <p className="font-bold text-xs text-slate-900 dark:text-slate-100 leading-tight">
                               {combinedName}
-                              {user.employee_id && <span className="ml-2 text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">ID: {user.employee_id}</span>}
+                              {user.employee_id && <span className="ml-1.5 text-[10px] font-mono font-medium text-slate-400">ID: {user.employee_id}</span>}
                             </p>
-                            <p className="text-[11px] font-medium text-slate-500 mt-0.5">{user.email}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{user.email}</p>
                           </div>
                         </div>
                       </TD>
                       <TD>
-                        <Badge tone={ROLE_TONE[user.role] ?? "default"} className="px-2.5 py-1 text-[10px] uppercase tracking-wide font-black">
+                        <Badge tone={ROLE_TONE[user.role] ?? "default"} className="px-1.5 py-0.5 text-[10px] uppercase font-mono tracking-wider">
                           {user.role?.replace(/_/g, " ")}
                         </Badge>
                       </TD>
                       <TD>
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-700">{user.department?.name || user.department?.department_name || "N/A"}</span>
-                          {user.department && <span className="text-[10px] font-semibold text-slate-400">Dept ID: {user.department.id}</span>}
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{user.department?.name || user.department?.department_name || "N/A"}</span>
+                          {user.department && <span className="text-[10px] font-mono text-slate-400">Dept ID: {user.department.id}</span>}
                         </div>
                       </TD>
                       <TD>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+                            className="h-7.5 rounded-md text-xs font-semibold flex items-center gap-1.5 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                             onClick={() => {
                               setSelectedUser(user);
                               setSlideOverOpen(true);
                             }}
                           >
-                            <Eye size={14} />
+                            <Eye size={13} />
                             View Details
                           </Button>
                         </div>
@@ -378,7 +381,7 @@ export default function ArchivedUsers() {
           </Table>
         </CardContent>
         {total > pageSize && (
-          <div className="border-t border-slate-100 p-4 bg-slate-50 rounded-b-3xl">
+          <div className="border-t border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-850/50">
             <Pagination
               currentPage={page}
               totalPages={Math.ceil(total / pageSize)}

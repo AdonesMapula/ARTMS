@@ -12,12 +12,12 @@ import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { preloadRoute } from "../utils/preloadRoute";
 
 const ROLE_LABELS = {
-  super_admin:     "Super Admin",
-  developer:       "Developer",
-  hr_admin:        "Human Resources Admin",
-  coo:             "Chief Operating Officer",
+  super_admin: "Super Admin",
+  developer: "Developer",
+  hr_admin: "Human Resources Admin",
+  coo: "Chief Operating Officer",
   department_head: "Department Head",
-  employee:        "Employee",
+  employee: "Employee",
 };
 
 const getRoleLabel = (role) =>
@@ -48,27 +48,27 @@ function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
     <button
       type="button"
       className={cn(
-        "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
-        isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
+        "flex items-center rounded-md font-semibold transition-all duration-150 focus:outline-none select-none",
+        isCollapsed ? "justify-center w-9 h-9 mx-auto px-0" : "w-full px-2.5 py-2 gap-2 text-xs",
         anyChildActive
-          ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
-          : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
+          ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316] font-bold"
+          : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white [&_.nav-icon]:text-slate-500 dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-slate-900 dark:hover:[&_.nav-icon]:text-white"
       )}
     >
       {it.icon && (
-        <span className="nav-icon text-base transition-colors shrink-0">{it.icon}</span>
+        <span className="nav-icon text-sm transition-colors shrink-0">{it.icon}</span>
       )}
-      
+
       <div className={cn("flex items-center justify-between overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0 ml-0" : "flex-1 opacity-100 ml-2")}>
         <span className="truncate text-left">{it.label}</span>
         <div className="flex items-center shrink-0">
           {it.badge && (
-            <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A]">
+            <span className="rounded-[3px] font-mono bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
               {it.badge}
             </span>
           )}
-          <span className="text-slate-400 transition-transform duration-200 ml-2">
-            {open ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
+          <span className="text-slate-400 transition-transform duration-200 ml-1.5">
+            {open ? <FiChevronDown size={13} /> : <FiChevronRight size={13} />}
           </span>
         </div>
       </div>
@@ -86,11 +86,11 @@ function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
                 {triggerContent}
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold">
+            <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold rounded-md text-xs">
               <div className="flex items-center">
                 {it.label}
                 {it.badge && (
-                  <span className="ml-2 rounded-full bg-[#FD761A] px-1.5 py-0.5 text-[9px] text-white">
+                  <span className="ml-2 rounded-[3px] font-mono bg-amber-500 px-1.5 py-0.2 text-[9px] text-white font-bold">
                     {it.badge}
                   </span>
                 )}
@@ -98,11 +98,11 @@ function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
             </TooltipContent>
           </Tooltip>
 
-          <PopoverContent side="right" sideOffset={12} className="w-56 p-2 rounded-xl border border-[var(--artms-border)] shadow-xl z-[200]">
-            <div className="px-2 py-1.5 mb-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{it.label}</p>
+          <PopoverContent side="right" sideOffset={12} className="w-56 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F163D] shadow-xl z-[200]">
+            <div className="px-2 py-1 mb-1 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{it.label}</p>
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {it.children.map((child) => (
                 <li key={child.to}>
                   <NavLink
@@ -112,21 +112,21 @@ function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
                     onFocus={() => preloadRoute(child.to)}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center rounded-lg px-2 py-2 gap-2 text-sm font-semibold transition-all duration-200 focus:outline-none group",
+                        "flex items-center rounded-md px-2 py-1.5 gap-2 text-xs font-semibold transition-all duration-150 focus:outline-none group",
                         isActive
-                          ? "bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white"
+                          ? "bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white font-bold"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                       )
                     }
                   >
                     {child.icon && (
-                      <span className="nav-icon text-sm transition-colors shrink-0 group-hover:text-[#111A62]">
+                      <span className="nav-icon text-xs transition-colors shrink-0 group-hover:text-[#111A62]">
                         {child.icon}
                       </span>
                     )}
                     <span className="flex-1 truncate">{child.label}</span>
                     {child.badge && (
-                      <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[10px] font-bold text-[#FD761A]">
+                      <span className="rounded-[3px] font-mono bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
                         {child.badge}
                       </span>
                     )}
@@ -150,37 +150,37 @@ function NavGroupItem({ it, isCollapsed, setIsCollapsed }) {
 
         {/* Children — indented */}
         <CollapsibleContent className="sidebar-collapsible-content overflow-hidden">
-          <ul className="mt-0.5 space-y-0.5 transition-all duration-300 pl-4">
-          {it.children.map((child) => (
-            <li key={child.to}>
-              <NavLink
-                to={child.to}
-                end={child.end}
-                onMouseEnter={() => preloadRoute(child.to)}
-                onFocus={() => preloadRoute(child.to)}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center rounded-xl font-semibold transition-all duration-200 group focus:outline-none px-3 py-2 gap-2 text-sm",
-                    isActive
-                      ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
-                      : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
-                  )
-                }
-              >
-                {child.icon && (
-                  <span className="nav-icon text-sm transition-colors shrink-0">{child.icon}</span>
-                )}
-                <div className="flex flex-1 items-center justify-between overflow-hidden transition-all duration-300">
-                  <span className="truncate">{child.label}</span>
-                  {child.badge && (
-                    <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A] ml-2">
-                      {child.badge}
-                    </span>
+          <ul className="mt-0.5 space-y-0.5 transition-all duration-300 pl-3">
+            {it.children.map((child) => (
+              <li key={child.to}>
+                <NavLink
+                  to={child.to}
+                  end={child.end}
+                  onMouseEnter={() => preloadRoute(child.to)}
+                  onFocus={() => preloadRoute(child.to)}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center rounded-md font-semibold transition-all duration-150 group focus:outline-none px-2.5 py-1.5 gap-2 text-xs",
+                      isActive
+                        ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white font-bold [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+                        : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white [&_.nav-icon]:text-slate-500 dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-slate-900 dark:hover:[&_.nav-icon]:text-white"
+                    )
+                  }
+                >
+                  {child.icon && (
+                    <span className="nav-icon text-xs transition-colors shrink-0">{child.icon}</span>
                   )}
-                </div>
-              </NavLink>
-            </li>
-          ))}
+                  <div className="flex flex-1 items-center justify-between overflow-hidden transition-all duration-300">
+                    <span className="truncate">{child.label}</span>
+                    {child.badge && (
+                      <span className="rounded-[3px] font-mono bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 ml-2">
+                        {child.badge}
+                      </span>
+                    )}
+                  </div>
+                </NavLink>
+              </li>
+            ))}
           </ul>
         </CollapsibleContent>
       </Collapsible>
@@ -193,14 +193,14 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
   if (it.type === "label") {
     if (isCollapsed) {
       return (
-        <li className="pt-6 first:pt-2 flex justify-center">
+        <li className="pt-4 first:pt-1 flex justify-center">
           <div className="w-8 h-[1px] bg-slate-200 dark:bg-slate-800" />
         </li>
       );
     }
     return (
-      <li className="pt-6 first:pt-2 overflow-hidden transition-all duration-300">
-        <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+      <li className="pt-4 first:pt-1 overflow-hidden transition-all duration-300">
+        <p className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap select-none">
           {it.label}
         </p>
       </li>
@@ -227,21 +227,21 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
       onFocus={() => preloadRoute(it.to)}
       className={({ isActive }) =>
         cn(
-          "flex items-center rounded-xl font-semibold transition-all duration-200 focus:outline-none",
-          isCollapsed ? "justify-center w-10 h-10 mx-auto px-0" : "w-full px-3 py-2.5 gap-2 text-sm",
+          "flex items-center rounded-md font-semibold transition-all duration-150 focus:outline-none select-none",
+          isCollapsed ? "justify-center w-9 h-9 mx-auto px-0" : "w-full px-2.5 py-2 gap-2 text-xs",
           isActive
-            ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
-            : "border-l-[3px] border-l-transparent text-slate-700 dark:text-slate-300 hover:bg-[#111A62]/5 dark:hover:bg-white/5 hover:text-[#111A62] dark:hover:text-white [&_.nav-icon]:text-[#4D569E] dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-[#111A62] dark:hover:[&_.nav-icon]:text-white"
+            ? "border-l-[3px] border-l-[#111A62] dark:border-l-[#F97316] bg-[#111A62]/10 dark:bg-[#3B4BA0]/30 text-[#111A62] dark:text-white font-bold [&_.nav-icon]:text-[#111A62] dark:[&_.nav-icon]:text-[#F97316]"
+            : "border-l-[3px] border-l-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white [&_.nav-icon]:text-slate-500 dark:[&_.nav-icon]:text-slate-400 hover:[&_.nav-icon]:text-slate-900 dark:hover:[&_.nav-icon]:text-white"
         )
       }
     >
       {it.icon && (
-        <span className="nav-icon text-base transition-colors shrink-0">{it.icon}</span>
+        <span className="nav-icon text-sm transition-colors shrink-0">{it.icon}</span>
       )}
       <div className={cn("flex items-center justify-between overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0 ml-0" : "flex-1 opacity-100 ml-2")}>
         <span className="truncate">{it.label}</span>
         {it.badge && (
-          <span className="rounded-full bg-[#FD761A]/15 px-2 py-0.5 text-[11px] font-bold text-[#FD761A] ml-2">
+          <span className="rounded-[3px] font-mono bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 ml-2">
             {it.badge}
           </span>
         )}
@@ -256,11 +256,11 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
           <TooltipTrigger asChild>
             {linkContent}
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold">
+          <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold rounded-md text-xs">
             <div className="flex items-center">
               {it.label}
               {it.badge && (
-                <span className="ml-2 rounded-full bg-[#FD761A] px-1.5 py-0.5 text-[9px] text-white">
+                <span className="ml-2 rounded-[3px] font-mono bg-amber-500 px-1.5 py-0.2 text-[9px] text-white font-bold">
                   {it.badge}
                 </span>
               )}
@@ -276,7 +276,7 @@ function NavItem({ it, isCollapsed, setIsCollapsed }) {
 
 export default function Sidebar({ brand = "ARTMS", items = [] }) {
   const { user, logout } = useAuth();
-  const navigate          = useNavigate();
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const [counts, setCounts] = useState({
@@ -294,7 +294,7 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
     try {
       const { data } = await api.get("/sidebar-counts");
       if (data) setCounts(data);
-    } catch (e) {}
+    } catch (e) { }
   }, [user]);
 
   useEffect(() => {
@@ -388,32 +388,32 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
   return (
     <TooltipProvider delayDuration={0}>
       <aside className={cn(
-        "hidden border-r border-[var(--artms-border)] bg-[#F3F0F1] dark:bg-[#0B0F2E] lg:block transition-all duration-300 ease-in-out z-40 shrink-0",
-        isCollapsed ? "w-[72px]" : "w-72"
+        "hidden border-r border-slate-200/90 bg-slate-100/75 dark:bg-[#0B0F2E] dark:border-slate-800 lg:block transition-all duration-300 ease-in-out z-40 shrink-0",
+        isCollapsed ? "w-[68px]" : "w-64"
       )}>
         <div className="sticky top-0 h-screen flex flex-col relative w-full overflow-hidden">
-          {/* Shadcn-style Toggle Button */}
+          {/* Architectural Toggle Button */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -right-3 top-7 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--artms-border)] bg-white dark:bg-[#0F163D] text-slate-500 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white z-50 focus:outline-none"
+            className="absolute -right-2.5 top-6 flex h-5 w-5 items-center justify-center rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0F163D] text-slate-500 dark:text-slate-300 shadow-2xs transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#111A62] dark:hover:text-white z-50 focus:outline-none"
             aria-label="Toggle Sidebar"
           >
-            {isCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
+            {isCollapsed ? <FiChevronRight size={12} /> : <FiChevronLeft size={12} />}
           </button>
 
           {/* Brand */}
           <div className={cn(
-            "border-b border-[var(--artms-border)] py-5 flex items-center transition-all duration-300",
-            isCollapsed ? "px-0 justify-center h-[81px]" : "px-5 justify-start h-[81px]"
+            "border-b border-slate-200/90 dark:border-slate-800 py-4 flex items-center transition-all duration-300 bg-white/50 dark:bg-[#0F163D]/40",
+            isCollapsed ? "px-0 justify-center h-[70px]" : "px-4 justify-start h-[70px]"
           )}>
-            <div className="flex items-center gap-3 overflow-hidden">
+            <div className="flex items-center gap-2.5 overflow-hidden">
               <img
                 src={artmsLogo}
                 alt="ARTMS Logo"
-                className={cn("shrink-0 rounded-lg object-contain transition-all duration-300", isCollapsed ? "h-8 w-8" : "h-10 w-10")}
+                className={cn("shrink-0 rounded-md object-contain transition-all duration-300", isCollapsed ? "h-8 w-8" : "h-9 w-9")}
               />
-              <div className={cn("flex flex-col leading-tight overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0" : "w-[160px] opacity-100")}>
-                <span className="font-logo text-[1.35rem] font-extrabold tracking-[-0.03em] leading-none text-[#111A62] dark:text-white whitespace-nowrap transition-colors">
+              <div className={cn("flex flex-col leading-tight overflow-hidden transition-all duration-300", isCollapsed ? "w-0 opacity-0" : "w-[150px] opacity-100")}>
+                <span className="font-logo text-lg font-bold tracking-tight text-[#111A62] dark:text-white whitespace-nowrap transition-colors">
                   {brand}
                 </span>
                 <span className="font-sans text-[10px] font-normal tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap mt-0.5">
@@ -424,42 +424,42 @@ export default function Sidebar({ brand = "ARTMS", items = [] }) {
           </div>
 
           {/* Nav items */}
-          <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 overflow-x-hidden custom-scrollbar">
-            <ul className="space-y-1">
+          <nav className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3 overflow-x-hidden custom-scrollbar">
+            <ul className="space-y-0.5">
               {formattedItems.map((it, idx) => (
-                <NavItem 
-                  key={it.to ?? (it.type === "label" ? `label-${idx}` : `group-${idx}`)} 
-                  it={it} 
-                  isCollapsed={isCollapsed} 
-                  setIsCollapsed={setIsCollapsed} 
+                <NavItem
+                  key={it.to ?? (it.type === "label" ? `label-${idx}` : `group-${idx}`)}
+                  it={it}
+                  isCollapsed={isCollapsed}
+                  setIsCollapsed={setIsCollapsed}
                 />
               ))}
             </ul>
           </nav>
 
           {/* User info + logout */}
-          <div className="border-t border-[var(--artms-border)] px-4 py-4 mt-auto">
-            <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "flex-col gap-3 justify-center" : "gap-3")}>
+          <div className="border-t border-slate-200/90 dark:border-slate-800 px-3 py-3 mt-auto bg-white/50 dark:bg-[#0F163D]/40">
+            <div className={cn("flex items-center transition-all duration-300", isCollapsed ? "flex-col gap-2.5 justify-center" : "gap-2.5")}>
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
+                <img src={user.avatar} alt="Avatar" className="h-8 w-8 shrink-0 rounded-md object-cover border border-slate-200 dark:border-slate-700" />
               ) : (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--artms-primary)] text-sm font-bold text-white">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#111A62] text-xs font-bold text-white shadow-2xs">
                   {initials}
                 </span>
               )}
               <div className={cn("flex flex-col overflow-hidden transition-all duration-300", isCollapsed ? "w-0 h-0 opacity-0" : "flex-1 opacity-100")}>
-                <p className="truncate text-sm font-extrabold text-[#111A62] dark:text-white transition-colors">{user?.name ?? "User"}</p>
-                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                <p className="truncate text-xs font-bold text-slate-900 dark:text-white transition-colors">{user?.name ?? "User"}</p>
+                <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                   {getRoleLabel(user?.role)}
                 </p>
               </div>
-              
+
               {isCollapsed ? (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     {logoutButtonContent}
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold z-[200]">
+                  <TooltipContent side="right" sideOffset={12} className="bg-[#111A62] text-white font-semibold text-xs z-[200]">
                     Sign out
                   </TooltipContent>
                 </Tooltip>

@@ -14,7 +14,10 @@ Traditional recruitment processes suffer from fragmented toolsets, manual candid
 
 ### Core Features
 - **Applicant Tracking System (ATS)**: Multi-stage candidate pipelines, automated status progression, resume parsing, and application screening.
-- **WebRTC Video Conferencing**: Low-latency, browser-based video interviews powered by **LiveKit Cloud**.
+- **WebRTC Video Conferencing & Multi-Interviewer Sync**: Real-time browser-based video interviews powered by **LiveKit Cloud** and `BroadcastChannel`, featuring live panel presence (1–8+ interviewers), active speaker tracking, shared collaborative notes, 1–5 star rubric scoring, and workflow checklists.
+- **Strict Role-Based Views (RBAC)**: Distinct Interviewer View (telemetry HUD, Gemini transcribe, contextual AI questions, scoring) and Candidate View (distraction-free, zero telemetry or AI data over the wire).
+- **MediaPipe Facial Telemetry & Live Speech-to-Text**: Real-time eye contact, posture, composure, and engaged attention HUD coupled with live transcription.
+- **Strict Session Reset Guarantees**: Complete automatic wipe of previous sentiment metrics and transcripts upon each new call session, preventing data leakage across interviews for the same applicant.
 - **AI-Assisted Evaluations**: Live transcript analysis, automated scoring, and structured candidate assessment reports via **xAI Grok**.
 - **Role-Based Access Control (RBAC)**: Fine-grained permissions across Super Admin, Developer, HR Admin, COO, and Department Heads.
 - **Developer Database Management**: Real-time database inspection, table-level truncation, one-click preset purges, and bulk data deletion with customizable table exclusions.
@@ -219,6 +222,35 @@ Accessible at `/developer/database` (or `/superadmin/database`), the platform in
   - *Purge Communications*: Clears messages, conversations, and notifications.
   - *Wipe All Except System Auth*: Clears all transactional data while preserving users, departments, and roles.
 - **On-Demand Reseeding**: Trigger seeders directly from the dashboard (e.g. 15 distinct job templates, demo candidates).
+
+---
+
+## 🎥 Real-Time Video Interview & Synchronization Suite
+
+Accessible at `/admin/interviews/:id/room` (or `/superadmin/interviews/:id/room`), the platform features an enterprise video assessment room:
+
+- **Role-Based Layouts**:
+  - **Interviewer View**: Video stage with MediaPipe telemetry HUD, dynamic candidate strengths/gaps analysis, real-time Gemini transcribe stream, and post-interview checklist.
+  - **Candidate View**: Minimalist interview stage featuring panelist video grid and picture-in-picture local camera tile with strict telemetry isolation.
+- **Multi-Interviewer Live Collaboration**:
+  - **Panel Presence**: Dynamic grid supporting 1 to 8+ connected panelists with active speaking indicators and invite links.
+  - **Shared Team Notes**: Real-time collaborative notepad with active-editor presence indicators.
+  - **Isolated Private Notes**: Secure local notepad for personal evaluator annotations.
+  - **Rubric Scoring Matrix**: 1–5 star rating system with instant room average computation.
+  - **Live HR Camera Tile**: Integrated self-camera preview with LiveKit track detection and local webcam fallback.
+- **Strict Session Data Isolation**:
+  - Automatically wipes prior sentiment analysis and transcription data upon each new call session, preventing data leakage across different interviews for the same applicant.
+  - Initial telemetry defaults to calibrated standby (`0%`) until live facial frames are processed.
+- **Radix Popover Portals in Data Tables**:
+  - Inline status update dropdowns in the Interviews table (`/admin/interviews`) are rendered via React Portals, preventing table overflow clipping and dynamically flipping to avoid viewport collisions.
+
+---
+
+## 📜 Session Changelogs & Documentation
+
+- [SESSION_CHANGELOG_2026-09-05.md](file:///c:/Users/My%20PC/Desktop/ARTMS/SESSION_CHANGELOG_2026-09-05.md) — Video Interview Suite Overhaul, Multi-Interviewer Sync, Light Mode Theme, Session Reset Guarantees, and Table Status Clipping Fix.
+- [SESSION_CHANGELOG_2026-09-01.md](file:///c:/Users/My%20PC/Desktop/ARTMS/SESSION_CHANGELOG_2026-09-01.md) — Developer Role & Portal, Database Live Inspector, Interactive Permissions, and Department Head PRF History.
+- [SESSION_CHANGELOG_2026-08-30.md](file:///c:/Users/My%20PC/Desktop/ARTMS/SESSION_CHANGELOG_2026-08-30.md) — Public Application Flow, Resume Parsing, and Pipeline Optimizations.
 
 ---
 

@@ -125,8 +125,9 @@ export default function AppRoutes() {
             <Route path="/application-guide" element={<ApplicationGuide />} />
           </Route>
 
-          {/* ── Applicant Video Interview Room ── */}
+          {/* ── Video Interview Routes (Dynamic Role-Based & Legacy) ── */}
           <Route path="/interview/:id/room" element={<ActiveInterviewRoom isApplicant={true} />} />
+          <Route path="/interview/:sessionId" element={<ActiveInterviewRoom />} />
 
           {/* ── Auth pages ───── */}
           <Route element={<GuestRoute />}>

@@ -100,14 +100,14 @@ export default function AuditLogs() {
         </div>
       </div>
 
-      <Card className="shadow-xl border border-slate-200/80 rounded-3xl bg-white overflow-hidden">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <CardTitle className="text-base font-black text-[#111A62] shrink-0">
-              System Events 
-              {totalRecords > 0 && <span className="text-slate-400 text-xs font-semibold ml-2">({totalRecords} Total)</span>}
+      <Card className="shadow-sm border border-slate-200/80 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
+        <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 px-4 sm:px-5 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <CardTitle className="text-sm font-bold text-slate-900 dark:text-white shrink-0 flex items-center gap-2">
+              <span>System Events</span> 
+              {totalRecords > 0 && <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">({totalRecords} Total)</span>}
             </CardTitle>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full lg:w-auto">
               <div className="w-full sm:w-40">
                 <Select
                   name="moduleFilter"
@@ -122,6 +122,7 @@ export default function AuditLogs() {
                   ]}
                   size="sm"
                   icon={FiFilter}
+                  buttonClassName="h-9 text-xs"
                 />
               </div>
               <div className="w-full sm:w-40">
@@ -140,66 +141,69 @@ export default function AuditLogs() {
                   ]}
                   size="sm"
                   icon={FiFilter}
+                  buttonClassName="h-9 text-xs"
                 />
               </div>
               <div className="w-full sm:w-56 shrink-0">
-                <SearchBar value={q} onChange={setQ} placeholder="Search loaded..." />
+                <SearchBar value={q} onChange={setQ} placeholder="Search loaded..." className="h-9 text-xs" />
               </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table className="w-full text-sm">
-              <THead className="bg-slate-50/50">
+            <Table className="w-full text-xs">
+              <THead>
                 <tr>
-                  <TH className="px-6 py-3">ID</TH>
-                  <TH className="px-6 py-3">Actor</TH>
-                  <TH className="px-6 py-3">Module</TH>
-                  <TH className="px-6 py-3">Action & Details</TH>
-                  <TH className="px-6 py-3">IP Address</TH>
-                  <TH className="px-6 py-3 text-right">Timestamp</TH>
+                  <TH className="py-2.5 px-4 w-20">Event ID</TH>
+                  <TH className="py-2.5 px-4">Actor</TH>
+                  <TH className="py-2.5 px-4">Module</TH>
+                  <TH className="py-2.5 px-4">Action & Details</TH>
+                  <TH className="py-2.5 px-4">IP Address</TH>
+                  <TH className="py-2.5 px-4 text-right">Timestamp</TH>
                 </tr>
               </THead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {loading ? (
                   <TableSkeleton rows={6} />
                 ) : filteredLogs.length === 0 ? (
                    <tr>
-                    <TD colSpan="6" className="text-center py-12 text-slate-500 font-medium">
+                    <TD colSpan="6" className="text-center py-12 text-slate-400 text-xs">
                       No logs found matching your criteria.
                     </TD>
                   </tr>
                 ) : (
                   filteredLogs.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50/80 transition-colors duration-150">
-                      <TD className="px-6 py-3.5 font-bold text-slate-900 text-xs whitespace-nowrap">AL-{l.id}</TD>
-                      <TD className="px-6 py-3.5 whitespace-nowrap">
+                    <tr key={l.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                      <TD className="py-3 px-4 font-mono font-medium text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">AL-{l.id}</TD>
+                      <TD className="py-3 px-4 whitespace-nowrap">
                         {l.user ? (
                           <div className="flex flex-col">
-                             <span className="font-bold text-slate-800">{l.user.name}</span>
-                             <span className="text-[10px] text-slate-500 mt-0.5 font-medium">{l.user.email}</span>
+                             <span className="font-semibold text-xs text-slate-900 dark:text-slate-200">{l.user.name}</span>
+                             <span className="text-[10px] text-slate-400 font-normal">{l.user.email}</span>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic text-xs font-semibold">System Generated</span>
+                          <span className="text-slate-400 italic text-xs">System Daemon</span>
                         )}
                       </TD>
-                      <TD className="px-6 py-3.5 whitespace-nowrap">
-                        <Badge tone="primary" className="uppercase text-[10px] tracking-widest font-black py-0.5 px-2">{l.module}</Badge>
+                      <TD className="py-3 px-4 whitespace-nowrap">
+                        <Badge tone="primary" className="uppercase text-[10px] font-mono tracking-wider py-0.5 px-1.5">{l.module}</Badge>
                       </TD>
-                      <TD className="px-6 py-3.5 min-w-[250px]">
+                      <TD className="py-3 px-4 min-w-[220px]">
                          <div className="flex flex-col">
-                           <span className="font-extrabold text-slate-800 capitalize text-sm">{l.action.replace(/_/g, ' ')}</span>
-                           {l.description && <span className="text-xs text-slate-500 mt-1 leading-relaxed">{l.description}</span>}
+                           <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize text-xs">{l.action.replace(/_/g, ' ')}</span>
+                           {l.description && <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{l.description}</span>}
                          </div>
                       </TD>
-                      <TD className="px-6 py-3.5 text-xs font-mono font-medium text-slate-600 whitespace-nowrap bg-slate-50/50">
-                        {l.ip_address || "N/A"}
+                      <TD className="py-3 px-4 text-xs font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        <span className="px-1.5 py-0.5 rounded border border-slate-200/80 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                          {l.ip_address || "127.0.0.1"}
+                        </span>
                       </TD>
-                      <TD className="px-6 py-3.5 text-right whitespace-nowrap">
+                      <TD className="py-3 px-4 text-right whitespace-nowrap">
                          <div className="flex flex-col items-end">
-                           <span className="text-sm font-bold text-slate-700">{new Date(l.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                           <span className="text-[11px] font-semibold text-slate-400 mt-0.5 tracking-wide">{new Date(l.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                           <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">{new Date(l.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                           <span className="text-[10px] font-mono text-slate-400 mt-0.5">{new Date(l.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                          </div>
                       </TD>
                     </tr>
@@ -211,7 +215,7 @@ export default function AuditLogs() {
           
           {/* Pagination Controls */}
           {!loading && totalPages > 1 && (
-            <div className="border-t border-slate-100 bg-slate-50/30 px-6 py-4">
+            <div className="border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 px-4 py-3">
               <Pagination
                 page={page}
                 pageSize={15}

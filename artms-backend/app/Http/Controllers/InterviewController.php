@@ -7,6 +7,7 @@ use App\Mail\InterviewInvitationMail;
 use App\Models\AuditLog;
 use App\Models\Interview;
 use App\Models\InterviewTranscript;
+use App\Services\GeminiService;
 use App\Services\LiveKitService;
 use App\Services\NotificationRecipientResolver;
 use App\Services\NotificationService;
@@ -114,7 +115,14 @@ class InterviewController extends Controller
 
     public function show(Interview $interview): JsonResponse
     {
-        return response()->json(['interview' => $interview->load('applicant', 'jobPosting.jobLibrary', 'interviewer')]);
+        return response()->json([
+            'interview' => $interview->load([
+                'applicant.aiEvaluation',
+                'applicant.jobPosting.jobLibrary',
+                'jobPosting.jobLibrary',
+                'interviewer',
+            ]),
+        ]);
     }
 
     public function update(Request $request, Interview $interview): JsonResponse
@@ -257,11 +265,21 @@ class InterviewController extends Controller
 
         AuditLog::record('livekit_join', 'interview', "User {$user->id} joined interview room {$interview->id}");
 
+        $interview->load([
+            'applicant.aiEvaluation',
+            'applicant.jobPosting.jobLibrary',
+            'jobPosting.jobLibrary',
+            'interviewer',
+        ]);
+
         return response()->json([
-            'token'     => $token,
-            'room_name' => $roomName,
+            'token'        => $token,
+            'room_name'    => $roomName,
             'livekit_host' => config('services.livekit.host'),
-            'identity'  => $identity,
+            'identity'     => $identity,
+            'interview'    => $interview,
+            'applicant'    => $interview->applicant,
+            'job_title'    => $interview->jobPosting?->jobLibrary?->job_title ?? $interview->applicant?->jobPosting?->jobLibrary?->job_title ?? 'Interview Session',
         ]);
     }
 
@@ -533,39 +551,20 @@ class InterviewController extends Controller
         $identity = $request->input('speaker_identity') ?? ($speakerRole === 'hr' ? 'hr_' . ($request->user()?->id ?? '0') : 'applicant_' . ($interview->applicant_id ?? '0'));
         $dialectDetected = $request->input('dialect_detected', null);
 
-        $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
-
-        if (empty($apiKey)) {
-            return response()->json(['message' => 'Whisper API key not configured', 'transcript' => null], 200);
-        }
-
+        // ── Primary Engine: Gemini 3.5 Transcribe (gemini-3.5-transcribe) ────────
         try {
-            $isGroq = str_starts_with($apiKey, 'gsk_');
-            $endpoint = $isGroq
-                ? 'https://api.groq.com/openai/v1/audio/transcriptions'
-                : 'https://api.openai.com/v1/audio/transcriptions';
-            $model = $isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+            $options = [];
+            if (! empty($dialectDetected)) {
+                $options['language_codes'] = [$dialectDetected];
+            }
 
-            $client = new \GuzzleHttp\Client(['verify' => false, 'timeout' => 20]);
-            $response = $client->post($endpoint, [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
-                ],
-                'multipart' => [
-                    [
-                        'name'     => 'file',
-                        'contents' => fopen($audioFile->getRealPath(), 'r'),
-                        'filename' => $audioFile->getClientOriginalName() ?: 'audio.webm',
-                    ],
-                    [
-                        'name'     => 'model',
-                        'contents' => $model,
-                    ],
-                ],
-            ]);
+            $geminiResult = GeminiService::transcribeAudio(
+                $audioFile->getRealPath(),
+                $audioFile->getClientMimeType() ?: 'audio/webm',
+                $options
+            );
 
-            $result = json_decode((string) $response->getBody(), true);
-            $text = trim($result['text'] ?? '');
+            $text = trim($geminiResult['text'] ?? '');
 
             if (! empty($text)) {
                 $transcript = InterviewTranscript::create([
@@ -578,11 +577,68 @@ class InterviewController extends Controller
                     'spoken_at'        => now(),
                 ]);
 
-                return response()->json(['message' => 'Audio transcribed successfully', 'transcript' => $transcript], 201);
+                return response()->json([
+                    'message'    => 'Audio transcribed successfully via Gemini 3.5 Transcribe',
+                    'transcript' => $transcript,
+                    'model'      => 'gemini-3.5-transcribe',
+                ], 201);
             }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Whisper STT fallback notice: " . $e->getMessage());
-            return response()->json(['message' => 'STT service notice', 'transcript' => null], 200);
+        } catch (\Throwable $geminiEx) {
+            \Illuminate\Support\Facades\Log::warning("Gemini 3.5 Transcribe notice in controller: " . $geminiEx->getMessage());
+        }
+
+        // ── Secondary Fallback: Groq / OpenAI Whisper ─────────────────────────
+        $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
+
+        if (! empty($apiKey)) {
+            try {
+                $isGroq = str_starts_with($apiKey, 'gsk_');
+                $endpoint = $isGroq
+                    ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+                    : 'https://api.openai.com/v1/audio/transcriptions';
+                $model = $isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+
+                $client = new \GuzzleHttp\Client(['verify' => false, 'timeout' => 20]);
+                $response = $client->post($endpoint, [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $apiKey,
+                    ],
+                    'multipart' => [
+                        [
+                            'name'     => 'file',
+                            'contents' => fopen($audioFile->getRealPath(), 'r'),
+                            'filename' => $audioFile->getClientOriginalName() ?: 'audio.webm',
+                        ],
+                        [
+                            'name'     => 'model',
+                            'contents' => $model,
+                        ],
+                    ],
+                ]);
+
+                $result = json_decode((string) $response->getBody(), true);
+                $text = trim($result['text'] ?? '');
+
+                if (! empty($text)) {
+                    $transcript = InterviewTranscript::create([
+                        'interview_id'     => $interview->id,
+                        'speaker_identity' => $identity,
+                        'speaker_role'     => $speakerRole,
+                        'text'             => $text,
+                        'dialect_detected' => $dialectDetected,
+                        'segment_offset'   => 0,
+                        'spoken_at'        => now(),
+                    ]);
+
+                    return response()->json([
+                        'message'    => 'Audio transcribed successfully via Whisper fallback',
+                        'transcript' => $transcript,
+                        'model'      => $model,
+                    ], 201);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Whisper STT fallback notice: " . $e->getMessage());
+            }
         }
 
         return response()->json(['message' => 'No speech detected', 'transcript' => null], 200);

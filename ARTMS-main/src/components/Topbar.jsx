@@ -127,19 +127,18 @@ export default function Topbar({ title, subtitle, right }) {
 
           {/* ── Notification Bell + Panel Dropdown ───────────────────────── */}
           <div className="relative" ref={notifRef}>
-            <Button
-              variant="outline"
+            <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center p-0 rounded-xl dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800"
+              className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none transition-colors"
               aria-label="Notifications"
             >
-              <FiBell size={18} className="shrink-0 text-slate-700 dark:text-slate-200" aria-hidden="true" />
+              <FiBell size={16} className="shrink-0" aria-hidden="true" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-black text-white shadow-md animate-pulse">
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-[3px] bg-rose-600 px-1 text-[10px] font-mono font-bold text-white shadow-2xs">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
-            </Button>
+            </button>
 
             {/* Notification Popover */}
             {notifOpen && (
@@ -150,14 +149,14 @@ export default function Topbar({ title, subtitle, right }) {
                   onClick={() => setNotifOpen(false)}
                 />
 
-                <div className="absolute right-0 z-50 mt-2.5 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden font-sans dark:border-slate-800 dark:bg-[#0F163D]">
+                <div className="absolute right-0 z-50 mt-2 w-80 sm:w-96 rounded-lg border border-slate-200 bg-white shadow-xl overflow-hidden font-sans dark:border-slate-800 dark:bg-[#0F163D]">
                   {/* Panel Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/80">
+                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/80">
                     <div>
-                      <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                         <span>Notifications</span>
                         {unreadCount > 0 && (
-                          <span className="rounded-full bg-blue-100 dark:bg-blue-950 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                          <span className="rounded-[3px] font-mono bg-blue-100 dark:bg-blue-950 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                             {unreadCount} unread
                           </span>
                         )}
@@ -166,7 +165,7 @@ export default function Topbar({ title, subtitle, right }) {
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllRead}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition"
                       >
                         Mark all as read
                       </button>
@@ -177,12 +176,12 @@ export default function Topbar({ title, subtitle, right }) {
                   <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {loadingNotifs ? (
                       <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
-                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
                         <p className="text-xs font-medium">Loading alerts...</p>
                       </div>
                     ) : notifications.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
-                        <FiCheckCircle className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                      <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-1.5">
+                        <FiCheckCircle className="w-6 h-6 text-slate-300 dark:text-slate-600" />
                         <p className="text-xs font-semibold">You're all caught up!</p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">No new notifications.</p>
                       </div>
@@ -193,13 +192,13 @@ export default function Topbar({ title, subtitle, right }) {
                           <div
                             key={item.id}
                             onClick={() => handleMarkAsRead(item.id, item.link)}
-                            className={`group relative flex items-start gap-3 p-3.5 transition cursor-pointer ${
+                            className={`group relative flex items-start gap-3 p-3 transition cursor-pointer ${
                               item.read
                                 ? "bg-white hover:bg-slate-50 dark:bg-[#0F163D] dark:hover:bg-slate-850"
                                 : "bg-blue-50/40 hover:bg-blue-50/70 dark:bg-blue-950/20 dark:hover:bg-blue-950/40"
                             }`}
                           >
-                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${meta.tone}`}>
+                            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${meta.tone}`}>
                               {meta.icon}
                             </span>
                             <div className="flex-1 min-w-0">
@@ -207,7 +206,7 @@ export default function Topbar({ title, subtitle, right }) {
                                 <p className={`text-xs font-bold truncate ${item.read ? "text-slate-800 dark:text-slate-200" : "text-slate-900 dark:text-white"}`}>
                                   {item.title}
                                 </p>
-                                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 shrink-0">
+                                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
                                   {item.time}
                                 </span>
                               </div>
@@ -216,7 +215,7 @@ export default function Topbar({ title, subtitle, right }) {
                               </p>
                             </div>
                             {!item.read && (
-                              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
                             )}
                           </div>
                         );
@@ -225,11 +224,11 @@ export default function Topbar({ title, subtitle, right }) {
                   </div>
 
                   {/* Panel Footer */}
-                  <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-center dark:border-slate-800 dark:bg-slate-900/80">
+                  <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 text-center dark:border-slate-800 dark:bg-slate-900/80">
                     <Link
                       to={getNotifPageUrl()}
                       onClick={() => setNotifOpen(false)}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition"
                     >
                       View All Notifications →
                     </Link>
@@ -243,18 +242,18 @@ export default function Topbar({ title, subtitle, right }) {
           <div className="relative">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-xl border border-[var(--artms-border)] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-850"
+              className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 focus:outline-none dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-850"
             >
               {/* Avatar */}
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="h-7 w-7 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
+                <img src={user.avatar} alt="Avatar" className="h-6 w-6 rounded-md object-cover border border-slate-200 dark:border-slate-700" />
               ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--artms-primary)] text-xs font-bold text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#111A62] text-[10px] font-bold text-white">
                   {initials}
                 </span>
               )}
-              <span className="hidden max-w-[120px] truncate sm:block">{user?.name ?? "User"}</span>
-              <FiChevronDown size={14} className="text-slate-400" />
+              <span className="hidden max-w-[120px] truncate sm:block font-bold">{user?.name ?? "User"}</span>
+              <FiChevronDown size={13} className="text-slate-400" />
             </button>
 
             {/* Dropdown */}
@@ -263,32 +262,32 @@ export default function Topbar({ title, subtitle, right }) {
                 {/* backdrop */}
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
 
-                <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--artms-border)] bg-white shadow-xl dark:border-slate-800 dark:bg-[#0F163D] overflow-hidden">
+                <div className="absolute right-0 z-50 mt-1.5 w-56 rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-[#0F163D] overflow-hidden">
                   {/* User info */}
-                  <div className="border-b border-[var(--artms-border)] px-4 py-3">
-                    <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate">{user?.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
-                    <span className="mt-1.5 inline-block rounded-full bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[11px] font-bold text-blue-700 dark:text-blue-300">
+                  <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3 bg-slate-50/50 dark:bg-slate-900/50">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user?.name}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+                    <span className="mt-1.5 inline-block rounded-[3px] border border-blue-200 bg-blue-50 dark:bg-blue-950/60 dark:border-blue-800 px-1.5 py-0.2 text-[10px] font-semibold text-blue-700 dark:text-blue-300">
                       {getRoleLabel(user?.role)}
                     </span>
                   </div>
 
                   {/* Menu items */}
-                  <div className="p-2">
+                  <div className="p-1.5">
                     <button
                       onClick={() => setMenuOpen(false)}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
-                      <FiUser size={15} /> My Profile
+                      <FiUser size={14} /> My Profile
                     </button>
                     <button
                       onClick={() => {
                         setMenuOpen(false);
                         setShowLogoutConfirm(true);
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                     >
-                      <FiLogOut size={15} /> Sign Out
+                      <FiLogOut size={14} /> Sign Out
                     </button>
                   </div>
                 </div>

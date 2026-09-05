@@ -251,7 +251,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
   if (!data && !loading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-400">
+      <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-8 text-center text-slate-400 text-xs font-medium">
         Applicant record not found.
       </div>
     );
@@ -278,33 +278,33 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
   const isHired = app.status === "hired";
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300 relative">
+    <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] shadow-xl overflow-hidden flex flex-col h-full transition-all duration-300 relative">
       {/* ── AI Screening Loading Modal — blocks all interaction ── */}
       {isScreening && (
-        <div className="absolute inset-0 z-50 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+        <div className="absolute inset-0 z-50 rounded-lg overflow-hidden bg-white/60 dark:bg-slate-950/60 backdrop-blur-xs">
           <ScreeningLoadingModal applicant={data} inline />
         </div>
       )}
-      {/* ── Top Header Banner (Styled like Modal.jsx) ────────────────── */}
-      <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+      {/* ── Top Header Banner ────────────────── */}
+      <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 px-5 py-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111A62]/10 text-lg font-black text-[#111A62] ring-2 ring-[#111A62]/5 border border-[#111A62]/20">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-slate-100 dark:bg-slate-800 text-sm font-bold text-slate-900 dark:text-white border border-slate-200/90 dark:border-slate-700">
             {(app.first_name?.[0] || "") + (app.last_name?.[0] || "")}
           </span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-mono font-bold tracking-wide text-slate-700">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-mono font-bold tracking-tight text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
                 APP-{String(app.id).padStart(3, "0")}
               </span>
               <Badge tone={STATUS_TONE[app.status] || "default"} className="capitalize">
                 {app.status ? app.status.replace(/_/g, " ") : "Applied"}
               </Badge>
             </div>
-            <h3 className="text-lg font-extrabold text-[#111A62] tracking-tight truncate">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
               {app.first_name} {app.last_name}
             </h3>
-            <p className="mt-1 text-sm text-slate-600 leading-relaxed truncate">
-              Applied for: <strong className="text-slate-800">{jobTitle}</strong>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              Applied for: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{jobTitle}</strong>
             </p>
           </div>
         </div>
@@ -319,29 +319,29 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 onClose?.();
               }}
               aria-label="Close"
-              className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 active:scale-95 cursor-pointer shadow-sm"
+              className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer shadow-2xs"
             >
-              <X className="h-4 w-4 transition-transform group-hover:scale-110" />
+              <X className="h-4 w-4 transition-transform group-hover:scale-105" />
             </button>
           )}
         </div>
       </div>
 
       {/* ── Panel Body ────────────────────────────────────────────── */}
-      <div className="p-6 flex-1 min-h-0 overflow-y-auto bg-slate-50/50 space-y-6">
+      <div className="p-5 flex-1 min-h-0 overflow-y-auto bg-slate-50/40 dark:bg-slate-950/40 space-y-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
-            <Loader size={32} className="animate-spin text-[#111A62]" />
-            <p className="text-xs font-semibold">Loading Candidate Profile...</p>
+            <Loader size={28} className="animate-spin text-slate-600 dark:text-slate-300" />
+            <p className="text-xs font-medium">Loading Candidate Profile...</p>
           </div>
         ) : (
           <>
             {/* Status Control Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3.5 shadow-2xs">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Application Pipeline Status</p>
-                <p className="text-xs font-bold text-slate-800 mt-0.5 capitalize">
-                  Current Stage: <span className="text-[#111A62] font-extrabold">{app.status?.replace(/_/g, " ")}</span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Application Pipeline Status</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-0.5 capitalize">
+                  Current Stage: <span className="text-slate-900 dark:text-white font-bold">{app.status?.replace(/_/g, " ")}</span>
                 </p>
               </div>
 
@@ -350,17 +350,17 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <Button
                     size="sm"
                     variant="primary"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs font-medium rounded-md"
                     onClick={handleReadyForInterview}
                     disabled={Boolean(actionLoading) || isScreening}
                   >
                     {actionLoading?.type === "ready" ? (
                       <>
-                        <Loader size={14} className="animate-spin" /> Moving to Interview...
+                        <Loader size={13} className="animate-spin" /> Moving to Interview...
                       </>
                     ) : (
                       <>
-                        <CheckCircle size={14} /> Ready for Interview
+                        <CheckCircle size={13} /> Ready for Interview
                       </>
                     )}
                   </Button>
@@ -370,17 +370,17 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   <Button
                     size="sm"
                     variant="primary"
-                    className="bg-[#111A62] text-white gap-1.5 text-xs"
+                    className="gap-1.5 text-xs font-medium rounded-md"
                     onClick={handleHire}
                     disabled={Boolean(actionLoading) || isScreening}
                   >
                     {actionLoading?.type === "hire" ? (
                       <>
-                        <Loader size={14} className="animate-spin" /> Creating 201 File...
+                        <Loader size={13} className="animate-spin" /> Creating 201 File...
                       </>
                     ) : (
                       <>
-                        <CheckCircle size={14} /> Hire & Create 201 File
+                        <CheckCircle size={13} /> Hire & Create 201 File
                       </>
                     )}
                   </Button>
@@ -389,46 +389,46 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1 text-xs text-slate-700 border-slate-300 bg-white hover:bg-slate-50"
+                  className="gap-1 text-xs text-slate-700 dark:text-slate-300 rounded-md"
                   onClick={runScreening}
                   disabled={Boolean(actionLoading) || isScreening}
                 >
-                  <RefreshCw size={14} className={isScreening ? "animate-spin" : ""} /> {isScreening ? "Re-running..." : "Re-run Screening"}
+                  <RefreshCw size={13} className={isScreening ? "animate-spin" : ""} /> {isScreening ? "Re-running..." : "Re-run Screening"}
                 </Button>
 
                 <div className="relative">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1.5 text-xs text-slate-700 border-slate-300 bg-white"
+                    className="gap-1.5 text-xs text-slate-700 dark:text-slate-300 rounded-md"
                     onClick={() => setShowStatusMenu(!showStatusMenu)}
                     disabled={Boolean(actionLoading) || isScreening}
                   >
                     {actionLoading?.type === "stage" ? (
                       <>
-                        <Loader size={13} className="animate-spin text-[#111A62]" /> Moving Stage...
+                        <Loader size={12} className="animate-spin" /> Moving Stage...
                       </>
                     ) : (
                       <>
-                        Move Stage <ChevronDown size={13} />
+                        Move Stage <ChevronDown size={12} />
                       </>
                     )}
                   </Button>
 
                   {showStatusMenu && (
-                    <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl space-y-0.5 text-xs font-semibold text-slate-700">
+                    <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-md border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-lg space-y-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                       {Object.entries(STAGE_LABELS).map(([key, label]) => (
                         <button
                           key={key}
                           onClick={() => handleStatusUpdate(key)}
                           disabled={Boolean(actionLoading)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 transition cursor-pointer ${
-                            app.status === key ? "bg-slate-100 font-bold text-[#111A62]" : ""
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer ${
+                            app.status === key ? "bg-slate-100 dark:bg-slate-800 font-bold text-slate-900 dark:text-white" : ""
                           }`}
                         >
                           <span>{label}</span>
                           {actionLoading?.status === key && (
-                            <Loader size={12} className="animate-spin text-[#111A62]" />
+                            <Loader size={12} className="animate-spin text-slate-500" />
                           )}
                         </button>
                       ))}
@@ -439,50 +439,50 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
             </div>
 
             {/* Resume File Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center justify-between">
+            <div className="rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3 shadow-2xs flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                  <FileText size={20} />
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/50">
+                  <FileText size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold text-slate-900">Uploaded Resume Document</p>
-                  <p className="text-[11px] text-slate-400">{app.resume_path ? app.resume_path.split("/").pop() : "No file attached"}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">Uploaded Resume Document</p>
+                  <p className="text-[11px] text-slate-500 font-mono">{app.resume_path ? app.resume_path.split("/").pop() : "No file attached"}</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={handleOpenResume} className="gap-1.5 text-xs font-semibold cursor-pointer border-[#111A62]/20 text-[#111A62] hover:bg-[#111A62]/10">
-                <Eye size={14} /> Open Resume
+              <Button size="sm" variant="outline" onClick={handleOpenResume} className="gap-1.5 text-xs font-medium cursor-pointer rounded-md">
+                <Eye size={13} /> Open Resume
               </Button>
             </div>
 
             {/* Contact Details Grid */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <Mail size={16} />
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center gap-2.5 rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3 shadow-2xs">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50">
+                  <Mail size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Email Address</p>
-                  <p className="truncate text-xs font-bold text-slate-900">{app.email || "—"}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</p>
+                  <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{app.email || "—"}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Phone size={16} />
+              <div className="flex items-center gap-2.5 rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3 shadow-2xs">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/50">
+                  <Phone size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Phone Number</p>
-                  <p className="truncate text-xs font-bold text-slate-900">{app.phone || "—"}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</p>
+                  <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{app.phone || "—"}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <Calendar size={16} />
+              <div className="flex items-center gap-2.5 rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3 shadow-2xs">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/50">
+                  <Calendar size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Applied Date</p>
-                  <p className="truncate text-xs font-bold text-slate-900">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applied Date</p>
+                  <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                     {app.created_at ? new Date(app.created_at).toLocaleDateString() : "—"}
                   </p>
                 </div>
@@ -490,16 +490,16 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
             </div>
 
             {/* AI Screening Breakdown */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="rounded-md border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-4 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">AI Screening Fit Evaluation</h3>
-                  <p className="text-sm font-extrabold text-slate-900 mt-0.5">
-                    Match Class: <span className="text-[#111A62] capitalize font-black">{fitClass} Fit</span>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AI Screening Fit Evaluation</h3>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                    Match Class: <span className="text-slate-900 dark:text-white capitalize font-black">{fitClass} Fit</span>
                   </p>
                 </div>
                 {score != null && (
-                  <span className="text-2xl font-black text-[#111A62] bg-[#111A62]/5 px-3.5 py-1 rounded-xl border border-[#111A62]/20">
+                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                     {score}%
                   </span>
                 )}
@@ -507,40 +507,40 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {/* Parsed Resume Details */}
               {parsedCv && (parsedCv.email || parsedCv.phone || parsedCv.education || parsedCv.experience || parsedCv.skills?.length > 0) && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2 text-xs">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Parsed Resume Information</p>
+                <div className="rounded-md border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 p-3 space-y-2 text-xs">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Parsed Resume Information</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {parsedCv.email && (
                       <div>
-                        <span className="font-bold text-slate-500">Email: </span>
-                        <span className="font-semibold text-slate-900">{parsedCv.email}</span>
+                        <span className="font-medium text-slate-500">Email: </span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{parsedCv.email}</span>
                       </div>
                     )}
                     {parsedCv.phone && (
                       <div>
-                        <span className="font-bold text-slate-500">Phone: </span>
-                        <span className="font-semibold text-slate-900">{parsedCv.phone}</span>
+                        <span className="font-medium text-slate-500">Phone: </span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{parsedCv.phone}</span>
                       </div>
                     )}
                   </div>
                   {parsedCv.education && (
                     <div>
-                      <span className="font-bold text-slate-500">Education: </span>
-                      <span className="font-medium text-slate-800">{parsedCv.education}</span>
+                      <span className="font-medium text-slate-500">Education: </span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">{parsedCv.education}</span>
                     </div>
                   )}
                   {parsedCv.experience && (
                     <div>
-                      <span className="font-bold text-slate-500">Experience: </span>
-                      <span className="font-medium text-slate-800">{parsedCv.experience}</span>
+                      <span className="font-medium text-slate-500">Experience: </span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">{parsedCv.experience}</span>
                     </div>
                   )}
                   {parsedCv.skills?.length > 0 && (
                     <div>
-                      <p className="mb-1 text-[10px] font-semibold uppercase text-slate-400">Extracted Skills</p>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Extracted Skills</p>
                       <div className="flex flex-wrap gap-1">
                         {parsedCv.skills.map((s) => (
-                          <span key={s} className="rounded-full bg-[#111A62]/10 px-2 py-0.5 text-[11px] font-semibold text-[#111A62]">
+                          <span key={s} className="rounded-[4px] bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 border border-slate-300/60 dark:border-slate-700">
                             {s}
                           </span>
                         ))}
@@ -558,15 +558,15 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   const pct = Math.min(100, Math.round((val / f.max) * 100));
                   return (
                     <div key={f.key} className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-600">{f.label}</span>
-                        <span className="text-slate-900">{val} / {f.max}</span>
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-slate-600 dark:text-slate-400">{f.label}</span>
+                        <span className="text-slate-900 dark:text-white font-mono text-[11px] font-bold">{val} / {f.max}</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-1.5 w-full rounded-xs bg-slate-100 dark:bg-slate-800 overflow-hidden">
                         <div className={`h-full ${scoreColor(pct)}`} style={{ width: `${pct}%` }} />
                       </div>
                       {remark && (
-                        <p className="text-[11px] text-slate-500 font-normal leading-snug">{remark}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal leading-snug">{remark}</p>
                       )}
                     </div>
                   );
@@ -575,12 +575,12 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
 
               {/* Skills Matched & Missing */}
               {(skillsMatched.length > 0 || skillsMissing.length > 0) && (
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Requirement Fit</p>
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Requirement Fit</p>
                   {skillsMatched.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {skillsMatched.map((s) => (
-                        <span key={s} className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        <span key={s} className="rounded-[4px] bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                           ✓ {s}
                         </span>
                       ))}
@@ -589,7 +589,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                   {skillsMissing.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {skillsMissing.map((s) => (
-                        <span key={s} className="rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-semibold text-red-600">
+                        <span key={s} className="rounded-[4px] bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-400">
                           ✗ {s}
                         </span>
                       ))}
@@ -599,32 +599,32 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {summary && (
-                <div className="mt-3 rounded-2xl bg-blue-50 p-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-blue-500">
-                    <Sparkles size={13} />
+                <div className="mt-3 rounded-md border border-blue-200/60 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 p-3.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+                    <Sparkles size={12} />
                     AI Summary
                   </p>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{summary}</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{summary}</p>
                 </div>
               )}
 
               {feedback && (
-                <div className="mt-3 rounded-2xl bg-amber-50/60 p-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
-                    <MessageSquare size={13} />
+                <div className="mt-3 rounded-md border border-amber-200/60 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-3.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                    <MessageSquare size={12} />
                     Feedback for Applicant
                   </p>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{feedback}</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{feedback}</p>
                 </div>
               )}
 
               {topAchievements.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-purple-50 p-4 border border-purple-100">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-purple-600">
-                    <Trophy size={13} />
+                <div className="mt-3 rounded-md border border-purple-200/60 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/20 p-3.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                    <Trophy size={12} />
                     Top Achievements
                   </p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-slate-700 dark:text-slate-300">
                     {topAchievements.map((achievement, idx) => (
                       <li key={idx} className="leading-relaxed">{achievement}</li>
                     ))}
@@ -633,12 +633,12 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {redFlags.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-red-50 p-4 border border-red-100">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-red-600">
-                    <Flag size={13} />
+                <div className="mt-3 rounded-md border border-rose-200/60 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 p-3.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">
+                    <Flag size={12} />
                     Red Flags & Concerns
                   </p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-slate-700 dark:text-slate-300">
                     {redFlags.map((flag, idx) => (
                       <li key={idx} className="leading-relaxed">{flag}</li>
                     ))}
@@ -647,22 +647,22 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {interviewQuestions.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-indigo-50 p-4 border border-indigo-100">
+                <div className="mt-3 rounded-md border border-indigo-200/60 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 p-3.5">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-indigo-600">
-                      <Lightbulb size={13} />
+                    <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                      <Lightbulb size={12} />
                       Recommended Interview Questions
                     </p>
                     <button 
                       onClick={handlePrintQuestions}
-                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-indigo-500 hover:text-indigo-700 transition-colors bg-indigo-100/50 hover:bg-indigo-200/50 px-2 py-1 rounded-md"
+                      className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition bg-indigo-100/60 dark:bg-indigo-900/40 px-2 py-0.5 rounded-md cursor-pointer border border-indigo-200/60 dark:border-indigo-800"
                       title="Print Questions"
                     >
-                      <Printer size={12} />
+                      <Printer size={11} />
                       <span>Print</span>
                     </button>
                   </div>
-                  <ul className="list-decimal pl-5 space-y-2 text-xs text-slate-700 font-medium">
+                  <ul className="list-decimal pl-5 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                     {interviewQuestions.map((q, idx) => (
                       <li key={idx} className="leading-relaxed">{q}</li>
                     ))}
@@ -671,12 +671,12 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {alternativeRoles.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-teal-50 p-4 border border-teal-100">
-                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-600">
-                    <RefreshCw size={13} />
+                <div className="mt-3 rounded-md border border-teal-200/60 dark:border-teal-900/50 bg-teal-50/50 dark:bg-teal-950/20 p-3.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">
+                    <RefreshCw size={12} />
                     Alternative Role Suggestions
                   </p>
-                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-700 font-medium">
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-slate-700 dark:text-slate-300">
                     {alternativeRoles.map((role, idx) => (
                       <li key={idx} className="leading-relaxed">{role}</li>
                     ))}
@@ -685,32 +685,32 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
               )}
 
               {/* HR review form */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">HR Decision</p>
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">HR Decision</p>
 
                 <textarea
                   rows={3}
                   value={hrForm.interpretation}
                   onChange={e => setHrForm(f => ({ ...f, interpretation: e.target.value }))}
                   placeholder="Add your HR interpretation or notes…"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#111A62]/20 resize-none"
+                  className="w-full rounded-md border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none"
                 />
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => setHrForm(f => ({ ...f, decision: "qualified" }))}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "qualified"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50/50"
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "qualified"
+                        ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                   >
                     <CheckCircle size={13} /> Qualified
                   </button>
                   <button
                     onClick={() => setHrForm(f => ({ ...f, decision: "not_qualified" }))}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "not_qualified"
-                        ? "border-red-300 bg-red-50 text-red-600"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-red-50/50"
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition cursor-pointer ${hrForm.decision === "not_qualified"
+                        ? "border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                   >
                     <XCircle size={13} /> Not Qualified
@@ -720,7 +720,7 @@ export default function ApplicantViewPanel({ applicantId, onClose, onUpdated }) 
                 <button
                   onClick={saveHrReview}
                   disabled={savingHr || !hrForm.decision}
-                  className="w-full rounded-xl bg-[#111A62] py-2.5 text-xs font-semibold text-white transition hover:bg-[#1a277a] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="w-full rounded-md bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-2xs"
                 >
                   {savingHr ? "Saving…" : hrSaved ? "✓ Saved!" : "Save HR Review"}
                 </button>

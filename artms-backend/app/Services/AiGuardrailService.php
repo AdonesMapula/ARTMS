@@ -3,10 +3,16 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class AiGuardrailService
 {
+    /**
+     * In-memory cache for fast-path neutralized prompts during the same request lifecycle.
+     */
+    protected static array $localMemoryCache = [];
+
     /**
      * Common Prompt Injection & Jailbreak Patterns
      */
@@ -29,7 +35,7 @@ class AiGuardrailService
     ];
 
     /**
-     * 1. Sanitize raw text: normalize encoding, strip null bytes and excessive whitespace, limit max length.
+     * 1. Sanitize raw text: normalize encoding, strip null bytes, invisible unicode, and excessive whitespace.
      *
      * @param string $text
      * @param int $maxLength
@@ -39,6 +45,9 @@ class AiGuardrailService
     {
         // Strip null bytes and non-printable control characters (except common whitespace)
         $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $text);
+
+        // Strip zero-width and invisible unicode characters used in prompt injection bypasses
+        $clean = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}\x{2060}\x{202A}-\x{202E}]/u', '', $clean);
 
         // Normalize letter-by-letter artifacts often produced by PDF text extractors (e.g. A<>L<>E<>X)
         $clean = preg_replace('/(?<=\w)<>(?=\w)/u', '', $clean);
@@ -61,7 +70,7 @@ class AiGuardrailService
     }
 
     /**
-     * 2. Detect and neutralize adversarial prompt injection attempts.
+     * 2. Detect and neutralize adversarial prompt injection attempts with fast-path memory caching.
      *
      * @param string $text
      * @param string|null $context
@@ -70,6 +79,11 @@ class AiGuardrailService
      */
     public static function detectAndNeutralizePromptInjection(string $text, ?string $context = 'AI Request', ?int $userId = null): string
     {
+        $cacheKey = md5($text . '_' . ($context ?? ''));
+        if (isset(self::$localMemoryCache[$cacheKey])) {
+            return self::$localMemoryCache[$cacheKey];
+        }
+
         $sanitized = $text;
         $injectionsFound = [];
 
@@ -100,6 +114,7 @@ class AiGuardrailService
             }
         }
 
+        self::$localMemoryCache[$cacheKey] = $sanitized;
         return $sanitized;
     }
 

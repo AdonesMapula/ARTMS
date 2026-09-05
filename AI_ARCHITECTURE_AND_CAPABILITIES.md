@@ -52,7 +52,7 @@ ARTMS (**AI Recruitment and Talent Management System**) leverages a multi-layere
 | **Job Doc Parsing** | Google Gemini API | `gemini-3.6-flash` / `gemini-2.0-flash` | Pure-PHP XML/CSV Structural Extractor | Converts raw job specs into structured Job Library items |
 | **Candidate Screening** | Google Gemini API | `gemini-3.6-flash` / `gemini-1.5-pro` | Weighted Matrix Scorer (0-100) | Objective evaluation against PRF requirements |
 | **Alternative Roles** | Google Gemini API | `gemini-3.6-flash` | Standard Rejection Flow | Matches rejected applicants to other open vacancies |
-| **Live Speech-to-Text** | Web Speech API + Groq | Groq `whisper-large-v3` | Client-Side Web Speech API | Dual-channel real-time transcription with dialect tracking |
+| **Live Speech-to-Text** | Google Gemini API + Web Speech | `gemini-3.5-transcribe` (Interactions API) | Groq Whisper `whisper-large-v3` / Web Speech API | Multilingual transcription with auto-language detection, speaker diarization, word timestamps & dialect tracking |
 | **Live Interview Telemetry** | xAI API | Grok `grok-4.5` / `grok-beta` | Keyword Extraction & Heuristic Metrics | Real-time sentiment, calmness, and keyword tracking |
 | **Facial Vision & Affect** | MediaPipe Vision | 478 3D Mesh + 52 Blendshapes | Client Baseline Aggregator | Client-side 15 FPS attentiveness, EAR, head pose telemetry |
 | **Interview Report** | Google Gemini API | `gemini-3.6-flash` | Deterministic Heuristic Report Engine | Synthesizes transcript, vision, and speech metrics |
@@ -225,16 +225,24 @@ sequenceDiagram
 **Components & Services**:
 - [`ActiveInterviewRoom.jsx`](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/ARTMS-main/src/pages/Interview/ActiveInterviewRoom.jsx)
 - [`InterviewController.php`](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Http/Controllers/InterviewController.php)
+- [`GeminiService.php`](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Services/GeminiService.php)
+- [`FinalizeInterviewPipelineJob.php`](file:///c:/Users/ASUS/OneDrive/Desktop/ARTMS/ARTMS/artms-backend/app/Jobs/FinalizeInterviewPipelineJob.php)
 
 ### Dual-Engine Multilingual Transcription:
-1. **Primary Client Engine**: HTML5 Web Speech API operating continuously with instant zero-latency UI display.
-2. **Secondary Cloud Fallback**: Throttled 3-second audio chunk streaming to **Groq Whisper (`whisper-large-v3`)** for high-accuracy phonetic transcription.
-3. **Philippine Regional Dialect & Code-Switching Detection**:
+1. **Primary Cloud Engine**: **Google Gemini 3.5 Transcribe (`gemini-3.5-transcribe`)** via the Google GenAI Interactions API & Files API:
+   - **Automatic Speech Recognition (ASR)**: Automatic language identification across 85+ locales including English (`en-US`, `en-GB`), Filipino (`fil-PH`), and regional dialects like Cebuano (`ceb`).
+   - **Speaker Diarization**: Identifies distinct speakers (`spk_1`, `spk_2`, up to 8 voices) and attributes dialogue turns.
+   - **Word-Level Timestamps**: Returns precise start/end offsets for each recognized spoken word.
+   - **Smart & Verbatim Transcription Modes**: Supports smart formatting with disfluency/filler removal or exact verbatim transcript captures.
+   - **Dual-Key Resilience**: Primary (`GEMINI_API_KEY`) and Reserve (`RESERVE_GEMINI_API_KEY`) dynamic fallback.
+2. **Real-Time Client Engine**: HTML5 Web Speech API operating continuously with instant zero-latency UI display.
+3. **Secondary Cloud Fallback**: Throttled 3-second audio chunk streaming to **Groq Whisper (`whisper-large-v3-turbo`)** / OpenAI Whisper as backup STT.
+4. **Philippine Regional Dialect & Code-Switching Detection**:
    - **English** (Standard / Professional)
    - **Filipino / Tagalog** (Formal & Taglish)
    - **Cebuano / Bisaya** (Central & Southern Philippines)
    - **Hiligaynon / Ilonggo** (Western Visayas)
-4. **WebRTC Ultra-Low Latency Synchronization**:
+5. **WebRTC Ultra-Low Latency Synchronization**:
    - Spoken segments are broadcast directly between interview participants over **LiveKit WebRTC Data Channels (~20ms latency)** so interviewer and candidate see live closed-captions instantaneously without waiting for database writes.
 
 ---

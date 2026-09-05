@@ -34,88 +34,73 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureAiRateLimiters(): void
     {
-        // 1. Public Resume Parsing (Strict: 5 requests per minute per IP)
-        RateLimiter::for('ai-public-parser', function (Request $request) {
-            return Limit::perMinute(5)
+        // Helper to format standardized rate limited responses
+        $format429 = function (string $message, array $headers) {
+            $retryAfter = (int) ($headers['Retry-After'] ?? 60);
+            return response()->json([
+                'status'      => 'rate_limited',
+                'message'     => $message,
+                'retry_after' => $retryAfter,
+            ], 429, [
+                'Retry-After' => $retryAfter,
+                'X-RateLimit-Status' => 'rate_limited',
+            ]);
+        };
+
+        // 1. Public Resume Parsing (10 requests per minute per IP)
+        RateLimiter::for('ai-public-parser', function (Request $request) use ($format429) {
+            return Limit::perMinute(10)
                 ->by($request->ip())
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'Too many resume parsing attempts. Please wait a minute before submitting again.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
+                ->response(fn (Request $r, array $h) => $format429('Too many resume parsing attempts. Please wait a moment before submitting again.', $h));
         });
 
-        // 2. HR Admin / Super Admin AI Candidate Screening (30 requests per minute per user/IP)
-        RateLimiter::for('ai-screening', function (Request $request) {
+        // 2. HR Admin / Super Admin AI Candidate Screening (45 requests per minute per user/IP)
+        RateLimiter::for('ai-screening', function (Request $request) use ($format429) {
             $key = $request->user()?->id ? 'user_' . $request->user()->id : 'ip_' . $request->ip();
-            return Limit::perMinute(30)
+            return Limit::perMinute(45)
                 ->by($key)
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'AI Candidate Screening rate limit reached. Please wait a moment before running more screenings.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
+                ->response(fn (Request $r, array $h) => $format429('AI Candidate Screening rate limit reached. Please wait a moment before running more screenings.', $h));
         });
 
         // 3. Audio Speech-To-Text Transcription (60 requests per minute per session/IP)
-        RateLimiter::for('ai-transcription', function (Request $request) {
+        RateLimiter::for('ai-transcription', function (Request $request) use ($format429) {
             $interviewId = $request->route('interview') ? (is_object($request->route('interview')) ? $request->route('interview')->id : $request->route('interview')) : 'general';
             $key = 'transcribe_' . $interviewId . '_' . $request->ip();
             return Limit::perMinute(60)
                 ->by($key)
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'Audio transcription rate limit exceeded. Please wait for audio chunks to process.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
+                ->response(fn (Request $r, array $h) => $format429('Audio transcription rate limit exceeded. Please wait for the current audio processing to complete.', $h));
         });
 
-        // 4. Job Document Parser (15 requests per minute per user/IP)
-        RateLimiter::for('ai-document-parser', function (Request $request) {
+        // 4. Job Document Parser (20 requests per minute per user/IP)
+        RateLimiter::for('ai-document-parser', function (Request $request) use ($format429) {
             $key = $request->user()?->id ? 'user_' . $request->user()->id : 'ip_' . $request->ip();
-            return Limit::perMinute(15)
-                ->by($key)
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'Job document parser rate limit exceeded. Please wait before uploading more documents.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
-        });
-
-        // 5. Live Interview AI Sentiment & Keywords Analysis (20 requests per minute per interview)
-        RateLimiter::for('ai-live-analysis', function (Request $request) {
-            $interviewId = $request->route('interview') ? (is_object($request->route('interview')) ? $request->route('interview')->id : $request->route('interview')) : $request->ip();
             return Limit::perMinute(20)
-                ->by('live_analysis_' . $interviewId)
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'Live analysis rate limit reached. Waiting for next analysis window.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
+                ->by($key)
+                ->response(fn (Request $r, array $h) => $format429('Job document parser rate limit exceeded. Please wait before uploading more documents.', $h));
         });
 
-        // 6. General AI Fallback Limiter (45 requests per minute)
-        RateLimiter::for('ai-general', function (Request $request) {
+        // 5. Live Interview AI Sentiment & Keywords Analysis (30 requests per minute per interview)
+        RateLimiter::for('ai-live-analysis', function (Request $request) use ($format429) {
+            $interviewId = $request->route('interview') ? (is_object($request->route('interview')) ? $request->route('interview')->id : $request->route('interview')) : $request->ip();
+            return Limit::perMinute(30)
+                ->by('live_analysis_' . $interviewId)
+                ->response(fn (Request $r, array $h) => $format429('Live analysis rate limit reached. Waiting for next analysis window.', $h));
+        });
+
+        // 6. AI Interview Evaluation Report Generation (15 requests per minute per interview)
+        RateLimiter::for('ai-report', function (Request $request) use ($format429) {
+            $interviewId = $request->route('interview') ? (is_object($request->route('interview')) ? $request->route('interview')->id : $request->route('interview')) : $request->ip();
+            return Limit::perMinute(15)
+                ->by('ai_report_' . $interviewId)
+                ->response(fn (Request $r, array $h) => $format429('Interview report is already generating. Please wait a moment.', $h));
+        });
+
+        // 7. General AI Fallback Limiter (60 requests per minute)
+        RateLimiter::for('ai-general', function (Request $request) use ($format429) {
             $key = $request->user()?->id ? 'user_' . $request->user()->id : 'ip_' . $request->ip();
-            return Limit::perMinute(45)
+            return Limit::perMinute(60)
                 ->by($key)
-                ->response(function (Request $request, array $headers) {
-                    return response()->json([
-                        'status'      => 'rate_limited',
-                        'message'     => 'AI service rate limit reached. Please retry shortly.',
-                        'retry_after' => (int) ($headers['Retry-After'] ?? 60),
-                    ], 429, $headers);
-                });
+                ->response(fn (Request $r, array $h) => $format429('AI service rate limit reached. Please retry shortly.', $h));
         });
     }
 }

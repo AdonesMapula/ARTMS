@@ -6,6 +6,7 @@ use App\Models\Interview;
 use App\Models\InterviewBehavioralMetric;
 use App\Models\InterviewRecording;
 use App\Models\InterviewTranscript;
+use App\Services\GeminiService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -93,6 +94,8 @@ class FinalizeInterviewPipelineJob implements ShouldQueue
 
     /**
      * Transcribe any pending audio recordings for this interview.
+     * Uses Gemini 3.5 Transcribe (gemini-3.5-transcribe) with speaker diarization & word timestamps,
+     * falling back gracefully to Whisper STT if Gemini is unavailable.
      */
     private function processAudioRecordings(Interview $interview): void
     {
@@ -111,9 +114,7 @@ class FinalizeInterviewPipelineJob implements ShouldQueue
             ]);
         }
 
-        $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
-
-        if (empty($apiKey) || $recordings->isEmpty()) {
+        if ($recordings->isEmpty()) {
             return;
         }
 
@@ -141,7 +142,7 @@ class FinalizeInterviewPipelineJob implements ShouldQueue
                 } catch (\Throwable $dlEx) {
                     Log::error("FinalizeInterviewPipelineJob: Failed to download remote recording from {$rec->file_url} - " . $dlEx->getMessage());
                 }
-            } else if (! file_exists($filePath)) {
+            } elseif (! file_exists($filePath)) {
                 $filePath = public_path($rec->file_path);
             }
 
@@ -151,70 +152,161 @@ class FinalizeInterviewPipelineJob implements ShouldQueue
             }
 
             $recStartedAt = isset($rec->started_at) ? strtotime($rec->started_at) : time();
+            $transcribedSuccessfully = false;
 
+            // ── Primary Engine: Gemini 3.5 Transcribe (gemini-3.5-transcribe) ────────
             try {
-                $isGroq = str_starts_with($apiKey, 'gsk_');
-                $endpoint = $isGroq
-                    ? 'https://api.groq.com/openai/v1/audio/transcriptions'
-                    : 'https://api.openai.com/v1/audio/transcriptions';
-                $model = $isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
-
-                $client = new \GuzzleHttp\Client(['verify' => false, 'timeout' => 90]);
-                $response = $client->post($endpoint, [
-                    'headers' => ['Authorization' => 'Bearer ' . $apiKey],
-                    'multipart' => [
-                        [
-                            'name'     => 'file',
-                            'contents' => fopen($filePath, 'r'),
-                            'filename' => basename($filePath),
-                        ],
-                        [
-                            'name'     => 'model',
-                            'contents' => $model,
-                        ],
-                        [
-                            'name'     => 'response_format',
-                            'contents' => 'verbose_json',
-                        ],
-                    ],
+                $geminiResult = GeminiService::transcribeAudio($filePath, null, [
+                    'diarization'      => true,
+                    'word_timestamps'  => true,
                 ]);
 
-                $result = json_decode((string) $response->getBody(), true);
-                $text = trim($result['text'] ?? '');
+                if (! empty($geminiResult['words'])) {
+                    $words = $geminiResult['words'];
+                    $currentSpeaker = null;
+                    $currentChunk = [];
+                    $chunkStartSec = 0;
+                    $lastEndSec = 0;
 
-                if (! empty($text)) {
-                    $segments = $result['segments'] ?? [];
+                    foreach ($words as $w) {
+                        $spk = $w['speaker'] ?? ($rec->participant_role ?? 'applicant');
+                        $startSec = floatval(rtrim($w['start_offset'] ?? '0s', 's'));
+                        $endSec = floatval(rtrim($w['end_offset'] ?? '0s', 's'));
 
-                    if (! empty($segments)) {
-                        foreach ($segments as $seg) {
-                            $segText = trim($seg['text'] ?? '');
-                            if (! empty($segText)) {
-                                $offset = (int) ($seg['start'] ?? 0);
+                        // Break chunk on speaker change or natural speech pause (> 2.5s)
+                        if ($currentSpeaker !== null && ($spk !== $currentSpeaker || ($startSec - $lastEndSec > 2.5))) {
+                            $chunkText = implode(' ', $currentChunk);
+                            if (! empty(trim($chunkText))) {
+                                $offset = (int) $chunkStartSec;
                                 $allLines[] = [
                                     'interview_id'     => $interview->id,
-                                    'speaker_identity' => $rec->participant_identity ?? 'system',
-                                    'speaker_role'     => $rec->participant_role ?? 'applicant',
-                                    'text'             => $segText,
+                                    'speaker_identity' => $currentSpeaker === 'spk_1' ? ($rec->participant_identity ?? 'spk_1') : $currentSpeaker,
+                                    'speaker_role'     => $rec->participant_role ?? (str_contains(strtolower($currentSpeaker), 'hr') ? 'hr' : 'applicant'),
+                                    'text'             => trim($chunkText),
                                     'segment_offset'   => $offset,
                                     'abs_timestamp'    => $recStartedAt + $offset,
                                     'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt + $offset),
                                 ];
                             }
+                            $currentChunk = [];
+                            $chunkStartSec = $startSec;
                         }
-                    } else {
-                        $allLines[] = [
-                            'interview_id'     => $interview->id,
-                            'speaker_identity' => $rec->participant_identity ?? 'system',
-                            'speaker_role'     => $rec->participant_role ?? 'applicant',
-                            'text'             => $text,
-                            'segment_offset'   => 0,
-                            'abs_timestamp'    => $recStartedAt,
-                            'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt),
-                        ];
+
+                        if ($currentSpeaker === null) {
+                            $chunkStartSec = $startSec;
+                        }
+
+                        $currentSpeaker = $spk;
+                        $currentChunk[] = $w['text'];
+                        $lastEndSec = $endSec;
+                    }
+
+                    if (! empty($currentChunk)) {
+                        $chunkText = implode(' ', $currentChunk);
+                        if (! empty(trim($chunkText))) {
+                            $offset = (int) $chunkStartSec;
+                            $allLines[] = [
+                                'interview_id'     => $interview->id,
+                                'speaker_identity' => $currentSpeaker === 'spk_1' ? ($rec->participant_identity ?? 'spk_1') : $currentSpeaker,
+                                'speaker_role'     => $rec->participant_role ?? (str_contains(strtolower($currentSpeaker), 'hr') ? 'hr' : 'applicant'),
+                                'text'             => trim($chunkText),
+                                'segment_offset'   => $offset,
+                                'abs_timestamp'    => $recStartedAt + $offset,
+                                'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt + $offset),
+                            ];
+                        }
+                    }
+
+                    $transcribedSuccessfully = true;
+                    Log::info("FinalizeInterviewPipelineJob: Successfully transcribed recording via gemini-3.5-transcribe ({$rec->file_path})");
+                } elseif (! empty($geminiResult['text'])) {
+                    $allLines[] = [
+                        'interview_id'     => $interview->id,
+                        'speaker_identity' => $rec->participant_identity ?? 'system',
+                        'speaker_role'     => $rec->participant_role ?? 'applicant',
+                        'text'             => trim($geminiResult['text']),
+                        'segment_offset'   => 0,
+                        'abs_timestamp'    => $recStartedAt,
+                        'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt),
+                    ];
+                    $transcribedSuccessfully = true;
+                    Log::info("FinalizeInterviewPipelineJob: Successfully transcribed text via gemini-3.5-transcribe ({$rec->file_path})");
+                }
+            } catch (\Throwable $geminiEx) {
+                Log::warning("FinalizeInterviewPipelineJob: Gemini 3.5 Transcribe notice: " . $geminiEx->getMessage());
+            }
+
+            // ── Secondary Fallback: Groq / OpenAI Whisper ─────────────────────────
+            if (! $transcribedSuccessfully) {
+                $apiKey = config('services.groq.key') ?? env('GROQ_API_KEY') ?? config('services.openai.key') ?? env('OPENAI_API_KEY');
+
+                if (! empty($apiKey)) {
+                    try {
+                        $isGroq = str_starts_with($apiKey, 'gsk_');
+                        $endpoint = $isGroq
+                            ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+                            : 'https://api.openai.com/v1/audio/transcriptions';
+                        $model = $isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+
+                        $client = new \GuzzleHttp\Client(['verify' => false, 'timeout' => 90]);
+                        $response = $client->post($endpoint, [
+                            'headers' => ['Authorization' => 'Bearer ' . $apiKey],
+                            'multipart' => [
+                                [
+                                    'name'     => 'file',
+                                    'contents' => fopen($filePath, 'r'),
+                                    'filename' => basename($filePath),
+                                ],
+                                [
+                                    'name'     => 'model',
+                                    'contents' => $model,
+                                ],
+                                [
+                                    'name'     => 'response_format',
+                                    'contents' => 'verbose_json',
+                                ],
+                            ],
+                        ]);
+
+                        $result = json_decode((string) $response->getBody(), true);
+                        $text = trim($result['text'] ?? '');
+
+                        if (! empty($text)) {
+                            $segments = $result['segments'] ?? [];
+
+                            if (! empty($segments)) {
+                                foreach ($segments as $seg) {
+                                    $segText = trim($seg['text'] ?? '');
+                                    if (! empty($segText)) {
+                                        $offset = (int) ($seg['start'] ?? 0);
+                                        $allLines[] = [
+                                            'interview_id'     => $interview->id,
+                                            'speaker_identity' => $rec->participant_identity ?? 'system',
+                                            'speaker_role'     => $rec->participant_role ?? 'applicant',
+                                            'text'             => $segText,
+                                            'segment_offset'   => $offset,
+                                            'abs_timestamp'    => $recStartedAt + $offset,
+                                            'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt + $offset),
+                                        ];
+                                    }
+                                }
+                            } else {
+                                $allLines[] = [
+                                    'interview_id'     => $interview->id,
+                                    'speaker_identity' => $rec->participant_identity ?? 'system',
+                                    'speaker_role'     => $rec->participant_role ?? 'applicant',
+                                    'text'             => $text,
+                                    'segment_offset'   => 0,
+                                    'abs_timestamp'    => $recStartedAt,
+                                    'spoken_at'        => date('Y-m-d H:i:s', $recStartedAt),
+                                ];
+                            }
+                            Log::info("FinalizeInterviewPipelineJob: Transcribed recording via Whisper fallback ({$rec->file_path})");
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning("FinalizeInterviewPipelineJob: Whisper fallback transcription error: " . $e->getMessage());
                     }
                 }
-            } catch (\Throwable $e) {
-                Log::warning("Whisper transcription error for recording: " . $e->getMessage());
             }
         }
 

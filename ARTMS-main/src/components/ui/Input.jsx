@@ -12,14 +12,14 @@ export default function Input({ className, inputClassName, label, hint, error, t
       {label ? (
         <label
           htmlFor={id}
-          className="mb-1.5 block text-sm font-semibold text-slate-800"
+          className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
         >
           {label}
         </label>
       ) : null}
       <div className="relative flex items-center">
         {icon && (
-          <div className="absolute left-3 text-slate-400">
+          <div className="absolute left-3 text-slate-400 pointer-events-none">
             {icon}
           </div>
         )}
@@ -27,12 +27,12 @@ export default function Input({ className, inputClassName, label, hint, error, t
           id={id}
           type={inputType}
           className={cn(
-            "h-11 w-full rounded-lg border border-[var(--artms-border)] bg-white px-3 text-sm text-slate-900 transition-colors",
-            "placeholder:text-slate-400",
-            "focus:border-[color-mix(in_oklab,var(--artms-primary),#000_5%)] focus:ring-2 focus:ring-[var(--artms-ring)]",
-            icon && "pl-10",
-            isPassword && "pr-10",
-            error ? "border-red-300 focus:border-red-500 focus:ring-red-200" : "",
+            "h-9 w-full rounded-md border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-white shadow-2xs transition-colors",
+            "placeholder:text-slate-400 dark:placeholder:text-slate-500",
+            "focus:border-[#111A62] focus:ring-1 focus:ring-[#111A62] dark:focus:border-indigo-500 dark:focus:ring-indigo-500",
+            icon && "pl-9",
+            isPassword && "pr-9",
+            error ? "border-rose-400 focus:border-rose-600 focus:ring-rose-200" : "",
             inputClassName
           )}
           {...props}

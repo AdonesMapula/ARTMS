@@ -96,49 +96,58 @@ export default function SuperAdminDashboard() {
   const auditLogs = stats?.recent_audit_logs ?? [];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 pb-8">
       {/* ── STANDARD SYSTEM HEADER ─────────────────────────────────────────────── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#E15B1D]">Governance</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] dark:text-white sm:text-3xl transition-colors">Super Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Live user and system overview.</p>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-xs bg-slate-900 dark:bg-white" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Governance & Security
+            </p>
+          </div>
+          <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl transition-colors">
+            Super Admin Command Center
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Live system telemetry, security audit logs, and account governance.
+          </p>
         </div>
         <button
           onClick={loadData}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm cursor-pointer self-start sm:self-center shrink-0"
+          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-2xs cursor-pointer self-start sm:self-center shrink-0"
           title="Refresh Telemetry"
         >
-          <RefreshCw size={13} className={cn(refreshing && "animate-spin text-[#E15B1D]")} />
+          <RefreshCw size={13} className={cn(refreshing && "animate-spin text-slate-600 dark:text-slate-300")} />
           <span>{refreshing ? "Updating..." : "Refresh Data"}</span>
         </button>
       </div>
 
       {/* ── TOP KPI GRID (4 CARDS) ────────────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <KPIBox
           title="Total Registered Users"
           value={totalUsers}
-          icon={<Users size={22} />}
+          icon={<Users size={18} />}
           accentColor="navy"
         />
         <KPIBox
           title="Active Sessions / Staff"
           value={activeUsers}
-          icon={<ShieldCheck size={22} />}
+          icon={<ShieldCheck size={18} />}
           accentColor="orange"
         />
         <KPIBox
           title="Active Departments"
           value={departments.length}
-          icon={<Building2 size={22} />}
+          icon={<Building2 size={18} />}
           accentColor="teal"
         />
         <KPIBox
-          title="Audit Telemetry"
+          title="Audit Telemetry Events"
           value={auditLogs.length || 248}
-          icon={<Activity size={22} />}
+          icon={<Activity size={18} />}
           accentColor="indigo"
         />
       </div>
@@ -179,32 +188,26 @@ export default function SuperAdminDashboard() {
    ─────────────────────────────────────────────────────────────────────────── */
 function KPIBox({ title, value, icon, accentColor }) {
   const colorMap = {
-    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
-    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
-    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
-    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
-    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
-    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
-    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
-    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+    navy: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-900/50",
+    emerald: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-900/50",
+    purple: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-900/50",
+    orange: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200/60 dark:border-orange-900/50",
+    indigo: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-900/50",
+    teal: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 border-teal-200/60 dark:border-teal-900/50",
+    amber: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-900/50",
+    rose: "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-900/50",
   };
   const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
-    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
-      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
-        <CardContent className="flex items-center gap-4 pt-6">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-            <div className={theme.text}>
-              {icon}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
-            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3.5 shadow-2xs flex items-center gap-3">
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md border", theme)}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">{title}</p>
+        <p className="text-xl font-bold font-mono text-slate-900 dark:text-white leading-tight mt-0.5">{value}</p>
+      </div>
     </div>
   );
 }
@@ -256,27 +259,27 @@ function TrafficTrendsChart({ totalUsers, trafficTrends }) {
   const maxUsers = Math.max(...chartData.map(d => d.users), 10);
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
-      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
+    <Card className="h-full shadow-2xs rounded-lg border-slate-200/80 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 py-3 px-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
-                <LineChartIcon size={16} />
+              <div className="p-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <LineChartIcon size={14} />
               </div>
-              <CardTitle className="text-base font-black text-[#111A62] dark:text-white">User Growth & Traffic Trends</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">User Growth & System Telemetry</CardTitle>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Dual-axis system workload and user sign-up trajectory</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Dual-axis system workload and user sign-up trajectory</p>
           </div>
           
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit self-start sm:self-auto border border-slate-200/60 dark:border-slate-700">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md w-fit self-start sm:self-auto border border-slate-200/90 dark:border-slate-700">
             {["24H", "30D", "7M"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTimeRange(t)}
                 className={cn(
-                  "px-3 py-1 text-xs font-extrabold rounded-lg transition-all duration-200 cursor-pointer",
-                  timeRange === t ? "bg-[#111A62] text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                  "px-2.5 py-1 text-xs font-semibold rounded-sm transition-all duration-200 cursor-pointer",
+                  timeRange === t ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs border border-slate-200/80 dark:border-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 {t === "7M" ? "Monthly" : t === "30D" ? "30 Days" : "Live (24h)"}
@@ -286,33 +289,33 @@ function TrafficTrendsChart({ totalUsers, trafficTrends }) {
         </div>
       </CardHeader>
 
-      <div className="grid grid-cols-2 gap-4 mx-6 mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <span className="h-4 w-4 rounded-full bg-[#111A62] ring-4 ring-[#111A62]/20 shrink-0" />
+      <div className="grid grid-cols-2 gap-3 mx-4 mt-3 p-2.5 rounded-md bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <span className="h-2.5 w-2.5 rounded-xs bg-[#111A62] shrink-0" />
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">System Traffic</p>
-            <p className="text-lg font-black text-[#111A62] dark:text-blue-400">{maxTraffic.toLocaleString()} <span className="text-xs font-semibold text-slate-500">peak ops</span></p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">System Traffic</p>
+            <p className="text-base font-bold font-mono text-slate-900 dark:text-white">{maxTraffic.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">ops</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-3 border-l border-slate-200 dark:border-slate-800 pl-4">
-          <span className="h-4 w-4 rounded-full bg-[#E15B1D] ring-4 ring-[#E15B1D]/20 shrink-0" />
+        <div className="flex items-center gap-2.5 border-l border-slate-200 dark:border-slate-800 pl-3">
+          <span className="h-2.5 w-2.5 rounded-xs bg-[#E15B1D] shrink-0" />
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Active User Base</p>
-            <p className="text-lg font-black text-[#E15B1D]">{maxUsers.toLocaleString()} <span className="text-xs font-semibold text-slate-500">accounts</span></p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active User Base</p>
+            <p className="text-base font-bold font-mono text-slate-900 dark:text-white">{maxUsers.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">accounts</span></p>
           </div>
         </div>
       </div>
 
-      <CardContent className="flex-1 p-6 min-h-[300px]">
+      <CardContent className="flex-1 p-4 min-h-[260px]">
         <ChartContainer config={trafficChartConfig} className="h-full w-full">
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.3} />
+                <stop offset="5%" stopColor={COLORS.navy} stopOpacity={0.25} />
                 <stop offset="95%" stopColor={COLORS.navy} stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.orange} stopOpacity={0.3} />
+                <stop offset="5%" stopColor={COLORS.orange} stopOpacity={0.25} />
                 <stop offset="95%" stopColor={COLORS.orange} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -322,8 +325,8 @@ function TrafficTrendsChart({ totalUsers, trafficTrends }) {
             <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} />
             <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
             
-            <Area yAxisId="left" type="monotone" dataKey="traffic" name="Traffic" stroke={COLORS.navy} strokeWidth={3} fill="url(#colorTraffic)" activeDot={{ r: 6, fill: COLORS.navy, stroke: 'white', strokeWidth: 2 }} />
-            <Area yAxisId="right" type="monotone" dataKey="users" name="Users" stroke={COLORS.orange} strokeWidth={3} fill="url(#colorUsers)" strokeDasharray="5 5" activeDot={{ r: 6, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
+            <Area yAxisId="left" type="monotone" dataKey="traffic" name="Traffic" stroke={COLORS.navy} strokeWidth={2} fill="url(#colorTraffic)" activeDot={{ r: 5, fill: COLORS.navy, stroke: 'white', strokeWidth: 2 }} />
+            <Area yAxisId="right" type="monotone" dataKey="users" name="Users" stroke={COLORS.orange} strokeWidth={2} fill="url(#colorUsers)" strokeDasharray="4 4" activeDot={{ r: 5, fill: COLORS.orange, stroke: 'white', strokeWidth: 2 }} />
           </AreaChart>
         </ChartContainer>
       </CardContent>
@@ -379,25 +382,25 @@ function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deleted
   const totalCount = currentList.reduce((acc, i) => acc + i.count, 0);
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
-      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
+    <Card className="h-full shadow-2xs rounded-lg border-slate-200/80 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 py-3 px-4">
         <div className="flex items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-[#E15B1D]/10 dark:bg-orange-900/30 text-[#E15B1D]">
-                <PieChartIcon size={16} />
+              <div className="p-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <PieChartIcon size={14} />
               </div>
-              <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Status & Role Distribution</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Role & Status Allocation</CardTitle>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Permission allocation breakdown</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Permission allocation breakdown</p>
           </div>
 
-          <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/60 dark:border-slate-700 shrink-0">
+          <div className="flex items-center rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/90 dark:border-slate-700 shrink-0">
             <button
               onClick={() => setActiveTab("roles")}
               className={cn(
-                "px-2.5 py-1 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer",
-                activeTab === "roles" ? "bg-[#111A62] text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                "px-2.5 py-1 text-xs font-semibold rounded-sm transition-all cursor-pointer",
+                activeTab === "roles" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs border border-slate-200/80 dark:border-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               Roles
@@ -405,8 +408,8 @@ function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deleted
             <button
               onClick={() => setActiveTab("status")}
               className={cn(
-                "px-2.5 py-1 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer",
-                activeTab === "status" ? "bg-[#E15B1D] text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                "px-2.5 py-1 text-xs font-semibold rounded-sm transition-all cursor-pointer",
+                activeTab === "status" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs border border-slate-200/80 dark:border-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               Status
@@ -415,12 +418,12 @@ function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deleted
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 p-6 flex flex-col justify-center">
+      <CardContent className="flex-1 p-4 flex flex-col justify-center">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-          <ChartContainer config={chartConfig} className="w-full mx-auto aspect-square max-h-[220px] relative">
+          <ChartContainer config={chartConfig} className="w-full mx-auto aspect-square max-h-[190px] relative">
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-              <span className="text-3xl font-black text-slate-900 dark:text-white">{totalCount || totalUsers}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{totalCount || totalUsers}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                 {activeTab === "roles" ? "Total Roles" : "Accounts"}
               </span>
             </div>
@@ -429,9 +432,9 @@ function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deleted
                 data={currentList}
                 cx="50%"
                 cy="50%"
-                innerRadius={65}
-                outerRadius={90}
-                paddingAngle={4}
+                innerRadius={55}
+                outerRadius={75}
+                paddingAngle={3}
                 dataKey="count"
                 stroke="none"
               >
@@ -443,18 +446,18 @@ function RoleDistributionChart({ usersByRole, totalUsers, inactiveUsers, deleted
             </PieChart>
           </ChartContainer>
 
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
             {currentList.map((item, idx) => {
               const percent = totalCount ? Math.round((item.count / totalCount) * 100) : 0;
               return (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all cursor-default">
+                <div key={idx} className="flex items-center justify-between p-1.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-800 transition-all cursor-default text-xs">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-3 w-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.fill }} />
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
+                    <span className="h-2 w-2 rounded-xs shrink-0" style={{ backgroundColor: item.fill }} />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
                   </div>
-                  <div className="flex items-baseline gap-1.5 ml-2">
-                    <span className="text-[10px] font-bold text-slate-400">({item.count})</span>
-                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">{percent}%</span>
+                  <div className="flex items-baseline gap-1.5 ml-2 font-mono">
+                    <span className="text-[10px] text-slate-400">({item.count})</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{percent}%</span>
                   </div>
                 </div>
               );
@@ -500,25 +503,25 @@ function SecurityAuditChart({ logs, departments }) {
   };
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
-      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
+    <Card className="h-full rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+      <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 pb-3 pt-3.5 px-4 sm:px-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
-                <BarChart3 size={16} />
+              <div className="p-1.5 rounded-md bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
+                <BarChart3 size={15} />
               </div>
-              <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Security Audit & Logs</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Security Audit & Logs</CardTitle>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Telemetry action frequency</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Telemetry action frequency and load</p>
           </div>
 
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit border border-slate-200/60 dark:border-slate-700 self-start sm:self-auto">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 self-start sm:self-auto">
             <button
               onClick={() => setViewMode("bar")}
               className={cn(
-                "px-3 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer",
-                viewMode === "bar" ? "bg-[#111A62] text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                "px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer",
+                viewMode === "bar" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               Action Volume
@@ -526,8 +529,8 @@ function SecurityAuditChart({ logs, departments }) {
             <button
               onClick={() => setViewMode("dept")}
               className={cn(
-                "px-3 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer",
-                viewMode === "dept" ? "bg-teal-600 text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                "px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer",
+                viewMode === "dept" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               Departments
@@ -536,10 +539,10 @@ function SecurityAuditChart({ logs, departments }) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-6 min-h-[300px]">
+      <CardContent className="flex-1 p-4 sm:p-5 min-h-[300px]">
         {viewMode === "bar" ? (
           <ChartContainer config={auditConfig} className="h-full w-full">
-            <BarChart data={actionStats} margin={{ top: 10, right: 10, left: -20, bottom: 20 }} barSize={36}>
+            <BarChart data={actionStats} margin={{ top: 10, right: 10, left: -20, bottom: 20 }} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
               <XAxis
                 dataKey="label"
@@ -556,28 +559,28 @@ function SecurityAuditChart({ logs, departments }) {
                 tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }}
               />
               <ChartTooltip cursor={{ fill: 'currentColor', className: 'text-slate-100 dark:text-slate-800/40' }} content={<ChartTooltipContent nameKey="label" />} />
-              <Bar dataKey="count" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         ) : (
-          <div className="flex-1 space-y-3 max-h-64 overflow-y-auto pr-1">
+          <div className="flex-1 space-y-2 max-h-64 overflow-y-auto pr-1">
             {departments.length === 0 ? (
               <p className="py-8 text-center text-xs text-slate-400">No departments established yet.</p>
             ) : (
               departments.map((d) => {
                 const count = d.employees_count || 0;
                 return (
-                  <div key={d.id} className="flex items-center justify-between p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 hover:border-teal-500 transition">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center font-black text-sm">
-                        <Building2 size={16} />
+                  <div key={d.id} className="flex items-center justify-between p-2.5 rounded-md border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-md bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold text-xs">
+                        <Building2 size={15} />
                       </div>
                       <div>
-                        <p className="text-xs font-extrabold text-slate-900 dark:text-slate-200">{d.department_name}</p>
-                        <p className="text-[10px] font-semibold text-slate-400">Code: DEPT-{String(d.id).padStart(2, "0")}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-slate-200">{d.department_name}</p>
+                        <p className="text-[10px] font-mono text-slate-400">DEPT-{String(d.id).padStart(2, "0")}</p>
                       </div>
                     </div>
-                    <Badge tone={d.is_active ? "success" : "default"} className="font-extrabold text-xs px-3 py-1">
+                    <Badge tone={d.is_active ? "success" : "default"} className="font-semibold text-xs px-2.5 py-0.5">
                       {count} {count === 1 ? "Staff Member" : "Staff Members"}
                     </Badge>
                   </div>
@@ -640,38 +643,36 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
   };
 
   return (
-    <Card className="h-full shadow-lg shadow-slate-200/50 dark:shadow-none rounded-3xl border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-[#0F163D] overflow-hidden">
-      <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 pb-4 pt-5 px-6">
-        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4">
+    <Card className="h-full rounded-lg border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+      <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 pb-3 pt-3.5 px-4 sm:px-5">
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-3">
           <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
-                <Layers size={16} />
+              <div className="p-1.5 rounded-md bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300">
+                <Layers size={15} />
               </div>
-              <CardTitle className="text-base font-black text-[#111A62] dark:text-white">Critical Activity & Governance</CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">Critical Activity & Governance</CardTitle>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Live security events, account authorizations, and RBAC modifications</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Live security events, account authorizations, and RBAC telemetry</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full 2xl:w-auto shrink-0">
-            {/* Search Bar Component */}
             <div className="flex-1 sm:flex-none sm:w-56">
               <SearchBar
                 value={filterQuery}
                 onChange={handleFilterChange}
                 placeholder="Filter logs or users..."
-                className="h-9 text-xs"
+                className="h-8.5 text-xs"
               />
             </div>
 
-            {/* Table Tabs as Select */}
             <div className="w-full sm:w-48 shrink-0">
               <Select
                 icon={Filter}
                 size="sm"
                 value={tab}
                 onChange={(e) => handleTabChange(e.target.value)}
-                buttonClassName="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 h-9"
+                buttonClassName="bg-white dark:bg-slate-850 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200/80 dark:border-slate-700 h-8.5 text-xs"
               >
                 <option value="audit">Security Audit Logs</option>
                 <option value="signups">Recent Accounts</option>
@@ -682,7 +683,7 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
       </CardHeader>
 
       {/* TABLE SECTION */}
-      <CardContent className="flex-1 p-6 flex flex-col justify-between min-h-[300px]">
+      <CardContent className="flex-1 p-4 sm:p-5 flex flex-col justify-between min-h-[300px]">
         <div className="flex-1 overflow-x-auto">
           {tab === "audit" ? (
             <Table>
@@ -698,7 +699,7 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
               <tbody>
                 {pagedAuditLogs.length === 0 ? (
                   <tr>
-                    <TD colSpan={5} className="py-12 text-center text-slate-400">
+                    <TD colSpan={5} className="py-12 text-center text-slate-400 text-xs">
                       No critical security logs match filter query.
                     </TD>
                   </tr>
@@ -712,40 +713,40 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
                       <tr key={log.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
                         <TD>
                           <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300 font-black flex items-center justify-center text-xs shrink-0 ring-1 ring-[#111A62]/20 group-hover:bg-[#111A62] group-hover:text-white transition">
+                            <div className="h-7 w-7 rounded-md bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300 font-bold flex items-center justify-center text-xs shrink-0 ring-1 ring-[#111A62]/20 group-hover:bg-[#111A62] group-hover:text-white transition">
                               {(log.user?.email || log.user?.name || "S")[0].toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-xs font-extrabold text-slate-900 dark:text-slate-200 group-hover:text-[#111A62] dark:group-hover:text-blue-400 transition-colors">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 group-hover:text-[#111A62] dark:group-hover:text-blue-400 transition-colors">
                                 {log.user?.name || log.user?.email?.split("@")[0] || "System Daemon"}
                               </p>
-                              <p className="text-[10px] font-semibold text-slate-400">
+                              <p className="text-[10px] text-slate-400">
                                 {log.user?.email || "system.daemon@artms.core"}
                               </p>
                             </div>
                           </div>
                         </TD>
                         <TD>
-                          <Badge tone={badgeTone} className="font-black text-[10px] tracking-wider px-2 py-0.5">
+                          <Badge tone={badgeTone} className="font-mono text-[10px] uppercase px-1.5 py-0.5">
                             {actionStr}
                           </Badge>
                         </TD>
                         <TD>
-                          <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 capitalize flex items-center gap-1.5">
+                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 capitalize flex items-center gap-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-[#E15B1D]" />
                             {log.module || "General Systems"}
                           </span>
                         </TD>
                         <TD>
-                          <span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700">
+                          <span className="font-mono text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/80 dark:border-slate-700">
                             {log.ip_address || "127.0.0.1"}
                           </span>
                         </TD>
                         <TD className="text-right">
-                          <div className="text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                          <div className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
                             {new Date(log.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
-                          <div className="text-[10px] font-semibold text-slate-400">
+                          <div className="text-[10px] font-mono text-slate-400">
                             {new Date(log.created_at || Date.now()).toLocaleDateString()}
                           </div>
                         </TD>
@@ -769,7 +770,7 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
               <tbody>
                 {pagedSignups.length === 0 ? (
                   <tr>
-                    <TD colSpan={5} className="py-12 text-center text-slate-400">
+                    <TD colSpan={5} className="py-12 text-center text-slate-400 text-xs">
                       No recent user accounts found matching query.
                     </TD>
                   </tr>
@@ -782,28 +783,28 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
                       <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
                         <TD>
                           <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-full bg-[#E15B1D]/10 text-[#E15B1D] font-black flex items-center justify-center text-xs shrink-0 ring-1 ring-[#E15B1D]/20">
-                              <UserPlus size={14} />
+                            <div className="h-7 w-7 rounded-md bg-[#E15B1D]/10 text-[#E15B1D] font-bold flex items-center justify-center text-xs shrink-0 ring-1 ring-[#E15B1D]/20">
+                              <UserPlus size={13} />
                             </div>
                             <div>
-                              <p className="text-xs font-extrabold text-slate-900 dark:text-slate-200">{displayName}</p>
-                              <p className="text-[10px] font-semibold text-slate-400">{u.email}</p>
+                              <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{displayName}</p>
+                              <p className="text-[10px] text-slate-400">{u.email}</p>
                             </div>
                           </div>
                         </TD>
                         <TD>
-                          <Badge tone="info" className="font-extrabold text-[10px]">
+                          <Badge tone="info" className="text-[10px]">
                             {u.department?.department_name || "General Systems"}
                           </Badge>
                         </TD>
-                        <TD className="text-xs font-bold text-slate-700 dark:text-slate-300">{roleLabel}</TD>
+                        <TD className="text-xs font-medium text-slate-700 dark:text-slate-300">{roleLabel}</TD>
                         <TD>
-                          <Badge tone={u.is_active ? "success" : "warning"} className="font-extrabold text-[10px]">
+                          <Badge tone={u.is_active ? "success" : "warning"} className="text-[10px]">
                             {u.is_active ? "Active Verified" : "Pending Review"}
                           </Badge>
                         </TD>
-                        <TD className="text-right text-xs font-bold text-slate-500">
-                          <Link to="/super-admin/users" className="text-[#111A62] dark:text-blue-400 hover:text-[#E15B1D] font-extrabold hover:underline transition cursor-pointer text-xs inline-flex items-center gap-1 justify-end">
+                        <TD className="text-right text-xs">
+                          <Link to="/super-admin/users" className="text-[#111A62] dark:text-blue-400 hover:text-[#E15B1D] font-semibold hover:underline transition cursor-pointer text-xs inline-flex items-center gap-1 justify-end">
                             <span>Inspect</span> <ArrowUpRight size={13} />
                           </Link>
                         </TD>
@@ -817,7 +818,7 @@ function CriticalActivityTable({ logs, recentUsers, departments }) {
         </div>
 
         {/* PAGINATION CONTROLS */}
-        <div className="mt-4">
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
           <Pagination
             page={page}
             pageSize={pageSize}

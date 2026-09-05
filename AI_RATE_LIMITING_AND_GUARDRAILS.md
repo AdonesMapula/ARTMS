@@ -65,12 +65,13 @@ Rate limiting in ARTMS operates across two distinct layers:
 
 | Rate Limiter Name | Protected Endpoint | Rate Limit | Identifier / Bucket Key | HTTP 429 Response Message |
 | :--- | :--- | :--- | :--- | :--- |
-| `ai-public-parser` | `POST /api/public/parse-resume` | **5 req / min** | Client IP (`request()->ip()`) | *"Too many resume parsing attempts. Please wait a minute before submitting again."* |
-| `ai-screening` | `POST /api/ai/screen/{applicant}` | **30 req / min** | User ID (`user_{id}`) or IP | *"AI Candidate Screening rate limit reached. Please wait a moment before running more screenings."* |
-| `ai-transcription` | `POST /api/interviews/{id}/transcribe-audio` | **60 req / min** | Session + IP (`transcribe_{id}_{ip}`) | *"Audio transcription rate limit exceeded. Please wait for audio chunks to process."* |
-| `ai-document-parser` | `POST /api/job-library/parse-document` | **15 req / min** | User ID (`user_{id}`) or IP | *"Job document parser rate limit exceeded. Please wait before uploading more documents."* |
-| `ai-live-analysis` | `POST /api/interviews/{id}/analyze-live` | **20 req / min** | Interview ID (`live_analysis_{id}`) | *"Live analysis rate limit reached. Waiting for next analysis window."* |
-| `ai-general` | Fallback AI endpoints | **45 req / min** | User ID or IP | *"AI service rate limit reached. Please retry shortly."* |
+| `ai-public-parser` | `POST /api/public/parse-resume` | **10 req / min** | Client IP (`request()->ip()`) | *"Too many resume parsing attempts. Please wait a moment before submitting again."* |
+| `ai-screening` | `POST /api/ai/screen/{applicant}` | **45 req / min** | User ID (`user_{id}`) or IP | *"AI Candidate Screening rate limit reached. Please wait a moment before running more screenings."* |
+| `ai-transcription` | `POST /api/interviews/{id}/transcribe-audio` | **60 req / min** | Session + IP (`transcribe_{id}_{ip}`) | *"Audio transcription rate limit exceeded. Please wait for the current audio processing to complete."* |
+| `ai-document-parser` | `POST /api/job-library/parse-document` | **20 req / min** | User ID (`user_{id}`) or IP | *"Job document parser rate limit exceeded. Please wait before uploading more documents."* |
+| `ai-live-analysis` | `POST /api/interviews/{id}/analyze-live` | **30 req / min** | Interview ID (`live_analysis_{id}`) | *"Live analysis rate limit reached. Waiting for next analysis window."* |
+| `ai-report` | `GET /api/interviews/{id}/report` | **15 req / min** | Interview ID (`ai_report_{id}`) | *"Interview report is already generating. Please wait a moment."* |
+| `ai-general` | Fallback AI endpoints | **60 req / min** | User ID or IP | *"AI service rate limit reached. Please retry shortly."* |
 
 #### Standard 429 Response Structure
 When a client exceeds the allocated rate limit, the API returns a structured JSON payload accompanied by standard HTTP headers:
@@ -78,23 +79,23 @@ When a client exceeds the allocated rate limit, the API returns a structured JSO
 HTTP/1.1 429 Too Many Requests
 Content-Type: application/json
 Retry-After: 42
-X-RateLimit-Limit: 5
-X-RateLimit-Remaining: 0
+X-RateLimit-Status: rate_limited
 ```
 ```json
 {
   "status": "rate_limited",
-  "message": "Too many resume parsing attempts. Please wait a minute before submitting again.",
+  "message": "Too many resume parsing attempts. Please wait a moment before submitting again.",
   "retry_after": 42
 }
 ```
 
-### 3.2. Service-Level Rate Limiter & Resilience (`GeminiService.php`)
+### 3.2. Dynamic Dual-Key Load Balancer & Resilience (`GeminiService.php`)
 
-To prevent hitting Google Gemini's free-tier rate limit (15 requests per minute per key), `GeminiService` implements:
-- **Key Sliding-Window Tracking**: Tracks active requests per key via cache (`gemini_rpm_{hash}`). If a key hits 14 RPM, requests immediately failover to the reserve API key (`RESERVE_GEMINI_API_KEY`).
-- **Exponential Backoff with Jitter**: If an HTTP `429 Too Many Requests` or `503 Service Unavailable` is encountered from Google, the service waits `400ms + random jitter` before retrying or cascading to the next fallback model (`gemini-3.6-flash` &rarr; `gemini-2.5-flash` &rarr; `gemini-2.0-flash` &rarr; `gemini-1.5-flash` &rarr; `gemini-1.5-pro`).
-- **Dual-Key Redundancy**: Seamless transition between Primary Key and Reserve Key without dropping user requests.
+To prevent hitting Google Gemini's rate limits and double system concurrency, `GeminiService` implements:
+- **Least-Loaded Dynamic Load Balancing**: Invocations are automatically routed to whichever configured API key has fewer active requests in the current 60-second sliding window via `getBalancedApiKeys()`.
+- **Key Sliding-Window Tracking**: Tracks active requests per key via cache (`gemini_rpm_{hash}`). If a key hits 14 RPM, requests dynamically route to the next available API key.
+- **Exponential Backoff with Jitter**: If an HTTP `429 Too Many Requests` or `503 Service Unavailable` is encountered from Google, the service waits `400ms + random jitter` before retrying or cascading to the next fallback model.
+- **Dual-Key Redundancy**: Seamless transition between Primary Key (`GEMINI_API_KEY`) and Reserve Key (`RESERVE_GEMINI_API_KEY`) without dropping user requests.
 
 ---
 

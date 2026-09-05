@@ -2,22 +2,26 @@ import { cn } from "../../utils/cn";
 
 const VARIANTS = {
   primary:
-    "bg-[var(--artms-primary)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary),#000_10%)] cursor-pointer active:scale-[0.98]",
+    "bg-[#111A62] text-white border border-[#111A62] shadow-2xs hover:bg-[#0c144e] cursor-pointer active:scale-[0.99] dark:bg-[#3B4BA0] dark:border-[#4D5DB8] dark:hover:bg-[#4D5DB8]",
   secondary:
-    "bg-[var(--artms-primary-2)] text-white hover:bg-[color-mix(in_oklab,var(--artms-primary-2),#000_10%)] cursor-pointer active:scale-[0.98]",
+    "bg-slate-800 text-white border border-slate-700 shadow-2xs hover:bg-slate-700 cursor-pointer active:scale-[0.99] dark:bg-slate-700 dark:hover:bg-slate-600",
   outline:
-    "border border-[var(--artms-border)] bg-white text-slate-800 hover:bg-slate-50 cursor-pointer active:scale-[0.98]",
-  ghost: "bg-transparent text-slate-700 hover:bg-slate-100 cursor-pointer active:scale-95",
+    "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer active:scale-[0.99]",
+  ghost:
+    "bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-[0.99]",
   danger:
-    "bg-red-600 text-white hover:bg-[color-mix(in_oklab,#dc2626,#000_12%)] cursor-pointer active:scale-[0.98]",
+    "bg-rose-600 text-white border border-rose-700 shadow-2xs hover:bg-rose-700 cursor-pointer active:scale-[0.99]",
+  destructive:
+    "bg-rose-600 text-white border border-rose-700 shadow-2xs hover:bg-rose-700 cursor-pointer active:scale-[0.99]",
   accent:
-    "bg-[var(--artms-accent)] text-white hover:bg-[color-mix(in_oklab,var(--artms-accent),#000_10%)] cursor-pointer active:scale-[0.98]",
+    "bg-[#E15B1D] text-white border border-[#c44e19] shadow-2xs hover:bg-[#c44e19] cursor-pointer active:scale-[0.99]",
 };
 
 const SIZES = {
-  sm: "h-9 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-11 px-5 text-base",
+  xs: "h-7 px-2.5 text-xs",
+  sm: "h-8 px-3 text-xs font-semibold",
+  md: "h-9 px-3.5 text-sm font-semibold",
+  lg: "h-10 px-4 text-sm font-semibold",
 };
 
 export default function Button({
@@ -30,11 +34,11 @@ export default function Button({
   return (
     <Comp
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all",
-        "focus-visible:ring-2 focus-visible:ring-[var(--artms-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
-        "disabled:pointer-events-none disabled:opacity-60 disabled:cursor-not-allowed",
-        VARIANTS[variant],
-        SIZES[size],
+        "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-all select-none tracking-tight",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111A62]/40 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0B0F2E]",
+        "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
+        VARIANTS[variant] || VARIANTS.primary,
+        SIZES[size] || SIZES.md,
         className
       )}
       {...props}

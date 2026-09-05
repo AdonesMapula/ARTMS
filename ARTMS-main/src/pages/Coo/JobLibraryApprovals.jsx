@@ -186,60 +186,61 @@ export default function JobLibraryApprovals() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Entries"
           value={total}
-          icon={<BookOpen size={24} />}
+          icon={<BookOpen size={20} />}
           themeColor="blue"
         />
         <StatCard
           title="Pending"
           value={pendingCount}
-          icon={<Clock size={24} />}
+          icon={<Clock size={20} />}
           themeColor="amber"
         />
         <StatCard
           title="Approved"
           value={approvedCount}
-          icon={<CheckCircle size={24} />}
+          icon={<CheckCircle size={20} />}
           themeColor="emerald"
         />
         <StatCard
           title="Rejected"
           value={rows.filter((r) => r.approval_status === "rejected").length}
-          icon={<XCircle size={24} />}
+          icon={<XCircle size={20} />}
           themeColor="red"
         />
       </div>
 
       {/* Filters & Search */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <CardContent className="py-3 px-4 sm:px-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Filter size={16} />
-              Filters:
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+              <Filter size={14} />
+              <span>Status:</span>
             </div>
-            <div className="flex flex-1 flex-wrap gap-2">
+            <div className="flex flex-1 flex-wrap gap-1.5">
               {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => { setStatusFilter(f.value); setPage(1); }}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === f.value
-                      ? "border-[#111A62] bg-[#111A62] text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${statusFilter === f.value
+                      ? "border-[#111A62] bg-[#111A62] text-white shadow-2xs"
+                      : "border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
                     }`}
                 >
                   {f.label}
                 </button>
               ))}
             </div>
-            <div className="w-full lg:w-64">
+            <div className="w-full lg:w-60">
               <SearchBar
                 value={q}
                 onChange={(v) => setQ(v)}
                 placeholder="Search title, category…"
+                className="h-8.5 text-xs"
               />
             </div>
           </div>
@@ -247,21 +248,24 @@ export default function JobLibraryApprovals() {
       </Card>
 
       {/* Job Entries Cards */}
-      <Card>
-        <CardHeader className="pb-6">
-          <CardTitle>
-            Job Entries ({filtered.length} {filtered.length === 1 ? "entry" : "entries"})
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 py-3 px-4 sm:px-5">
+          <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Job Entries</span>
+            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+            </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="p-4 sm:p-5">
           {loading ? (
             <div className="py-2">
               <CardSkeleton count={6} className="!grid-cols-2 lg:!grid-cols-3" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center">
-              <BookOpen size={48} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">
+              <BookOpen size={40} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 {q ? "No matching entries found" : "No entries in this category"}
               </p>
               <p className="mt-1 text-xs text-slate-400">
@@ -270,7 +274,7 @@ export default function JobLibraryApprovals() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((r) => (
                   <Card
                     key={r.id}
@@ -281,20 +285,20 @@ export default function JobLibraryApprovals() {
                         setViewModal({ open: true, job: r });
                       }
                     }}
-                    className="group border-slate-200 bg-white transition-all hover:shadow-lg hover:border-blue-300 cursor-pointer flex flex-col h-full"
+                    className="group border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-2xs hover:shadow-sm cursor-pointer flex flex-col h-full rounded-lg overflow-hidden"
                   >
-                    <CardContent className="p-5 flex flex-col flex-1 justify-between">
-                      <div className="flex-1 space-y-4">
+                    <CardContent className="p-4 flex flex-col flex-1 justify-between">
+                      <div className="flex-1 space-y-3">
                         {/* Header */}
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge tone="default" className="text-xs font-semibold">
+                              <Badge tone="default" className="text-[10px] font-mono px-1.5 py-0.5">
                                 JL-{String(r.id).padStart(3, "0")}
                               </Badge>
-                              <span className="text-xs text-slate-400">{fmt(r.created_at)}</span>
+                              <span className="text-[11px] font-mono text-slate-400">{fmt(r.created_at)}</span>
                             </div>
-                            <h3 className="text-lg font-extrabold text-[#111A62]">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#111A62] dark:group-hover:text-blue-400 transition-colors truncate">
                               {r.job_title}
                             </h3>
                           </div>
@@ -304,66 +308,66 @@ export default function JobLibraryApprovals() {
                                 ? "info"
                                 : APPROVAL_TONE[r.approval_status] ?? "default"
                             }
-                            className="text-xs font-semibold"
+                            className="text-[10px] px-1.5 py-0.5 shrink-0"
                           >
                             {r.approval_status === "pending" && (r.approval_remarks || r.remarks)
-                              ? "Resubmitted (Revised)"
+                              ? "Resubmitted"
                               : r.approval_status === "revised"
-                                ? "Needs Revision (HR)"
+                                ? "Needs Revision"
                                 : r.approval_status.charAt(0).toUpperCase() + r.approval_status.slice(1)}
                           </Badge>
                         </div>
 
                         {/* Details Grid */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                            <Briefcase size={16} className="text-slate-400" />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-2 rounded-md bg-slate-50 dark:bg-slate-800/50 p-2">
+                            <Briefcase size={14} className="text-slate-400 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-slate-500">Category</p>
-                              <p className="text-sm font-semibold text-slate-900 truncate">
+                              <p className="text-[10px] text-slate-400 font-medium">Category</p>
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                                 {r.job_category || "—"}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                            <User size={16} className="text-slate-400" />
+                          <div className="flex items-center gap-2 rounded-md bg-slate-50 dark:bg-slate-800/50 p-2">
+                            <User size={14} className="text-slate-400 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-slate-500">Created By</p>
-                              <p className="text-sm font-semibold text-slate-900 truncate">
+                              <p className="text-[10px] text-slate-400 font-medium">Created By</p>
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                                 {r.creator?.name || "—"}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                            <DollarSign size={16} className="text-slate-400" />
+                          <div className="flex items-center gap-2 rounded-md bg-slate-50 dark:bg-slate-800/50 p-2">
+                            <DollarSign size={14} className="text-slate-400 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-slate-500">Salary Range</p>
-                              <p className="text-sm font-semibold text-slate-900 truncate">
+                              <p className="text-[10px] text-slate-400 font-medium">Salary Range</p>
+                              <p className="text-xs font-mono font-medium text-slate-800 dark:text-slate-200 truncate">
                                 {r.salary_min || r.salary_max
                                   ? `${fmtMoney(r.salary_min)} – ${fmtMoney(r.salary_max)}`
                                   : "—"}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                            <Calendar size={16} className="text-slate-400" />
+                          <div className="flex items-center gap-2 rounded-md bg-slate-50 dark:bg-slate-800/50 p-2">
+                            <Calendar size={14} className="text-slate-400 shrink-0" />
                             <div>
-                              <p className="text-xs text-slate-500">Submitted</p>
-                              <p className="text-sm font-semibold text-slate-900">{fmt(r.created_at)}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">Submitted</p>
+                              <p className="text-xs font-mono font-medium text-slate-800 dark:text-slate-200">{fmt(r.created_at)}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Employment Type */}
                         <div>
-                          <Badge tone="accent">
+                          <Badge tone="accent" className="text-[10px]">
                             {r.employment_type?.replace(/_/g, " ") || "—"}
                           </Badge>
                         </div>
                       </div>
 
-                      {/* Actions Container - Pushed to Bottom */}
-                      <div className="mt-4 pt-3 border-t border-slate-100">
+                      {/* Actions Container */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
                         {r.approval_status === "pending" ? (
                           <Button
                             variant="outline"
@@ -372,9 +376,9 @@ export default function JobLibraryApprovals() {
                               e.stopPropagation();
                               openReview(r, "approved");
                             }}
-                            className="w-full gap-1.5 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-bold"
+                            className="w-full gap-1.5 border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 text-xs font-semibold h-7.5"
                           >
-                            <Eye size={14} />
+                            <Eye size={13} />
                             Review Entry & Decide
                           </Button>
                         ) : (
@@ -385,9 +389,9 @@ export default function JobLibraryApprovals() {
                               e.stopPropagation();
                               setViewModal({ open: true, job: r });
                             }}
-                            className="w-full gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                            className="w-full gap-1.5 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 text-xs h-7.5"
                           >
-                            <Eye size={14} />
+                            <Eye size={13} />
                             View Details
                           </Button>
                         )}
@@ -398,7 +402,7 @@ export default function JobLibraryApprovals() {
               </div>
 
               {/* Pagination */}
-              <div className="mt-6">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <Pagination
                   page={page}
                   pageSize={PAGE_SIZE}
@@ -414,7 +418,7 @@ export default function JobLibraryApprovals() {
       {/* ── Modals & Panels ── */}
       {viewModal.open && viewModal.job && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden">
+          <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-xl overflow-hidden shadow-2xl">
             <JobLibraryViewPanel
               jobId={viewModal.job.id}
               initialJob={viewModal.job}
@@ -452,28 +456,22 @@ export default function JobLibraryApprovals() {
 // ── KPI / StatCard Component ──────────────────────────────────────────────────
 function StatCard({ title, value, icon, themeColor }) {
   const colorMap = {
-    blue: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
-    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
-    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
-    red: { bg: "bg-red-100 dark:bg-red-950/60", text: "text-red-600 dark:text-red-400" },
+    blue: { bg: "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400" },
+    amber: { bg: "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400" },
+    emerald: { bg: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400" },
+    red: { bg: "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400" },
   };
   const theme = colorMap[themeColor] || colorMap.blue;
 
   return (
-    <div className="group relative rounded-xl h-full p-[1.5px] transition-all duration-300 bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10">
-      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D] flex flex-col justify-between p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
-            <p className="text-3xl font-black tracking-tight text-[#111A62]">{value}</p>
-          </div>
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${theme.bg}`}>
-            <div className={theme.text}>
-              {icon}
-            </div>
-          </div>
-        </div>
-      </Card>
+    <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs flex items-center justify-between">
+      <div className="space-y-0.5">
+        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{title}</p>
+        <p className="text-xl font-bold font-mono text-slate-900 dark:text-white leading-tight">{value}</p>
+      </div>
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${theme.bg}`}>
+        {icon}
+      </div>
     </div>
   );
 }

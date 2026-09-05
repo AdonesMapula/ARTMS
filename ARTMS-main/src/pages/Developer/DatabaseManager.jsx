@@ -418,86 +418,86 @@ export default function DatabaseManager() {
       </div>
 
       {/* ── System Overview Stats Cards ────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Name</p>
-              <h3 className="text-xl font-extrabold text-[#111A62] mt-1 font-mono">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Database Name</p>
+              <h3 className="text-lg font-bold text-[#111A62] dark:text-blue-400 mt-0.5 font-mono">
                 {dbData?.database || "artms_db"}
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Active Connection</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Active Connection</p>
             </div>
-            <div className="p-3 rounded-2xl bg-blue-50 text-[#111A62]">
-              <Server size={24} />
+            <div className="p-2.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#111A62] dark:text-blue-400">
+              <Server size={20} />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Tables</p>
-              <h3 className="text-2xl font-extrabold text-[#111A62] mt-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Tables</p>
+              <h3 className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-0.5">
                 {loading ? "..." : dbData?.total_tables || 0}
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Mapped Schemas</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Mapped Schemas</p>
             </div>
-            <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600">
-              <Layers size={24} />
+            <div className="p-2.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+              <Layers size={20} />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Records</p>
-              <h3 className="text-2xl font-extrabold text-emerald-600 mt-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Records</p>
+              <h3 className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {loading ? "..." : (dbData?.total_rows || 0).toLocaleString()}
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Rows across all tables</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Rows across all tables</p>
             </div>
-            <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-              <FileSpreadsheet size={24} />
+            <div className="p-2.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <FileSpreadsheet size={20} />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Storage Footprint</p>
-              <h3 className="text-2xl font-extrabold text-amber-600 mt-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Storage Footprint</p>
+              <h3 className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
                 {loading ? "..." : dbData?.total_size_human || "0 B"}
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Data & Index size</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Data & Index size</p>
             </div>
-            <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-              <HardDrive size={24} />
+            <div className="p-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+              <HardDrive size={20} />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* ── Fast Presets Panel ─────────────────────────────────────── */}
-      <Card className="border-amber-200 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-white shadow-sm">
-        <CardContent className="p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-amber-200/60 pb-3.5 mb-3.5">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <Sparkles size={16} className="text-amber-600" /> Fast Purge & Reseed Presets
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Sparkles size={14} className="text-amber-500" /> Fast Purge & Reseed Presets
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Targeted single-click cleanup for specific subsystems with automatic sequence resets.
               </p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-amber-800 font-semibold bg-amber-100/70 px-2.5 py-1 rounded-lg self-start md:self-auto">
-              <Info size={13} /> Auto-Increment Reset & Cache Flush Included
+            <div className="flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 px-2.5 py-1 rounded-md self-start md:self-auto">
+              <Info size={12} /> Auto-Increment Reset & Cache Flush Included
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -509,9 +509,9 @@ export default function DatabaseManager() {
                   affectedTables: ["applicants", "ai_evaluations", "interviews", "job_postings", "job_library", "manpower_requests"],
                 })
               }
-              className="bg-white border-blue-200 text-blue-700 hover:bg-blue-50 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <Trash2 size={13} /> Purge Recruitment (Jobs, PRFs, Applicants)
+              <Trash2 size={12} /> Purge Recruitment (Jobs, PRFs, Applicants)
             </Button>
 
             <Button
@@ -525,9 +525,9 @@ export default function DatabaseManager() {
                   affectedTables: ["employees", "attendances", "leaves", "payrolls"],
                 })
               }
-              className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <Trash2 size={13} /> Purge Workforce (Employees, Attendance, Payroll)
+              <Trash2 size={12} /> Purge Workforce (Employees, Attendance, Payroll)
             </Button>
 
             <Button
@@ -541,9 +541,9 @@ export default function DatabaseManager() {
                   affectedTables: ["messages", "conversations", "notifications"],
                 })
               }
-              className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <Trash2 size={13} /> Purge Messages & Notifications
+              <Trash2 size={12} /> Purge Messages & Notifications
             </Button>
 
             <Button
@@ -557,12 +557,12 @@ export default function DatabaseManager() {
                   affectedTables: ["applicants", "jobs", "employees", "attendances", "messages", "leaves", "payrolls"],
                 })
               }
-              className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-rose-50/50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 hover:bg-rose-100 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <ShieldAlert size={13} /> Wipe All Except Core Auth & Roles
+              <ShieldAlert size={12} /> Wipe All Except Core Auth & Roles
             </Button>
 
-            <div className="h-6 w-px bg-slate-200 self-center hidden sm:block" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 self-center hidden sm:block" />
 
             <Button
               size="sm"
@@ -574,9 +574,9 @@ export default function DatabaseManager() {
                   title: "Reseed 15 Job Templates & Published Postings",
                 })
               }
-              className="bg-white border-slate-300 text-[#111A62] hover:bg-slate-50 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <RotateCcw size={13} /> Reseed 15 Job Templates
+              <RotateCcw size={12} /> Reseed 15 Job Templates
             </Button>
 
             <Button
@@ -589,9 +589,9 @@ export default function DatabaseManager() {
                   title: "Reseed Demo Applicants",
                 })
               }
-              className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 font-semibold gap-1.5 cursor-pointer text-xs h-8"
             >
-              <RotateCcw size={13} /> Reseed Demo Applicants
+              <RotateCcw size={12} /> Reseed Demo Applicants
             </Button>
           </div>
         </CardContent>
@@ -599,56 +599,56 @@ export default function DatabaseManager() {
 
       {/* ── Active Bulk Selection Floating Toolbar ─────────────────── */}
       {selectedTables.length > 0 && (
-        <div className="sticky top-4 z-40 animate-slide-down rounded-2xl bg-[#111A62] text-white p-4 shadow-xl border border-blue-900 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400 text-slate-900 font-black text-xs">
+        <div className="sticky top-4 z-40 rounded-lg bg-slate-900 dark:bg-slate-950 text-white p-3 shadow-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500 text-white font-mono font-bold text-xs">
               {selectedTables.length}
             </div>
             <div>
-              <p className="text-sm font-extrabold">
+              <p className="text-xs font-bold">
                 {selectedTables.length} {selectedTables.length === 1 ? "Table" : "Tables"} Selected
               </p>
-              <p className="text-[11px] text-blue-200">
+              <p className="text-[10px] text-slate-400">
                 Execute batch actions on the selected tables simultaneously.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button
               size="sm"
               onClick={() => {
                 setConfirmInput("");
                 setBulkTruncateModal({ open: true, tables: selectedTables });
               }}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-1.5 cursor-pointer text-xs h-7.5"
             >
-              <Trash2 size={13} /> Delete / Truncate Selected ({selectedTables.length})
+              <Trash2 size={12} /> Delete Selected ({selectedTables.length})
             </Button>
 
             <Button
               size="sm"
               variant="outline"
               onClick={handleAddSelectedToExclusions}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 font-semibold gap-1.5 cursor-pointer text-xs h-7.5"
             >
-              <ShieldCheck size={13} /> Protect from Purge
+              <ShieldCheck size={12} /> Protect from Purge
             </Button>
 
             <Button
               size="sm"
               variant="outline"
               onClick={handleRemoveSelectedFromExclusions}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 font-bold gap-1.5 cursor-pointer text-xs"
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 font-semibold gap-1.5 cursor-pointer text-xs h-7.5"
             >
-              <X size={13} /> Remove Protection
+              <X size={12} /> Remove Protection
             </Button>
 
             <Button
               size="sm"
               variant="ghost"
               onClick={handleDeselectAll}
-              className="text-blue-200 hover:text-white hover:bg-white/10 text-xs cursor-pointer"
+              className="text-slate-400 hover:text-white hover:bg-slate-800 text-xs cursor-pointer h-7.5"
             >
               Deselect All
             </Button>
@@ -657,15 +657,15 @@ export default function DatabaseManager() {
       )}
 
       {/* ── Active Exclusions Bar ──────────────────────────────────── */}
-      <Card className="border-slate-200 bg-white">
-        <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <CardContent className="p-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle className="text-emerald-600 shrink-0" size={18} />
+            <CheckCircle className="text-emerald-600 dark:text-emerald-400 shrink-0" size={16} />
             <div>
-              <p className="text-xs font-extrabold text-slate-900">
+              <p className="text-xs font-bold text-slate-900 dark:text-slate-200">
                 Protected Exclusions for Bulk Purge ({excludedTables.length} tables protected)
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 These tables will be safely skipped whenever "Delete Everything Except..." is executed.
               </p>
             </div>
@@ -675,20 +675,20 @@ export default function DatabaseManager() {
             {excludedTables.map((tbl) => (
               <span
                 key={tbl}
-                className={`inline-flex items-center gap-1 text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${
+                className={`inline-flex items-center gap-1 text-xs font-mono font-medium px-2 py-0.5 rounded border ${
                   tbl === "migrations"
-                    ? "bg-slate-100 text-slate-500 border-slate-200"
-                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200/80 dark:border-slate-700"
+                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/80 dark:border-emerald-800/40"
                 }`}
               >
                 {tbl}
                 {tbl !== "migrations" && (
                   <button
                     onClick={() => toggleExcludeTable(tbl)}
-                    className="text-emerald-700/60 hover:text-emerald-900 cursor-pointer ml-0.5"
+                    className="text-emerald-700/60 dark:text-emerald-400/60 hover:text-emerald-900 dark:hover:text-emerald-300 cursor-pointer ml-0.5"
                     title="Remove from exclusions"
                   >
-                    <X size={12} />
+                    <X size={11} />
                   </button>
                 )}
               </span>
@@ -698,26 +698,27 @@ export default function DatabaseManager() {
       </Card>
 
       {/* ── Database Tables Explorer ───────────────────────────────── */}
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader className="pb-4">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 py-3 px-4 sm:px-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <Layers className="text-[#111A62]" size={18} /> Tables & Live Inspector ({filteredTables.length})
+            <div className="flex items-center gap-2.5">
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Layers className="text-[#111A62] dark:text-blue-400" size={16} /> 
+                <span>Tables & Live Inspector</span>
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {filteredTables.length}
+                </span>
               </CardTitle>
-              <span className="text-xs text-slate-400 font-semibold hidden sm:inline">
-                • Click any row to view live data inside that table
-              </span>
             </div>
 
             {/* Controls: Search, Check All, Category Filter & View Toggle */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div className="w-full sm:w-56">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="w-full sm:w-52">
                 <SearchBar
                   value={q}
                   onChange={setQ}
                   placeholder="Search table name..."
-                  className="h-9 text-xs"
+                  className="h-8.5 text-xs"
                 />
               </div>
 
@@ -726,32 +727,32 @@ export default function DatabaseManager() {
                 variant="outline"
                 size="sm"
                 onClick={handleToggleSelectAll}
-                className="h-9 text-xs font-bold gap-1.5 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer shrink-0"
+                className="h-8.5 text-xs font-semibold gap-1.5 bg-white dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer shrink-0"
               >
                 {isAllFilteredSelected ? (
                   <>
-                    <CheckSquare size={14} className="text-blue-600" />
+                    <CheckSquare size={13} className="text-blue-600 dark:text-blue-400" />
                     <span>Uncheck All ({filteredTables.length})</span>
                   </>
                 ) : (
                   <>
-                    <Square size={14} className="text-slate-400" />
+                    <Square size={13} className="text-slate-400" />
                     <span>Check All ({filteredTables.length})</span>
                   </>
                 )}
               </Button>
 
               {/* Category Pills */}
-              <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 overflow-x-auto">
+              <div className="flex items-center rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700 overflow-x-auto">
                 {Object.entries(CATEGORY_META).map(([key, meta]) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => setCategoryFilter(key)}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                    className={`px-2 py-1 text-xs font-semibold rounded transition-all whitespace-nowrap cursor-pointer ${
                       categoryFilter === key
-                        ? "bg-white text-[#111A62] shadow-xs"
-                        : "text-slate-500 hover:text-slate-900"
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                     }`}
                   >
                     {meta.label}
@@ -760,46 +761,46 @@ export default function DatabaseManager() {
               </div>
 
               {/* View Mode Toggle */}
-              <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shrink-0">
+              <div className="flex items-center rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/80 dark:border-slate-700 shrink-0">
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${
-                    viewMode === "list" ? "bg-white text-[#111A62] shadow-xs" : "text-slate-400 hover:text-slate-700"
+                  className={`p-1 rounded transition cursor-pointer ${
+                    viewMode === "list" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs" : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                   title="List View"
                 >
-                  <List size={15} />
+                  <List size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded-lg transition cursor-pointer ${
-                    viewMode === "grid" ? "bg-white text-[#111A62] shadow-xs" : "text-slate-400 hover:text-slate-700"
+                  className={`p-1 rounded transition cursor-pointer ${
+                    viewMode === "grid" ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs" : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                   title="Grid View"
                 >
-                  <LayoutGrid size={15} />
+                  <LayoutGrid size={14} />
                 </button>
               </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
             <div className="py-12 text-center text-slate-400">
-              <RefreshCw size={28} className="mx-auto mb-2 animate-spin text-slate-300" />
-              <p className="text-sm font-semibold">Reading database schema & table statistics...</p>
+              <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-slate-300" />
+              <p className="text-xs font-semibold">Reading database schema & table statistics...</p>
             </div>
           ) : filteredTables.length === 0 ? (
             <div className="py-12 text-center">
-              <Database size={36} className="mx-auto mb-2 text-slate-300" />
-              <p className="text-sm font-bold text-slate-600">No tables match your filter</p>
+              <Database size={32} className="mx-auto mb-2 text-slate-300" />
+              <p className="text-xs font-bold text-slate-600">No tables match your filter</p>
             </div>
           ) : viewMode === "list" ? (
             /* ── Table View ── */
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-slate-50/80">
                   <TableRow>

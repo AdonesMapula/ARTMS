@@ -243,7 +243,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('interviews/{interview}/end-session',    [InterviewController::class, 'endSession']);
         Route::get('interviews/{interview}/processing-status', [InterviewController::class, 'getProcessingStatus']);
         Route::post('interviews/{interview}/behavioral-metrics', [InterviewController::class, 'saveBehavioralMetrics']);
-        Route::get('interviews/{interview}/report',          [InterviewController::class, 'report']);
+        Route::get('interviews/{interview}/report',          [InterviewController::class, 'report'])->middleware('throttle:ai-report');
         Route::post('interviews/{interview}/transcript',     [InterviewController::class, 'storeTranscript']);
         Route::post('interviews/{interview}/transcribe-audio', [InterviewController::class, 'transcribeAudio'])->middleware('throttle:ai-transcription');
         Route::get('interviews/{interview}/transcripts',     [InterviewController::class, 'getTranscripts']);

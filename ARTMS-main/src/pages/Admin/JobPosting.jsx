@@ -273,19 +273,19 @@ export default function JobPosting() {
 
           {selectedPostingId ? (
             /* ── COMPACT SIDEBAR LIST (When Job Panel is open) ──────── */
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl space-y-3 animate-fade-in flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+            <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3.5 shadow-lg space-y-2.5 flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 shrink-0">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">Active Job Postings</h3>
-                  <p className="text-[11px] text-slate-400">Click job to view specification & edit</p>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Job Postings</h3>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">Active Listings</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setSelectedPostingId(null)}
-                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
+                    className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
                     title="Expand to Full Table"
                   >
-                    <X size={16} />
+                    <X size={15} />
                   </button>
                 </div>
               </div>
@@ -296,7 +296,7 @@ export default function JobPosting() {
                   value={q}
                   onChange={(val) => { setQ(val); setPage(1); }}
                   placeholder="Search job title..."
-                  className="text-xs"
+                  className="text-xs h-8 rounded-md"
                 />
 
                 <Select
@@ -304,7 +304,7 @@ export default function JobPosting() {
                   size="sm"
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  buttonClassName="bg-slate-50 hover:bg-white"
+                  buttonClassName="bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 h-8 text-xs rounded-md"
                 >
                   {STATUS_FILTERS.map((f) => (
                     <option key={f.value} value={f.value}>{f.label}</option>
@@ -313,7 +313,7 @@ export default function JobPosting() {
               </div>
 
               {/* Sidebar Cards */}
-              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1">
+              <div className="space-y-1.5 flex-1 min-h-0 overflow-y-auto pr-0.5">
                 {loading ? (
                   <div className="flex flex-col gap-2">
                     <CardSkeleton count={4} className="!grid-cols-1" />
@@ -331,9 +331,9 @@ export default function JobPosting() {
                       <div
                         key={p.id}
                         onClick={() => setSelectedPostingId(p.id)}
-                        className={`p-3 rounded-2xl transition cursor-pointer border ${isSelected
-                            ? "border-[#111A62] bg-[#111A62]/10 ring-2 ring-[#111A62]/20 shadow-xs"
-                            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                        className={`p-2.5 rounded-md transition cursor-pointer border ${isSelected
+                            ? "border-slate-900 dark:border-white bg-slate-50 dark:bg-slate-800/80 shadow-2xs"
+                            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] hover:border-slate-300 dark:hover:border-slate-700"
                           }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -343,9 +343,9 @@ export default function JobPosting() {
                               checked={isChecked}
                               onChange={(e) => handleToggleSelectOne(p.id, e)}
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer shrink-0"
+                              className="rounded-xs border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-0 h-3.5 w-3.5 cursor-pointer shrink-0"
                             />
-                            <span className="text-[10px] font-mono font-extrabold text-[#111A62] bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                            <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded-sm border border-slate-200 dark:border-slate-700">
                               JP-{String(p.id).padStart(3, "0")}
                             </span>
                           </div>
@@ -354,16 +354,16 @@ export default function JobPosting() {
                           </Badge>
                         </div>
 
-                        <p className={`text-xs font-extrabold mt-1.5 truncate ${isSelected ? "text-[#111A62]" : "text-slate-900"}`}>
+                        <p className={`text-xs font-bold mt-1.5 truncate ${isSelected ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-slate-200"}`}>
                           {title}
                         </p>
-                        <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between gap-1 flex-wrap">
-                          <span className="font-semibold">{dept}</span>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between gap-1 flex-wrap">
+                          <span className="font-medium truncate max-w-[120px]">{dept}</span>
                           <div className="flex items-center gap-1.5">
-                            <span className="rounded bg-amber-50 px-1.5 py-0.5 font-bold text-amber-700 border border-amber-200 text-[9px]">
-                              {p.vacancies_count ?? 1} {p.vacancies_count === 1 ? "position needed" : "positions needed"}
+                            <span className="rounded-xs bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.2 font-semibold text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/50 text-[9px]">
+                              {p.vacancies_count ?? 1} {p.vacancies_count === 1 ? "needed" : "needed"}
                             </span>
-                            <span className="text-emerald-700 font-bold">{p.applicants_count || 0} apps</span>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[10px]">{p.applicants_count || 0} apps</span>
                           </div>
                         </div>
                       </div>
@@ -601,39 +601,35 @@ export default function JobPosting() {
 
 function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
   const colorMap = {
-    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
-    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
-    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
-    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
-    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
-    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
-    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
-    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+    navy: { bg: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-900/50" },
+    emerald: { bg: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-900/50" },
+    purple: { bg: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-900/50" },
+    orange: { bg: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200/60 dark:border-orange-900/50" },
+    indigo: { bg: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 dark:border-indigo-900/50" },
+    teal: { bg: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 border-teal-200/60 dark:border-teal-900/50" },
+    amber: { bg: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-900/50" },
+    rose: { bg: "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200/60 dark:border-rose-900/50" },
   };
   const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
     <div
       onClick={onClick}
-      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+      className={`rounded-lg border transition-all duration-200 p-3.5 cursor-pointer select-none bg-white dark:bg-[#0F163D] shadow-2xs ${
         active
-          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
-          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+          ? "border-slate-900 dark:border-white ring-1 ring-slate-900 dark:ring-white"
+          : "border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
       }`}
     >
-      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
-        <CardContent className="flex items-center gap-4 pt-6">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-            <div className={theme.text}>
-              {icon}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
-            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${theme.bg}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">{title}</p>
+          <p className="text-xl font-bold font-mono text-slate-900 dark:text-white leading-tight mt-0.5">{value}</p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -258,58 +258,65 @@ export default function Interviews() {
     <div className="space-y-4">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--artms-accent)]">
-            Recruitment
-          </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#111A62] sm:text-3xl">
-            Interview Scheduling
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-xs bg-slate-900 dark:bg-white" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Recruitment Operations
+            </p>
+          </div>
+          <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+            Interview Management & Scheduling
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Schedule interviews, send email invitations, and record evaluations.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Schedule candidate sessions, coordinate multi-stage evaluations, and track outcomes.
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {["list", "calendar"].map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`rounded-xl border px-4 py-2 text-xs font-bold capitalize transition ${view === v
-                  ? "bg-[var(--artms-primary)] text-white border-[var(--artms-primary)]"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+        <div className="flex gap-2 items-center flex-wrap">
+          <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200/90 dark:border-slate-700">
+            {["list", "calendar"].map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-semibold capitalize transition cursor-pointer ${
+                  view === v
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs border border-slate-200/80 dark:border-slate-700"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
-            >
-              {v === "list" ? (
-                <span className="flex items-center gap-1.5"><FiFileText size={13} /> List</span>
-              ) : (
-                <span className="flex items-center gap-1.5"><FiCalendar size={13} /> Calendar</span>
-              )}
-            </button>
-          ))}
-          <Button onClick={() => setScheduleOpen(true)}>
-            <FiPlus size={14} /> Schedule Interview
+              >
+                {v === "list" ? (
+                  <><FiFileText size={12} /> List</>
+                ) : (
+                  <><FiCalendar size={12} /> Calendar</>
+                )}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" onClick={() => setScheduleOpen(true)} className="gap-1.5 rounded-md text-xs font-medium">
+            <FiPlus size={13} /> Schedule Interview
           </Button>
         </div>
       </div>
 
       {/* ── Stats ───────────────────────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-2.5 sm:grid-cols-4">
         {stats.map((s) => (
           <SummaryCard key={s.label} label={s.label} value={s.count} color={s.color} icon={s.icon} />
         ))}
       </div>
 
       {/* ── Stage Tabs ──────────────────────────────────────────────── */}
-      <div className="flex gap-1 flex-wrap border-b border-slate-200 pb-px">
+      <div className="flex gap-1 flex-wrap border-b border-slate-200/80 dark:border-slate-800 pb-px">
         {STAGE_TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => { setStageTab(t.key); setPage(1); }}
-            className={`px-4 py-2 text-xs font-bold rounded-t-lg transition border-b-2 -mb-px ${stageTab === t.key
-                ? "border-[var(--artms-primary)] text-[var(--artms-primary)] bg-white"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-md transition border-b-2 -mb-px cursor-pointer ${
+              stageTab === t.key
+                ? "border-slate-900 dark:border-white text-slate-900 dark:text-white bg-slate-50/80 dark:bg-slate-800/60 font-bold"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50/50"
+            }`}
           >
             {t.label}
           </button>
@@ -321,26 +328,26 @@ export default function Interviews() {
           {/* ── Filters ─────────────────────────────────────────────── */}
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">
                 {stageTab ? STAGE_LABEL[stageTab] : "All Interviews"}
                 {meta?.total != null && (
-                  <span className="ml-2 text-xs font-semibold text-slate-400">
+                  <span className="ml-2 font-mono text-xs font-bold text-slate-400">
                     ({meta.total})
                   </span>
                 )}
               </CardTitle>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 <input
                   type="search"
                   placeholder="Search applicant or role…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-9 rounded-lg border border-slate-200 px-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--artms-ring)] w-52"
+                  className="h-8.5 rounded-md border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 text-xs text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 w-48"
                 />
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--artms-ring)]"
+                  className="h-8.5 rounded-md border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 cursor-pointer"
                 >
                   <option value="">All Statuses</option>
                   <option value="scheduled">Scheduled</option>
@@ -352,10 +359,10 @@ export default function Interviews() {
                 </select>
                 <button
                   onClick={fetchInterviews}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 transition"
+                  className="flex h-8.5 w-8.5 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer shadow-2xs"
                   title="Refresh"
                 >
-                  <FiRefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                  <FiRefreshCw size={13} className={loading ? "animate-spin" : ""} />
                 </button>
               </div>
             </div>
@@ -623,24 +630,22 @@ export default function Interviews() {
 
 function SummaryCard({ label, value, color, icon: Icon }) {
   const colorMap = {
-    amber: { bg: "bg-amber-100", text: "text-amber-600", hover: "hover:border-amber-400" },
-    emerald: { bg: "bg-emerald-100", text: "text-emerald-600", hover: "hover:border-emerald-400" },
-    blue: { bg: "bg-blue-100", text: "text-blue-600", hover: "hover:border-blue-400" },
-    slate: { bg: "bg-slate-100", text: "text-slate-600", hover: "hover:border-slate-400" },
+    amber: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-900/50",
+    emerald: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-900/50",
+    blue: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-900/50",
+    slate: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700",
   };
   const theme = colorMap[color] || colorMap.blue;
 
   return (
-    <Card className={`transition-all ${theme.hover} hover:shadow-md bg-white`}>
-      <CardContent className="flex items-center gap-4 pt-6">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-          {Icon && <Icon size={24} className={theme.text} />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-500 truncate">{label}</p>
-          <p className="text-2xl font-extrabold text-slate-900">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0F163D] p-3 shadow-2xs flex items-center gap-3">
+      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${theme}`}>
+        {Icon && <Icon size={18} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">{label}</p>
+        <p className="text-xl font-bold font-mono text-slate-900 dark:text-white leading-tight mt-0.5">{value}</p>
+      </div>
+    </div>
   );
 }

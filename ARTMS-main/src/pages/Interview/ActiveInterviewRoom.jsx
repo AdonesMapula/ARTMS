@@ -6,8 +6,11 @@
  * - Applicant View: Full-screen Zoom call layout (matching Image 1)
  * - Interviewer View: Zoom stage + Live Sentiment/Keywords/AI Match Score analytics + Sidebar (matching Image 2)
  */
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import InterviewerRoomView from "../../components/interview/InterviewerRoomView";
+import CandidateInterviewView from "../../components/interview/CandidateInterviewView";
 
 import {
   LiveKitRoom,
@@ -601,14 +604,12 @@ function TwoWayTranscriptionManager({
   onLiveSegmentProduced,
   setInterimSpeech,
 }) {
-  const audioTracks = useTracks([Track.Source.Microphone]);
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
 
   const recognitionRef = useRef(null);
   const isRecognizingRef = useRef(false);
   const processedHashesRef = useRef(new Map());
-  const isTranscribingRef = useRef(false);
 
   // 1. LiveKit WebRTC Data Channel Broadcasting (0ms Latency Transport with ConnectionState Guard)
   const broadcastData = useCallback((dataObj) => {
@@ -796,86 +797,6 @@ function TwoWayTranscriptionManager({
       }
     };
   }, [interviewId, isApplicant, speechLang, localParticipant, setInterimSpeech, broadcastData]);
-
-  // 5. Remote Participant Audio Track Streamer (Whisper Fallback Engine with Concurrency Lock & Stable Dependencies)
-  useEffect(() => {
-    if (!interviewId) return;
-
-    const remoteTrackEntries = audioTracks.filter(
-      (t) => t.participant && !t.participant.isLocal
-    );
-
-    const activeRecorders = [];
-
-    remoteTrackEntries.forEach((trackEntry) => {
-      const participant = trackEntry.participant;
-      const identity = participant.identity || "";
-      const role = identity.startsWith("hr_") ? "hr" : "applicant";
-
-      const mediaStreamTrack = trackEntry.publication?.track?.mediaStreamTrack;
-      if (!mediaStreamTrack || mediaStreamTrack.readyState !== "live") return;
-
-      try {
-        const stream = new MediaStream([mediaStreamTrack]);
-        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : MediaRecorder.isTypeSupported("audio/mp4")
-          ? "audio/mp4"
-          : "";
-
-        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-        let audioChunks = [];
-
-        recorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
-
-        recorder.onstop = async () => {
-          if (audioChunks.length === 0) return;
-          const audioBlob = new Blob(audioChunks, { type: mimeType || "audio/webm" });
-          audioChunks = [];
-
-          // Require at least 4KB of audio data and check concurrency lock
-          if (audioBlob.size < 4000 || isTranscribingRef.current) return;
-          isTranscribingRef.current = true;
-
-          const formData = new FormData();
-          formData.append("audio", audioBlob, `speech_${role}.webm`);
-          formData.append("speaker_role", role);
-          formData.append("speaker_identity", identity);
-
-          try {
-            const apiCall = isApplicant
-              ? interviewService.publicTranscribeAudio(interviewId, formData)
-              : interviewService.transcribeAudio(interviewId, formData);
-            const { data } = await apiCall;
-            if (data?.transcript?.text) {
-              processFinalSegmentRef.current(data.transcript.text, role, identity);
-            }
-          } catch (e) {
-            // Whisper fallback notice
-          } finally {
-            isTranscribingRef.current = false;
-          }
-        };
-
-        recorder.start(3000); // Stable 3s recording window
-        activeRecorders.push(recorder);
-      } catch (e) {
-        console.warn("Could not attach recorder to remote track:", e);
-      }
-    });
-
-    return () => {
-      activeRecorders.forEach((rec) => {
-        try {
-          if (rec.state !== "inactive") rec.stop();
-        } catch (e) {}
-      });
-    };
-  }, [audioTracks, interviewId, isApplicant]);
 
   return null;
 }
@@ -1404,42 +1325,140 @@ function ZoomInterviewerLayout({ interviewId, applicantName, jobTitle, onHangup,
 
 // ── Main Page Component ──────────────────────────────────────────────────────
 
-export default function ActiveInterviewRoom({ isApplicant = false }) {
-  const { id }   = useParams();
+// ── Candidate LiveKit Layout Wrapper ─────────────────────────────────────────
+
+function CandidateLayoutWrapper({
+  candidateName = "Applicant",
+  jobTitle = "Interview Candidate",
+  onHangup,
+}) {
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant?.() || {};
+  const tracks = useTracks?.([
+    { source: Track.Source.Camera, withPlaceholder: false },
+  ]) || [];
+
+  const localCameraTrack = tracks.find(
+    (t) => t.source === Track.Source.Camera && t.participant?.isLocal
+  ) || null;
+
+  const toggleMic = useCallback(async () => {
+    if (localParticipant) {
+      try {
+        await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      } catch (e) {
+        console.warn("Toggle mic notice:", e);
+      }
+    }
+  }, [localParticipant, isMicrophoneEnabled]);
+
+  const toggleCam = useCallback(async () => {
+    if (localParticipant) {
+      try {
+        await localParticipant.setCameraEnabled(!isCameraEnabled);
+      } catch (e) {
+        console.warn("Toggle cam notice:", e);
+      }
+    }
+  }, [localParticipant, isCameraEnabled]);
+
+  return (
+    <CandidateInterviewView
+      candidateName={candidateName}
+      jobTitle={jobTitle}
+      localCameraTrack={localCameraTrack}
+      isMuted={!isMicrophoneEnabled}
+      onToggleMute={toggleMic}
+      isVideoOff={!isCameraEnabled}
+      onToggleVideo={toggleCam}
+      onLeaveCall={onHangup}
+    />
+  );
+}
+
+// ── Main Page Component ──────────────────────────────────────────────────────
+
+export default function ActiveInterviewRoom({ isApplicant: isApplicantProp = false }) {
+  const { id, sessionId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const currentSessionId = sessionId || id || "session-demo";
+  const queryRole = searchParams.get("role"); // "interviewer" | "candidate"
+
+  // Role detection:
+  // 1. Explicit prop (isApplicantProp)
+  // 2. Query param (?role=candidate vs ?role=interviewer)
+  // 3. User auth role: if user.role === "applicant" -> candidate; else if staff -> interviewer
+  const isCandidate =
+    isApplicantProp ||
+    queryRole === "candidate" ||
+    (queryRole !== "interviewer" && user?.role === "applicant");
 
   const [tokenData,       setTokenData]       = useState(null);  // { token, room_name, livekit_host }
   const [loadingToken,    setLoadingToken]    = useState(false);
   const [tokenError,      setTokenError]      = useState(null);
+  const [demoMode,        setDemoMode]        = useState(false);
   const [consentGiven,    setConsentGiven]    = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [endingSession,   setEndingSession]   = useState(false);
 
+  const [interviewDetails, setInterviewDetails] = useState(null);
+  const [dbTranscripts, setDbTranscripts]       = useState([]);
+
+  // ── Fetch real interview record & transcripts from database ───────────────
+  useEffect(() => {
+    if (!currentSessionId || currentSessionId === "demo") return;
+
+    // 1. Fetch real interview details
+    interviewService
+      .getById(currentSessionId)
+      .then(({ data }) => {
+        const item = data?.interview || data;
+        if (item) setInterviewDetails(item);
+      })
+      .catch((err) => {
+        console.debug("Notice: Could not load interview by ID:", err?.message || err);
+      });
+
+    // 2. Ensure live transcripts and metrics start clean for this new call session
+    setDbTranscripts([]);
+  }, [currentSessionId]);
+
   // ── Fetch LiveKit token ──────────────────────────────────────────────────
   useEffect(() => {
+    // If explicit demo route or already in demo mode, skip remote token fetch
+    if (currentSessionId === "demo" || demoMode) return;
+
     setLoadingToken(true);
-    const fetchToken = isApplicant
-      ? interviewService.getPublicLivekitToken(id)
-      : interviewService.getLivekitToken(id);
+    const fetchToken = isCandidate
+      ? interviewService.getPublicLivekitToken(currentSessionId)
+      : interviewService.getLivekitToken(currentSessionId);
 
     fetchToken
-      .then(({ data }) => setTokenData(data))
+      .then(({ data }) => {
+        setTokenData(data);
+        if (data?.interview) setInterviewDetails(data.interview);
+      })
       .catch((err) => {
-        if (!isApplicant) {
-          setTokenError(err.response?.data?.message ?? "Failed to fetch session token.");
+        if (!isCandidate) {
+          setTokenError(err.response?.data?.message ?? "LiveKit token gateway error. You may enter Interactive Preview mode.");
         }
       })
       .finally(() => setLoadingToken(false));
-  }, [id, isApplicant]);
+  }, [currentSessionId, isCandidate, demoMode]);
 
   // ── Handle applicant email check ──────────────────────────────────────────
   function handleApplicantVerify(email) {
     setLoadingToken(true);
     setTokenError(null);
     interviewService
-      .getPublicLivekitToken(id, email)
-      .then(({ data }) => setTokenData(data))
+      .getPublicLivekitToken(currentSessionId, email)
+      .then(({ data }) => {
+        setTokenData(data);
+        if (data?.interview) setInterviewDetails(data.interview);
+      })
       .catch((err) => {
         const msg = typeof err.response?.data?.message === "string"
           ? err.response.data.message
@@ -1454,44 +1473,180 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
     if (endingSession) return;
     setEndingSession(true);
 
-    if (isApplicant) {
+    if (isCandidate) {
       setSessionFinished(true);
-      interviewService.endPublicSession(id).catch((e) => console.warn("endPublicSession notice:", e));
+      if (!demoMode) {
+        interviewService.endPublicSession(currentSessionId).catch((e) => console.warn("endPublicSession notice:", e));
+      }
     } else {
       setShowReportModal(true);
-      interviewService.endSession(id).catch((e) => console.warn("endSession notice:", e));
+      if (!demoMode) {
+        interviewService.endSession(currentSessionId).catch((e) => console.warn("endSession notice:", e));
+      }
     }
-  }, [id, isApplicant, endingSession]);
+  }, [currentSessionId, isCandidate, endingSession, demoMode]);
 
   // ── Exit handler ──────────────────────────────────────────────────────────
   function handleExit() {
-    if (isApplicant) {
+    if (isCandidate) {
       navigate("/");
     } else {
       navigate("/admin/interviews");
     }
   }
 
+  // ── Real applicant & interview data resolution ───────────────────────────
+  const realApplicant =
+    interviewDetails?.applicant ||
+    tokenData?.applicant ||
+    tokenData?.interview?.applicant;
+
+  const applicantName = realApplicant
+    ? (`${realApplicant.first_name || ""} ${realApplicant.last_name || ""}`.trim() ||
+       realApplicant.name ||
+       realApplicant.email ||
+       "Applicant")
+    : (tokenData?.applicant?.name || "Applicant");
+
+  const jobTitle =
+    interviewDetails?.job_posting?.job_library?.job_title ||
+    interviewDetails?.applicant?.job_posting?.job_library?.job_title ||
+    tokenData?.job_title ||
+    "Interview Session";
+
+  const fitScore = Math.round(
+    realApplicant?.ai_evaluation?.ai_score ??
+    realApplicant?.overall_score ??
+    interviewDetails?.rating_score ??
+    85
+  );
+
+  const strengths = realApplicant?.ai_evaluation?.skills_matched || [];
+  const gaps = realApplicant?.ai_evaluation?.skills_missing || [];
+  const initialNotes = interviewDetails?.evaluation_notes || "";
+
+  // Dynamic context-aware questions from real applicant skills
+  const dynamicQuestions = useMemo(() => {
+    const questions = [];
+    if (gaps && gaps.length > 0) {
+      gaps.slice(0, 3).forEach((gap, idx) => {
+        const gapName = typeof gap === "string" ? gap : JSON.stringify(gap);
+        questions.push({
+          id: `gap_${idx}`,
+          question: `Can you walk us through your practical experience with ${gapName}, and how you adapt to workflows involving ${gapName}?`,
+          gapContext: `Screened Gap: ${gapName}`,
+        });
+      });
+    }
+
+    if (strengths && strengths.length > 0 && questions.length < 3) {
+      strengths.slice(0, 3 - questions.length).forEach((str, idx) => {
+        const strName = typeof str === "string" ? str : JSON.stringify(str);
+        questions.push({
+          id: `str_${idx}`,
+          question: `Your profile demonstrates strength in ${strName}. Can you share an example of a challenging task where you applied ${strName}?`,
+          gapContext: `Screened Strength: ${strName}`,
+        });
+      });
+    }
+
+    if (questions.length === 0) {
+      questions.push(
+        {
+          id: "q_core_1",
+          question: `Can you walk us through your most relevant past projects for the ${jobTitle} role?`,
+          gapContext: `Core Role Fit: ${jobTitle}`,
+        },
+        {
+          id: "q_core_2",
+          question: "How do you handle ambiguous requirements and unexpected operational bottlenecks?",
+          gapContext: "Problem Solving",
+        },
+        {
+          id: "q_core_3",
+          question: "Describe your communication style when collaborating with department heads and team colleagues.",
+          gapContext: "Team Collaboration",
+        }
+      );
+    }
+    return questions;
+  }, [jobTitle, strengths, gaps]);
+
+  // Real competencies matrix
+  const competencies = useMemo(() => {
+    const res = {};
+    const combined = [...strengths, ...gaps];
+    if (combined.length > 0) {
+      combined.slice(0, 4).forEach((skill) => {
+        const skillName = typeof skill === "string" ? skill : JSON.stringify(skill);
+        res[skillName] = {
+          checked: strengths.includes(skill),
+          rating: strengths.includes(skill) ? 4 : 2,
+        };
+      });
+    }
+    const fallbacks = [jobTitle, "Problem Solving", "Professional Communication", "Task Execution"];
+    fallbacks.forEach((f) => {
+      if (Object.keys(res).length < 4 && !res[f]) {
+        res[f] = { checked: true, rating: 3 };
+      }
+    });
+    return res;
+  }, [jobTitle, strengths, gaps]);
+
+  // Real assigned panelists
+  const realPanelists = useMemo(() => {
+    const list = [
+      {
+        id: `panelist-${user?.id || "host"}`,
+        name: user?.name ? `${user.name} (Host)` : "You (Host)",
+        role: user?.role?.replace(/_/g, " ") || "Host Evaluator",
+        avatar: (user?.name?.split(" ").map((w) => w[0]).join("") || "YR").slice(0, 2).toUpperCase(),
+        isHost: true,
+        isSpeaking: false,
+        isMuted: false,
+      },
+    ];
+
+    if (interviewDetails?.interviewer && interviewDetails.interviewer.id !== user?.id) {
+      list.push({
+        id: `panelist-${interviewDetails.interviewer.id}`,
+        name: interviewDetails.interviewer.name,
+        role: interviewDetails.interviewer.role?.replace(/_/g, " ") || "Assigned Interviewer",
+        avatar: (interviewDetails.interviewer.name.split(" ").map((w) => w[0]).join("") || "IN").slice(0, 2).toUpperCase(),
+        isHost: false,
+        isSpeaking: false,
+        isMuted: false,
+      });
+    } else {
+      list.push(
+        { id: "panelist-tech", name: "Technical Lead", role: "Department Evaluator", avatar: "TL", isHost: false, isSpeaking: false, isMuted: false },
+        { id: "panelist-hr", name: "HR Department Rep", role: "Talent Ops", avatar: "HR", isHost: false, isSpeaking: false, isMuted: true }
+      );
+    }
+    return list;
+  }, [user, interviewDetails]);
+
   // ── Session finished screen (for applicants) ──────────────────────────────
   if (sessionFinished) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white font-sans">
-        <div className="max-w-md rounded-2xl border border-emerald-500/30 bg-slate-900 px-8 py-10 text-center shadow-2xl">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-3xl mx-auto mb-4">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6 text-slate-800 font-sans">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white px-8 py-10 text-center shadow-xl">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl mx-auto mb-4 border border-emerald-200">
             🎉
           </span>
-          <h2 className="text-xl font-extrabold mb-2">Interview Completed</h2>
-          <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-            Thank you for attending your interview session! Your transcript and video feed have been processed. The HR recruitment team will review your session shortly.
+          <h2 className="text-xl font-extrabold text-slate-900 mb-2">Interview Completed</h2>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+            Thank you for attending your interview session! Your interview observations and responses have been logged. The HR recruitment team will review your session shortly.
           </p>
-          <Button onClick={() => navigate("/")}>Return to Home</Button>
+          <Button onClick={() => navigate("/")} className="bg-[#111A62] hover:bg-[#0d1550] text-white">Return to Home</Button>
         </div>
       </div>
     );
   }
 
-  // ── Applicant Verification Form (if applicant and not verified yet) ─────
-  if (isApplicant && !tokenData) {
+  // ── Applicant Verification Form (if applicant and not verified yet and not in demo) ─────
+  if (isCandidate && !tokenData && !demoMode) {
     return (
       <ApplicantVerificationForm
         onSubmit={handleApplicantVerify}
@@ -1505,24 +1660,39 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loadingToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="flex flex-col items-center gap-3 text-white">
-          <span className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="flex flex-col items-center gap-3 text-slate-800">
+          <span className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#F97316]" />
           <p className="text-sm font-semibold">Preparing interview session…</p>
         </div>
       </div>
     );
   }
 
-  // ── Error state for HR ────────────────────────────────────────────────────
-  if (tokenError) {
+  // ── Error state for HR (provides instant fallback to demo mode) ───────────
+  if (tokenError && !demoMode) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
-        <div className="max-w-md rounded-2xl border border-red-500/30 bg-red-950/40 px-6 py-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
+        <div className="max-w-md rounded-2xl border border-red-200 bg-white px-6 py-8 text-center shadow-xl">
           <p className="text-4xl mb-3">⚠️</p>
-          <h2 className="text-lg font-extrabold text-white mb-2">Could not start session</h2>
-          <p className="text-sm text-red-300 mb-5">{tokenError}</p>
-          <Button variant="outline" onClick={handleExit}>← Exit Session</Button>
+          <h2 className="text-lg font-extrabold text-slate-900 mb-2">Session Notice</h2>
+          <p className="text-xs text-red-700 mb-5 leading-relaxed">{tokenError}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setTokenError(null);
+                setDemoMode(true);
+                setConsentGiven(true);
+              }}
+              className="w-full rounded-xl bg-[#111A62] hover:bg-[#0d1550] text-white font-bold text-xs py-3 transition-colors cursor-pointer shadow-md"
+            >
+              Enter Interactive Preview Mode
+            </button>
+            <Button variant="outline" onClick={handleExit} className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs">
+              ← Exit Session
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -1531,7 +1701,7 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
   // ── DPA Consent gate ─────────────────────────────────────────────────────
   if (!consentGiven) {
     return (
-      <div className="min-h-screen bg-slate-950">
+      <div className="min-h-screen bg-slate-100">
         <DpaConsentModal
           onAccept={() => setConsentGiven(true)}
           onDecline={handleExit}
@@ -1540,10 +1710,48 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
     );
   }
 
-  const applicantName = tokenData?.applicant?.name || "Candidate_01";
-  const jobTitle      = tokenData?.job_title || "Senior Dev Role";
+  // ── Demo / Preview Mode (Direct Rendering with Simulated WebRTC / Presence) ──
+  if (demoMode || !tokenData) {
+    return (
+      <div className="min-h-screen w-full bg-slate-100">
+        {isCandidate ? (
+          <CandidateInterviewView
+            candidateName={applicantName}
+            jobTitle={jobTitle}
+            panelists={realPanelists}
+            onLeaveCall={handleSessionEnded}
+          />
+        ) : (
+          <InterviewerRoomView
+            interviewId={currentSessionId}
+            applicantName={applicantName}
+            jobTitle={jobTitle}
+            fitScore={fitScore}
+            currentUser={user}
+            onEndCall={handleSessionEnded}
+            onExportSummary={() => setShowReportModal(true)}
+            FaceTrackingComponent={FaceTrackingVideo}
+            strengths={strengths}
+            gaps={gaps}
+            dynamicQuestions={dynamicQuestions}
+            initialCompetencies={competencies}
+            initialPanelists={realPanelists}
+            initialNotes={initialNotes}
+            initialTranscripts={[]}
+          />
+        )}
 
-  // ── LiveKit Room ─────────────────────────────────────────────────────────
+        {/* AI Report Modal */}
+        <InterviewReportModal
+          isOpen={showReportModal}
+          onClose={() => navigate("/admin/interviews")}
+          interviewId={currentSessionId}
+        />
+      </div>
+    );
+  }
+
+  // ── LiveKit Room (Production Connected Mode) ──────────────────────────────
   return (
     <LiveKitRoom
       token={tokenData.token}
@@ -1556,20 +1764,29 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
     >
       <RoomAudioRenderer />
 
-      {isApplicant ? (
-        <ZoomApplicantLayout
-          interviewId={id}
-          applicantName={applicantName}
-          onHangup={handleSessionEnded}
-          endingSession={endingSession}
-        />
-      ) : (
-        <ZoomInterviewerLayout
-          interviewId={id}
-          applicantName={applicantName}
+      {isCandidate ? (
+        <CandidateLayoutWrapper
+          candidateName={applicantName}
           jobTitle={jobTitle}
           onHangup={handleSessionEnded}
-          endingSession={endingSession}
+        />
+      ) : (
+        <InterviewerRoomView
+          interviewId={currentSessionId}
+          applicantName={applicantName}
+          jobTitle={jobTitle}
+          fitScore={fitScore}
+          currentUser={user}
+          onEndCall={handleSessionEnded}
+          onExportSummary={() => setShowReportModal(true)}
+          FaceTrackingComponent={FaceTrackingVideo}
+          strengths={strengths}
+          gaps={gaps}
+          dynamicQuestions={dynamicQuestions}
+          initialCompetencies={competencies}
+          initialPanelists={realPanelists}
+          initialNotes={initialNotes}
+          initialTranscripts={[]}
         />
       )}
 
@@ -1577,8 +1794,10 @@ export default function ActiveInterviewRoom({ isApplicant = false }) {
       <InterviewReportModal
         isOpen={showReportModal}
         onClose={() => navigate("/admin/interviews")}
-        interviewId={id}
+        interviewId={currentSessionId}
       />
     </LiveKitRoom>
   );
 }
+
+

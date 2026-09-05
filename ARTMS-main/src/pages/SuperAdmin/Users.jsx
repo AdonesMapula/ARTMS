@@ -300,11 +300,11 @@ export default function Users() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatFilterCard
           title="Total Users"
           value={stats.total}
-          icon={<UsersIcon size={22} />}
+          icon={<UsersIcon size={20} />}
           accentColor="navy"
           active={statusFilter === "all" && roleFilter === "all"}
           onClick={() => {
@@ -316,7 +316,7 @@ export default function Users() {
         <StatFilterCard
           title="Active Users"
           value={stats.active}
-          icon={<UserCheck size={22} />}
+          icon={<UserCheck size={20} />}
           accentColor="emerald"
           active={statusFilter === "active" && roleFilter === "all"}
           onClick={() => {
@@ -328,7 +328,7 @@ export default function Users() {
         <StatFilterCard
           title="Inactive Users"
           value={stats.inactive}
-          icon={<UserX size={22} />}
+          icon={<UserX size={20} />}
           accentColor="rose"
           active={statusFilter === "inactive" && roleFilter === "all"}
           onClick={() => {
@@ -340,7 +340,7 @@ export default function Users() {
         <StatFilterCard
           title="HR Admins"
           value={stats.hrAdmin}
-          icon={<UsersIcon size={22} />}
+          icon={<UsersIcon size={20} />}
           accentColor="purple"
           active={statusFilter === "all" && roleFilter === "hr_admin"}
           onClick={() => {
@@ -352,8 +352,8 @@ export default function Users() {
       </div>
 
       {/* Filters & Search */}
-      <Card>
-        <CardContent className="py-4 px-5">
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <CardContent className="py-3 px-4 sm:px-5">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="w-full sm:flex-1 min-w-[220px]">
               <SearchBar
@@ -363,11 +363,11 @@ export default function Users() {
                   setPage(1);
                 }}
                 placeholder="Search users by name, email, or role..."
-                className="h-11 text-sm"
+                className="h-9 text-xs"
               />
             </div>
-            <div className="flex w-full sm:w-auto gap-3">
-              <div className="w-full sm:w-48 shrink-0">
+            <div className="flex w-full sm:w-auto gap-2.5">
+              <div className="w-full sm:w-44 shrink-0">
                 <Select
                   value={roleFilter}
                   onChange={(e) => {
@@ -376,10 +376,12 @@ export default function Users() {
                   }}
                   options={ROLES}
                   icon={Filter}
+                  size="sm"
                   placeholder="All Roles"
+                  buttonClassName="h-9 text-xs"
                 />
               </div>
-              <div className="w-full sm:w-48 shrink-0">
+              <div className="w-full sm:w-44 shrink-0">
                 <Select
                   value={statusFilter}
                   onChange={(e) => {
@@ -388,7 +390,9 @@ export default function Users() {
                   }}
                   options={STATUSES}
                   icon={Filter}
+                  size="sm"
                   placeholder="All Status"
+                  buttonClassName="h-9 text-xs"
                 />
               </div>
             </div>
@@ -397,25 +401,28 @@ export default function Users() {
       </Card>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader>
+      <Card className="rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 py-3 px-4 sm:px-5">
           <div className="flex items-center justify-between">
-            <CardTitle>
-              Users ({filtered.length} {filtered.length === 1 ? "user" : "users"})
+            <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Users Directory</span>
+              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filtered.length} {filtered.length === 1 ? "record" : "records"}
+              </span>
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="space-y-2">
+            <div className="p-5 space-y-2">
               {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
+                <Skeleton key={i} className="h-12 rounded-md" />
               ))}
             </div>
           ) : paginated.length === 0 ? (
             <div className="py-12 text-center">
-              <UsersIcon size={48} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">No users found</p>
+              <UsersIcon size={40} className="mx-auto mb-2.5 text-slate-300 dark:text-slate-600" />
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No users found</p>
               <p className="mt-1 text-xs text-slate-400">
                 {q || roleFilter !== "all" || statusFilter !== "all"
                   ? "Try adjusting your search or filters"
@@ -432,7 +439,7 @@ export default function Users() {
                         type="checkbox"
                         checked={paginated.length > 0 && paginated.every((u) => selectedIds.includes(u.id))}
                         onChange={handleToggleSelectAll}
-                        className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                        className="rounded border-slate-300 dark:border-slate-600 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer"
                       />
                     </TH>
                     <TH>Name</TH>
@@ -449,105 +456,105 @@ export default function Users() {
                     const isChecked = selectedIds.includes(u.id);
 
                     return (
-                      <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${isChecked ? 'bg-blue-50/40' : ''}`}>
+                      <tr key={u.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${isChecked ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}>
                         <TD className="w-10 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={(e) => handleToggleSelectOne(u.id, e)}
-                            className="rounded border-slate-300 text-[#111A62] focus:ring-[#111A62] h-4 w-4 cursor-pointer"
+                            className="rounded border-slate-300 dark:border-slate-600 text-[#111A62] focus:ring-[#111A62] h-3.5 w-3.5 cursor-pointer"
                           />
                         </TD>
-                        <TD className="font-semibold text-slate-900">
-                          <div className="flex items-center gap-3">
+                        <TD className="font-semibold text-slate-900 dark:text-slate-100">
+                          <div className="flex items-center gap-2.5">
                             {u.avatar ? (
-                              <img src={u.avatar} alt={displayName} className="h-10 w-10 shrink-0 rounded-full object-cover border border-slate-200 shadow-sm" />
+                              <img src={u.avatar} alt={displayName} className="h-8 w-8 shrink-0 rounded-md object-cover border border-slate-200/80 dark:border-slate-700 shadow-2xs" />
                             ) : (
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#111A62]/10 text-[#111A62] ring-1 ring-[#111A62]/20 shadow-sm" title="No photo - showing profile icon">
-                                <UserIcon size={18} />
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#111A62]/10 dark:bg-blue-900/30 text-[#111A62] dark:text-blue-300 ring-1 ring-[#111A62]/20 font-bold text-xs" title="No photo">
+                                {displayName[0]?.toUpperCase() || <UserIcon size={14} />}
                               </div>
                             )}
                             <div>
-                              <p className="text-xs font-extrabold text-slate-900">{displayName}</p>
+                              <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{displayName}</p>
                               {u.employee_id && (
-                                <p className="text-[10px] font-semibold text-slate-400">ID: {u.employee_id}</p>
+                                <p className="text-[10px] font-mono text-slate-400">ID: {u.employee_id}</p>
                               )}
                             </div>
                           </div>
                         </TD>
-                      <TD className="text-slate-600">{u.email}</TD>
-                      <TD>
-                        <Badge tone={ROLE_TONE[u.role] ?? "default"}>
-                          {u.role?.replace(/_/g, " ")}
-                        </Badge>
-                      </TD>
-                      <TD>
-                        {u.department?.department_name ?? (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </TD>
-                      <TD>
-                        <Badge tone={u.is_active ? "success" : "default"}>
-                          {u.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TD>
-                      <TD className="text-right">
-                        <div className="inline-flex gap-1.5">
-                          {/* Edit Button */}
-                          <button
-                            onClick={() => openEdit(u)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                            title="Edit User"
-                          >
-                            <Edit size={16} />
-                          </button>
-
-                          {/* Disable/Enable Button */}
-                          {u.is_active ? (
-                            <button
-                              onClick={() => {
-                                setConfirmId(u.id);
-                                setConfirmUser(u);
-                              }}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-orange-500 hover:bg-orange-50 hover:text-orange-600 cursor-pointer"
-                              title="Disable User"
-                            >
-                              <Ban size={16} />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setConfirmId(u.id);
-                                setConfirmUser(u);
-                              }}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-green-500 hover:bg-green-50 hover:text-green-600 cursor-pointer"
-                              title="Enable User"
-                            >
-                              <CheckCircle size={16} />
-                            </button>
+                        <TD className="text-xs text-slate-600 dark:text-slate-400 font-medium">{u.email}</TD>
+                        <TD>
+                          <Badge tone={ROLE_TONE[u.role] ?? "default"} className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5">
+                            {u.role?.replace(/_/g, " ")}
+                          </Badge>
+                        </TD>
+                        <TD className="text-xs text-slate-700 dark:text-slate-300">
+                          {u.department?.department_name ?? (
+                            <span className="text-slate-400">—</span>
                           )}
+                        </TD>
+                        <TD>
+                          <Badge tone={u.is_active ? "success" : "default"} className="text-[10px] px-1.5 py-0.5">
+                            {u.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TD>
+                        <TD className="text-right">
+                          <div className="inline-flex gap-1">
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => openEdit(u)}
+                              className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 cursor-pointer"
+                              title="Edit User"
+                            >
+                              <Edit size={13} />
+                            </button>
 
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => {
-                              setDeleteId(u.id);
-                              setDeleteUser(u);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-transparent text-slate-600 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                            title="Delete User"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </TD>
-                    </tr>
-                  );
-                })}
+                            {/* Disable/Enable Button */}
+                            {u.is_active ? (
+                              <button
+                                onClick={() => {
+                                  setConfirmId(u.id);
+                                  setConfirmUser(u);
+                                }}
+                                className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:border-amber-300 hover:text-amber-600 cursor-pointer"
+                                title="Disable User"
+                              >
+                                <Ban size={13} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setConfirmId(u.id);
+                                  setConfirmUser(u);
+                                }}
+                                className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 hover:text-emerald-600 cursor-pointer"
+                                title="Enable User"
+                              >
+                                <CheckCircle size={13} />
+                              </button>
+                            )}
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => {
+                                setDeleteId(u.id);
+                                setDeleteUser(u);
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 hover:text-rose-600 cursor-pointer"
+                              title="Archive User"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </TD>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
 
               {/* Pagination */}
-              <div className="mt-4">
+              <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50">
                 <Pagination
                   page={page}
                   pageSize={pageSize}
@@ -636,39 +643,35 @@ export default function Users() {
 
 function StatFilterCard({ title, value, icon, accentColor, active, onClick }) {
   const colorMap = {
-    navy: { bg: "bg-blue-100 dark:bg-blue-950/60", text: "text-blue-600 dark:text-blue-400" },
-    emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-600 dark:text-emerald-400" },
-    purple: { bg: "bg-purple-100 dark:bg-purple-950/60", text: "text-purple-600 dark:text-purple-400" },
-    orange: { bg: "bg-orange-100 dark:bg-orange-950/60", text: "text-orange-600 dark:text-orange-400" },
-    indigo: { bg: "bg-indigo-100 dark:bg-indigo-950/60", text: "text-indigo-600 dark:text-indigo-400" },
-    teal: { bg: "bg-teal-100 dark:bg-teal-950/60", text: "text-teal-600 dark:text-teal-400" },
-    amber: { bg: "bg-amber-100 dark:bg-amber-950/60", text: "text-amber-600 dark:text-amber-400" },
-    rose: { bg: "bg-rose-100 dark:bg-rose-950/60", text: "text-rose-600 dark:text-rose-400" },
+    navy: { bg: "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400" },
+    purple: { bg: "bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400" },
+    orange: { bg: "bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400" },
+    indigo: { bg: "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400" },
+    teal: { bg: "bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400" },
+    amber: { bg: "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400" },
+    rose: { bg: "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400" },
   };
   const theme = colorMap[accentColor] || colorMap.navy;
 
   return (
     <div
       onClick={onClick}
-      className={`group relative rounded-xl h-full p-[1.5px] transition-all duration-300 cursor-pointer ${
+      className={`rounded-lg border p-3.5 transition-all cursor-pointer ${
         active
-          ? "bg-gradient-to-r from-[#111A62] to-[#E15B1D] shadow-md shadow-[#111A62]/15 scale-[1.02]"
-          : "bg-slate-200 dark:bg-slate-800 hover:bg-gradient-to-r hover:from-[#111A62] hover:to-[#E15B1D] hover:shadow-lg hover:shadow-[#111A62]/10"
+          ? "border-[#111A62] dark:border-blue-500 ring-2 ring-[#111A62]/15 dark:ring-blue-500/20 bg-blue-50/30 dark:bg-blue-950/30 shadow-xs"
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs"
       }`}
     >
-      <Card className="h-full rounded-[10px] border-0 bg-white dark:bg-[#0F163D]">
-        <CardContent className="flex items-center gap-4 pt-6">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${theme.bg}`}>
-            <div className={theme.text}>
-              {icon}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
-            <p className="text-2xl font-extrabold text-[#111A62] dark:text-white">{value}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${theme.bg}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">{title}</p>
+          <p className="font-mono text-xl font-bold text-slate-900 dark:text-white leading-tight">{value}</p>
+        </div>
+      </div>
     </div>
   );
 }
